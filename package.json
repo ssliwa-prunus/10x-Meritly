@@ -1,5 +1,5 @@
 {
-  "name": "10x-astro-starter",
+  "name": "meritly",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
@@ -27,7 +27,6 @@
     "astro": "^7.3.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "esbuild": "^0.28.2",
     "lucide-react": "^1.14.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -73,6 +72,6 @@
   },
   "allowScripts": {
     "workerd@1.20260911.1": true,
-    "esbuild@0.28.2": true
+    "esbuild@0.28.1": true
   }
 }
