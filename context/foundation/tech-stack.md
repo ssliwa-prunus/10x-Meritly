@@ -5,7 +5,7 @@ project_name: meritly
 hints:
   language_family: js
   team_size: solo
-  deployment_target: cloudflare-pages
+  deployment_target: cloudflare-workers
   ci_provider: github-actions
   ci_default_flow: auto-deploy-on-merge
   bootstrapper_confidence: first-class
@@ -29,9 +29,11 @@ Cloudflare) ships Postgres, auth, and storage out of the box via Supabase, and i
 TypeScript-first, convention-based shape clears all four agent-friendly gates,
 which matters for a short, mostly-unsupervised timeline. Payments, realtime, and AI
 are out of scope per the PRD, so the starter's edge-runtime constraint on
-long-running tasks is not a concern here. Deployment stays on the starter's default,
-Cloudflare Pages; CI runs on GitHub Actions with auto-deploy-on-merge, the
-lowest-friction flow for a solo build. Bootstrapper confidence is first-class —
+long-running tasks is not a concern here. Deployment targets Cloudflare Workers
+(not Pages — `@astrojs/cloudflare` 14.x supports Workers only); CI runs on GitHub
+Actions for lint/check/build/smoke, with auto-deploy-on-merge handled by Cloudflare
+Workers Builds (GitHub-connected), the lowest-friction flow for a solo build.
+Bootstrapper confidence is first-class —
 expect scaffolding to be mostly smooth with occasional manual steps, particularly
 around Supabase row-level security, which must be configured early given the
 per-role visibility guardrail in the PRD.
