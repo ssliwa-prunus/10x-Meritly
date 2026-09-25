@@ -3,7 +3,7 @@ project: Meritly
 version: 1
 status: draft
 created: 2026-09-22
-updated: 2026-09-22
+updated: 2026-09-26
 prd_version: 1
 main_goal: quality
 top_blocker: time
@@ -41,7 +41,7 @@ A budget-holding supervisor today splits a milestone's bonus pool using a valida
 
 | ID   | Change ID                                             | Outcome (user can …)                                                                                                                                | Prerequisites | PRD refs                         | Status   |
 | ---- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------- | -------- |
-| F-01 | role-and-rls-scaffold                                 | (foundation) role-based access + RLS scaffold in place                                                                                              | —             | Access Control, NFR (visibility) | ready    |
+| F-01 | role-and-rls-scaffold                                 | (foundation) role-based access + RLS scaffold in place                                                                                              | —             | Access Control, NFR (visibility) | done     |
 | S-01 | admin-configures-bonus-rules                          | Admin can configure role weights, KPI weights, and the rating→factor mapping                                                                        | F-01          | FR-001, FR-002, FR-003           | proposed |
 | S-02 | supervisor-creates-project-and-milestones             | Supervisor can create a project (with a total bonus budget) and milestones within it, pool-checked against that budget                              | F-01          | FR-004, FR-005, FR-017           | proposed |
 | S-03 | supervisor-assigns-employee-engagement                | Supervisor can register employees and assign their engagement (time-share, contribution rating) to a milestone, with >100% total time-share flagged | S-02, F-01    | FR-007, FR-008, FR-011           | proposed |
@@ -84,7 +84,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Highest-leverage item in the whole milestone — every other slice's access guarantee (Admin sees all, Supervisor sees own team, Employee sees only self) is unenforceable without it. Sequencing it first, ahead of any user-facing slice, avoids retrofitting RLS onto tables that already hold data — the `quality`-goal bias calls for this explicitly.
-- **Status:** ready
+- **Status:** done
 
 ## Slices
 
@@ -205,3 +205,5 @@ None currently — the PRD closed every Open Question before this roadmap was ge
 ## Done
 
 (Empty on first generation. `/10x-archive` appends an entry here — and flips that item's `Status` to `done` — when a change whose `Change ID` matches the item is archived.)
+
+- **F-01: (foundation) a `profiles` table (keyed to `auth.users`, carrying `role`) exists with RLS enabled; the established pattern (role stored server-side, not in `user_metadata`; `security_invoker = true` on any views over RLS-protected tables) is in place for every subsequent slice to build on.** — Archived 2026-09-25 → `context/archive/2026-09-25-role-and-rls-scaffold/`. Lesson: —.
