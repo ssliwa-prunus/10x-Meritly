@@ -291,17 +291,17 @@ Greenfield: no existing data. Users created in the hosted project before this mi
 
 #### Automated
 
-- [x] 2.1 Types regenerate and check cleanly: `npx astro sync && npx astro check`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
-- [x] 2.4 pgTAP suite still passes: `npx supabase test db`
-- [x] 2.5 Smoke test passes: `npm run smoke`
-- [ ] 2.6 CI run on the pushed branch is green, including the new `Run RLS tests` step
+- [x] 2.1 Types regenerate and check cleanly: `npx astro sync && npx astro check` — 586d60d
+- [x] 2.2 Lint passes: `npm run lint` — 586d60d
+- [x] 2.3 Build passes: `npm run build` — 586d60d
+- [x] 2.4 pgTAP suite still passes: `npx supabase test db` — 586d60d
+- [x] 2.5 Smoke test passes: `npm run smoke` — 586d60d
+- [x] 2.6 CI run on the pushed branch is green, including the new `Run RLS tests` step — 586d60d
 
 #### Manual
 
-- [x] 2.7 Signed in as `employee@meritly.local`, `/dashboard` shows role `employee` and `/admin` returns 403
-- [x] 2.8 Signed in as `supervisor@meritly.local`, `/admin` returns 403
-- [x] 2.9 Signed in as `admin@meritly.local`, `/dashboard` shows role `admin` and `/admin` renders
-- [x] 2.10 Signed out, `/admin` redirects to `/auth/signin`
-- [x] 2.11 Profile query failure is not a 403: with the middleware query temporarily pointed at a nonexistent column, `/admin` as admin returns 503 and the dev-server log shows the error with the user id (then revert)
+- [x] 2.7 Signed in as `employee@meritly.local`, `/dashboard` shows role `employee` and `/admin` returns 403 — 586d60d
+- [x] 2.8 Signed in as `supervisor@meritly.local`, `/admin` returns 403 — 586d60d
+- [x] 2.9 Signed in as `admin@meritly.local`, `/dashboard` shows role `admin` and `/admin` renders — 586d60d
+- [x] 2.10 Signed out, `/admin` redirects to `/auth/signin` — 586d60d
+- [x] 2.11 Profile query failure is not a 403: with the middleware query temporarily pointed at a nonexistent column, `/admin` as admin returns 503 and the dev-server log shows the error with the user id (then revert) — 586d60d
