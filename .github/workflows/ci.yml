@@ -40,6 +40,8 @@ jobs:
         run: |
           supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
           supabase status -o env | grep -E '^(API_URL|ANON_KEY)=' > supabase.env
+      - name: Run RLS tests
+        run: supabase test db
       - name: Configure secrets for build and preview
         run: |
           source supabase.env

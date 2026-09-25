@@ -277,31 +277,31 @@ Greenfield: no existing data. Users created in the hosted project before this mi
 
 #### Automated
 
-- [x] 1.1 Migration and seed apply cleanly: `npx supabase db reset`
-- [x] 1.2 pgTAP suite passes: `npx supabase test db`
-- [x] 1.3 Smoke test still passes against a local dev server (signup trigger does not break signup): `npm run smoke`
-- [x] 1.6 pgTAP suite is isolated: after the smoke run (extra users present) it passes twice in a row without a reset: `npx supabase test db && npx supabase test db`
+- [x] 1.1 Migration and seed apply cleanly: `npx supabase db reset` — c1972b6
+- [x] 1.2 pgTAP suite passes: `npx supabase test db` — c1972b6
+- [x] 1.3 Smoke test still passes against a local dev server (signup trigger does not break signup): `npm run smoke` — c1972b6
+- [x] 1.6 pgTAP suite is isolated: after the smoke run (extra users present) it passes twice in a row without a reset: `npx supabase test db && npx supabase test db` — c1972b6
 
 #### Manual
 
-- [x] 1.4 In Supabase Studio, `profiles` shows the three seeded users with roles admin / supervisor / employee, and the smoke-test signup appears as `employee`
-- [x] 1.5 Signing in as `employee@meritly.local` in the app works (seeded password login is valid)
+- [x] 1.4 In Supabase Studio, `profiles` shows the three seeded users with roles admin / supervisor / employee, and the smoke-test signup appears as `employee` — c1972b6
+- [x] 1.5 Signing in as `employee@meritly.local` in the app works (seeded password login is valid) — c1972b6
 
 ### Phase 2: CI gate and app wiring
 
 #### Automated
 
-- [ ] 2.1 Types regenerate and check cleanly: `npx astro sync && npx astro check`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 pgTAP suite still passes: `npx supabase test db`
-- [ ] 2.5 Smoke test passes: `npm run smoke`
+- [x] 2.1 Types regenerate and check cleanly: `npx astro sync && npx astro check`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 pgTAP suite still passes: `npx supabase test db`
+- [x] 2.5 Smoke test passes: `npm run smoke`
 - [ ] 2.6 CI run on the pushed branch is green, including the new `Run RLS tests` step
 
 #### Manual
 
-- [ ] 2.7 Signed in as `employee@meritly.local`, `/dashboard` shows role `employee` and `/admin` returns 403
-- [ ] 2.8 Signed in as `supervisor@meritly.local`, `/admin` returns 403
-- [ ] 2.9 Signed in as `admin@meritly.local`, `/dashboard` shows role `admin` and `/admin` renders
-- [ ] 2.10 Signed out, `/admin` redirects to `/auth/signin`
-- [ ] 2.11 Profile query failure is not a 403: with the middleware query temporarily pointed at a nonexistent column, `/admin` as admin returns 503 and the dev-server log shows the error with the user id (then revert)
+- [x] 2.7 Signed in as `employee@meritly.local`, `/dashboard` shows role `employee` and `/admin` returns 403
+- [x] 2.8 Signed in as `supervisor@meritly.local`, `/admin` returns 403
+- [x] 2.9 Signed in as `admin@meritly.local`, `/dashboard` shows role `admin` and `/admin` renders
+- [x] 2.10 Signed out, `/admin` redirects to `/auth/signin`
+- [x] 2.11 Profile query failure is not a 403: with the middleware query temporarily pointed at a nonexistent column, `/admin` as admin returns 503 and the dev-server log shows the error with the user id (then revert)
