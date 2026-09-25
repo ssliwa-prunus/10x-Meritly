@@ -112,7 +112,23 @@ npx supabase stop
 
 The local Studio UI is available at `http://localhost:54323`.
 
-No database tables or migrations are required — this project uses Supabase Auth's built-in `auth.users` table only.
+`npx supabase start` (and `npx supabase db reset`) applies the migrations in `supabase/migrations/` and loads `supabase/seed.sql`, which creates three local accounts: `admin@meritly.local`, `supervisor@meritly.local` and `employee@meritly.local`, all with the password `Meritly-Local-Passw0rd!`. The seed is for local development and CI only.
+
+Run the database RLS tests (pgTAP) against the running local stack with:
+
+```bash
+npx supabase test db
+```
+
+### Roles
+
+Access roles (`admin`, `supervisor`, `employee`) live in `public.profiles.role`. Every new signup gets a profile with role `employee`. Until an admin UI exists, promote a user in the hosted project by running this in the Supabase SQL editor:
+
+```sql
+update public.profiles set role = 'admin' where email = '<email>';
+```
+
+Never store roles in `user_metadata`: users can edit it themselves.
 
 ### Using a cloud Supabase project instead
 
