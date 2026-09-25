@@ -1,10 +1,10 @@
 ---
 change_id: role-and-rls-scaffold
 title: Role and RLS scaffold (roadmap F-01)
-status: implemented
+status: archived
 created: 2026-09-25
 updated: 2026-09-26
-archived_at: null
+archived_at: 2026-09-25T22:34:12Z
 ---
 
 ## Notes
