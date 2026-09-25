@@ -23,8 +23,9 @@ allowed-tools:
 This skill is the second link in the bootstrap chain. For greenfield: `/10x-shape → /10x-prd → 10x-tech-stack-selector → bootstrapper`. For brownfield: `/10x-shape → /10x-prd → 10x-stack-assess → 10x-health-check`. Its single job: take a shaped notes file and emit a `context/foundation/prd.md` that conforms to the locked PRD schema, routing every gap to `## Open Questions` rather than inventing content.
 
 The skill auto-routes to the correct template based on `context_type` in the input:
-- **greenfield** → 11-section PRD template (product built from scratch)
-- **brownfield** → 12-section PRD template (delta-change to an existing system)
+
+- **greenfield** → 10-section PRD template (product built from scratch)
+- **brownfield** → 11-section PRD template (delta-change to an existing system)
 
 The skill is a **document generator**, not a discovery facilitator. It NEVER invents domain decisions, business-logic rules, success criteria, or user stories. Anything missing in the input goes verbatim into `## Open Questions` so a human can resolve it.
 
@@ -34,7 +35,7 @@ The locked schema this skill conforms to lives at `../10x-shape/references/prd-s
 
 **Use when**: the user has run `/10x-shape` (and `context/foundation/shape-notes.md` exists with a checkpoint block), OR the user has a raw notes file they want turned into a PRD draft, OR the user explicitly asks to (re-)generate `context/foundation/prd.md`.
 
-**Skip when**: the user is still ideating and has no notes — point at `/10x-shape` first. Skip also when the user wants to *edit* an existing PRD by hand — this skill writes whole files; surgical edits are out of scope.
+**Skip when**: the user is still ideating and has no notes — point at `/10x-shape` first. Skip also when the user wants to _edit_ an existing PRD by hand — this skill writes whole files; surgical edits are out of scope.
 
 ## Relationship to other skills
 
@@ -70,6 +71,7 @@ If the file exists, read it FULLY (no `limit`/`offset`) and proceed to Step 1.5.
 If the file does not exist, ask:
 
 AskUserQuestion:
+
 - question: "No input file found at `<resolved-path>`. How would you like to proceed?"
   header: "Input?"
   options:
@@ -79,7 +81,7 @@ AskUserQuestion:
     description: "I'll wait for you to paste any notes you have. The thin-input check will warn about missing signals."
   - label: "Cancel"
     description: "Exit without changes."
-  multiSelect: false
+    multiSelect: false
 
 On "Run /10x-shape first": print "Stopping. Run `/10x-shape` to produce shape-notes.md, then re-invoke `/10x-prd`." and STOP.
 
@@ -106,7 +108,7 @@ Determine whether to generate a greenfield or brownfield PRD:
        description: "Generate a [greenfield|brownfield] PRD."
      - label: "[Other mode] — override"
        description: "Generate a [other] PRD instead."
-     multiSelect: false
+       multiSelect: false
 
 Store the resolved `context_type` for use in Steps 2 and 3. Proceed to Step 2.
 
@@ -124,7 +126,7 @@ Score the input on a 0–4 shaped-vs-thin heuristic. Each signal contributes 1 p
 **Brownfield signals** (replace signal 1 when `context_type: brownfield`):
 
 1. **Frontmatter `checkpoint:` block present AND `context_type: brownfield`** — strongest signal that this came from `/10x-shape` in brownfield mode. Also check for `## Current System` section in the body.
-2–4. Same as greenfield.
+   2–4. Same as greenfield.
 
 Compute the total. Document the heuristic explicitly in the conversation so a future maintainer can tune it:
 
@@ -156,6 +158,7 @@ time to run /10x-shape first, the resulting PRD will be substantially stronger.
 Then ask:
 
 AskUserQuestion:
+
 - question: "How would you like to proceed?"
   header: "Thin input"
   options:
@@ -165,7 +168,7 @@ AskUserQuestion:
     description: "Generate the PRD from what's there. Missing pieces land in ## Open Questions verbatim."
   - label: "Cancel"
     description: "Exit without changes."
-  multiSelect: false
+    multiSelect: false
 
 On "Run /10x-shape first": print the redirect message and STOP. On "Proceed anyway": continue to Step 3 with `score < 2` recorded so later steps know to expect TODOs. On "Cancel": STOP.
 
@@ -314,6 +317,7 @@ If the file does not exist, write to `context/foundation/prd.md` and proceed to 
 If the file exists, ask:
 
 AskUserQuestion:
+
 - question: "context/foundation/prd.md already exists. How would you like to proceed?"
   header: "Collision"
   options:
@@ -323,7 +327,7 @@ AskUserQuestion:
     description: "Replace the existing prd.md. The prior version is lost (unless you've committed it)."
   - label: "Abort"
     description: "Exit without writes. No collision resolution."
-  multiSelect: false
+    multiSelect: false
 
 On "Save as prd-vN.md": pick `N` by scanning `context/foundation/` for files matching `prd-v*.md`. Treat the unversioned `prd.md` as v1. The next slot is `N = (max existing N or 1) + 1`. Write the validated content to `context/foundation/prd-v<N>.md` and bump the in-content `version:` frontmatter field to `<N>`. Proceed to Step 5.
 
@@ -343,7 +347,7 @@ After the write lands, summarize what was produced:
   Project:          [project from frontmatter]
   Context type:     [greenfield | brownfield]
   Path:             [context/foundation/prd.md | context/foundation/prd-vN.md]
-  Schema sections:  [11 / 11 | 12 / 12] present
+  Schema sections:  [10 / 10 | 11 / 11] present
   Frontmatter:      <K populated, M as TODO>  (8 keys total)
   Open Questions:   <count> entries
 

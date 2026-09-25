@@ -43,7 +43,7 @@ Testy — co najmniej jeden test weryfikujący działanie z perspektywy użytkow
 Projekt dostępny pod publicznym URL, w App Store lub jako instalowalny pakiet (jeśli typ aplikacji na to nie pozwala, pomiń to w opisie projektu)
 
 🥇 Kryteria na wyróżnienie
-Zgłoszenie w 1. terminie (5.07.2026):
+Zgłoszenie w 1. terminie:
 
 Własna wersja 10xCards — spełnienie wszystkich wymagań (obowiązkowe + publiczny URL)
 
@@ -80,7 +80,6 @@ Pusty CRUD — lista zadań czy lista książek to dobry fundament, ale sama lis
 Wysoki próg zero-to-one — tydzień pracy, a nadal nie da się wykonać jednej sensownej akcji w aplikacji
 
 Użyj tej tabeli do pierwszej oceny swojego pomysłu:
-
 
 Masz dwa pomysły? Wybierz ten, który ma krótszą drogę do pierwszego przepływu i bardziej oczywistą logikę biznesową. Efektowność pojawia się później.
 
