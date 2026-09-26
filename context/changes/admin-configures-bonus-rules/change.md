@@ -1,7 +1,7 @@
 ---
 change_id: admin-configures-bonus-rules
 title: Admin configures role weights, KPI weights and rating-to-factor mapping
-status: implementing
+status: implemented
 created: 2026-09-26
 updated: 2026-09-26
 archived_at: null

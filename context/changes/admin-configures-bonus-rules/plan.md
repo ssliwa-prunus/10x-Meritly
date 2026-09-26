@@ -330,16 +330,16 @@ None: a single-digit number of rows, read once per page load.
 
 #### Automated
 
-- [x] 2.1 Astro types regenerate and type-check passes: `npx astro sync && npx astro check`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Production build succeeds: `npm run build`
-- [x] 2.4 Existing auth smoke test still passes against a running dev server: `npm run smoke`
-- [x] 2.5 pgTAP suites still pass: `npx supabase test db`
+- [x] 2.1 Astro types regenerate and type-check passes: `npx astro sync && npx astro check` — 38a2ac8
+- [x] 2.2 Lint passes: `npm run lint` — 38a2ac8
+- [x] 2.3 Production build succeeds: `npm run build` — 38a2ac8
+- [x] 2.4 Existing auth smoke test still passes against a running dev server: `npm run smoke` — 38a2ac8
+- [x] 2.5 pgTAP suites still pass: `npx supabase test db` — 38a2ac8
 
 #### Manual
 
-- [x] 2.6 Signed in as `admin@meritly.local`, `/admin/settings` shows the eight roles, KPI weights 0.30/0.30/0.25/0.15, bounds 0.70/1.30 and factors 0.80–1.20
-- [x] 2.7 Admin can add a role, edit its weight, archive it (it moves to the muted archived group) and restore it; each save shows a success message and persists after reload
-- [x] 2.8 Saving KPI weights that sum to 0.95, a min ≥ max, a decreasing factor list or a duplicate role name (different case) shows a readable error and leaves the stored values unchanged
-- [x] 2.9 Signed in as supervisor or employee, `/admin/settings` returns 403, and a POST to `/api/admin/bonus-settings/kpi` also returns 403
-- [x] 2.10 The page is usable at phone width (no horizontal scroll, forms stack)
+- [x] 2.6 Signed in as `admin@meritly.local`, `/admin/settings` shows the eight roles, KPI weights 0.30/0.30/0.25/0.15, bounds 0.70/1.30 and factors 0.80–1.20 — 38a2ac8
+- [x] 2.7 Admin can add a role, edit its weight, archive it (it moves to the muted archived group) and restore it; each save shows a success message and persists after reload — 38a2ac8
+- [x] 2.8 Saving KPI weights that sum to 0.95, a min ≥ max, a decreasing factor list or a duplicate role name (different case) shows a readable error and leaves the stored values unchanged — 38a2ac8
+- [x] 2.9 Signed in as supervisor or employee, `/admin/settings` returns 403, and a POST to `/api/admin/bonus-settings/kpi` also returns 403 — 38a2ac8
+- [x] 2.10 The page is usable at phone width (no horizontal scroll, forms stack) — 38a2ac8
