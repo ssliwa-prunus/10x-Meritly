@@ -14,6 +14,12 @@ const { profile } = Astro.locals;
         Signed in as <span class="font-semibold text-white">{profile?.email}</span>
       </p>
       <p class="mt-2 text-sm text-blue-100/50">This page is only for admins.</p>
+      <a
+        href="/admin/settings"
+        class="mt-6 inline-block rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
+      >
+        Bonus settings
+      </a>
     </div>
   </div>
 </Layout>

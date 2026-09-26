@@ -1,0 +1,78 @@
+---
+import { cn } from "@/lib/utils";
+import type { BonusSettings } from "@/types";
+
+interface Props {
+  settings: BonusSettings;
+  saved: boolean;
+  error: string | null;
+}
+
+const { settings, saved, error } = Astro.props;
+
+const inputClass = cn(
+  "w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white",
+  "focus:border-purple-300 focus:ring-2 focus:ring-purple-300/40 focus:outline-none",
+);
+
+const factors = [
+  { name: "rating_factor_1", rating: 1, value: settings.rating_factor_1 },
+  { name: "rating_factor_2", rating: 2, value: settings.rating_factor_2 },
+  { name: "rating_factor_3", rating: 3, value: settings.rating_factor_3 },
+  { name: "rating_factor_4", rating: 4, value: settings.rating_factor_4 },
+  { name: "rating_factor_5", rating: 5, value: settings.rating_factor_5 },
+];
+---
+
+<section
+  id="factors"
+  aria-labelledby="factors-heading"
+  class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
+>
+  <h2 id="factors-heading" class="text-xl font-semibold">
+    Contribution rating factors
+  </h2>
+  <p class="mt-1 text-sm text-blue-100/60">
+    Factor applied for each contribution rating. Values must be non-decreasing from rating 1 to rating 5, each greater
+    than 0 and at most 3.
+  </p>
+
+  {saved && (
+    <p role="status" class="mt-3 rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">
+      Rating factors saved.
+    </p>
+  )}
+  {error && (
+    <p role="alert" class="mt-3 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
+      {error}
+    </p>
+  )}
+
+  <form method="POST" action="/api/admin/bonus-settings/rating-factors" class="mt-4 flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      {factors.map((field) => (
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-blue-100/80">Rating {field.rating}</span>
+          <input
+            type="number"
+            name={field.name}
+            value={field.value.toFixed(2)}
+            min="0.01"
+            max="3"
+            step="0.01"
+            required
+            class:list={inputClass}
+          />
+        </label>
+      ))}
+    </div>
+    <div>
+      <button
+        type="submit"
+        class="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
+      >
+        Save rating factors
+      </button>
+    </div>
+  </form>
+</section>

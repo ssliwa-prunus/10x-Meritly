@@ -2,8 +2,8 @@ import { defineMiddleware } from "astro:middleware";
 import { createClient } from "@/lib/supabase";
 import type { Profile } from "@/types";
 
-const PROTECTED_ROUTES = ["/dashboard", "/admin"];
-const ADMIN_ROUTES = ["/admin"];
+const PROTECTED_ROUTES = ["/dashboard", "/admin", "/api/admin"];
+const ADMIN_ROUTES = ["/admin", "/api/admin"];
 
 const matchesRoute = (pathname: string, routes: string[]) => routes.some((route) => pathname.startsWith(route));
 
