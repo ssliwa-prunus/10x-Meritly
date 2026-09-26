@@ -1,6 +1,6 @@
 ---
-import { cn } from "@/lib/utils";
 import type { BonusSettings } from "@/types";
+import { buttonClass, inputClass } from "./form-classes";
 
 interface Props {
   settings: BonusSettings;
@@ -9,11 +9,6 @@ interface Props {
 }
 
 const { settings, saved, error } = Astro.props;
-
-const inputClass = cn(
-  "w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white",
-  "focus:border-purple-300 focus:ring-2 focus:ring-purple-300/40 focus:outline-none",
-);
 
 const factors = [
   { name: "rating_factor_1", rating: 1, value: settings.rating_factor_1 },
@@ -67,10 +62,7 @@ const factors = [
       ))}
     </div>
     <div>
-      <button
-        type="submit"
-        class="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
-      >
+      <button type="submit" class:list={buttonClass}>
         Save rating factors
       </button>
     </div>

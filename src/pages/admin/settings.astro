@@ -5,15 +5,22 @@ import JobRolesSection from "@/components/admin/JobRolesSection.astro";
 import KpiSettingsSection from "@/components/admin/KpiSettingsSection.astro";
 import RatingFactorsSection from "@/components/admin/RatingFactorsSection.astro";
 import { createClient } from "@/lib/supabase";
-import { getBonusSettings, listJobRoles, type SettingsSection } from "@/lib/services/bonus-config";
+import {
+  getBonusSettings,
+  listJobRoles,
+  settingsErrorMessage,
+  type SettingsSection,
+} from "@/lib/services/bonus-config";
 
 const saved = Astro.url.searchParams.get("saved");
-const error = Astro.url.searchParams.get("error");
+const errorCode = Astro.url.searchParams.get("error");
+const errorField = Astro.url.searchParams.get("field");
 const section = Astro.url.searchParams.get("section");
 
+// The URL carries only an error code; the displayed text always comes from the fixed catalog.
 const statusFor = (name: SettingsSection) => ({
   saved: saved === name,
-  error: error && section === name ? error : null,
+  error: errorCode && section === name ? settingsErrorMessage(errorCode, errorField) : null,
 });
 
 const supabase = createClient(Astro.request.headers, Astro.cookies);

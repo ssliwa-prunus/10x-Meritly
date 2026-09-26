@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
 import {
-  firstIssueMessage,
   kpiSettingsInputSchema,
+  parseForm,
   settingsErrorUrl,
   settingsSavedUrl,
   updateKpiSettings,
@@ -11,13 +11,12 @@ import {
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return context.redirect(settingsErrorUrl("kpi", "Supabase is not configured"));
+    return context.redirect(settingsErrorUrl("kpi", { code: "not_configured" }));
   }
 
-  const form = await context.request.formData();
-  const parsed = kpiSettingsInputSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) {
-    return context.redirect(settingsErrorUrl("kpi", firstIssueMessage(parsed.error)));
+  const parsed = await parseForm(context.request, kpiSettingsInputSchema);
+  if (parsed.error) {
+    return context.redirect(settingsErrorUrl("kpi", parsed.error));
   }
 
   const { error } = await updateKpiSettings(supabase, parsed.data);

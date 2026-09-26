@@ -1,33 +1,29 @@
 import type { APIRoute } from "astro";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import {
-  firstIssueMessage,
+  firstIssueError,
+  jobRoleArchiveInputSchema,
   jobRoleIdSchema,
+  parseForm,
   setJobRoleArchived,
   settingsErrorUrl,
   settingsSavedUrl,
 } from "@/lib/services/bonus-config";
 
-const archiveInputSchema = z.object({
-  archived: z.enum(["true", "false"], { error: "Invalid archive action" }).transform((value) => value === "true"),
-});
-
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return context.redirect(settingsErrorUrl("roles", "Supabase is not configured"));
+    return context.redirect(settingsErrorUrl("roles", { code: "not_configured" }));
   }
 
   const id = jobRoleIdSchema.safeParse(context.params.id);
   if (!id.success) {
-    return context.redirect(settingsErrorUrl("roles", firstIssueMessage(id.error)));
+    return context.redirect(settingsErrorUrl("roles", firstIssueError(id.error)));
   }
 
-  const form = await context.request.formData();
-  const parsed = archiveInputSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) {
-    return context.redirect(settingsErrorUrl("roles", firstIssueMessage(parsed.error)));
+  const parsed = await parseForm(context.request, jobRoleArchiveInputSchema);
+  if (parsed.error) {
+    return context.redirect(settingsErrorUrl("roles", parsed.error));
   }
 
   const { error } = await setJobRoleArchived(supabase, id.data, parsed.data.archived);
