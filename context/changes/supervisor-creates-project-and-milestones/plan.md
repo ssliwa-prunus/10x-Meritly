@@ -532,27 +532,27 @@ This is an additive migration: two new tables, one view, two functions and four 
 
 #### Automated
 
-- [x] 1.1 Migration and seed apply cleanly from scratch: `npx supabase db reset`
-- [x] 1.2 All pgTAP suites pass, including the new `projects_rls.test.sql` and the existing structural guard: `npx supabase test db`
+- [x] 1.1 Migration and seed apply cleanly from scratch: `npx supabase db reset` — 32ad3a3
+- [x] 1.2 All pgTAP suites pass, including the new `projects_rls.test.sql` and the existing structural guard: `npx supabase test db` — 32ad3a3
 
 #### Manual
 
-- [x] 1.3 In Supabase Studio, the seeded project shows in `project_budget_exposure` with `reserved_total` 7800.00 and `over_budget` false
-- [x] 1.4 In Studio, changing `supervisor@meritly.local`'s role to `employee` is rejected with the "reassign first" message
+- [x] 1.3 In Supabase Studio, the seeded project shows in `project_budget_exposure` with `reserved_total` 7800.00 and `over_budget` false — 32ad3a3
+- [x] 1.4 In Studio, changing `supervisor@meritly.local`'s role to `employee` is rejected with the "reassign first" message — 32ad3a3
 
 ### Phase 2: Services, Routes and Middleware
 
 #### Automated
 
-- [ ] 2.1 Types regenerate and type-check passes: `npx astro sync && npx astro check`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Production build succeeds: `npm run build`
-- [ ] 2.4 Existing pgTAP suites still pass: `npx supabase test db`
+- [x] 2.1 Types regenerate and type-check passes: `npx astro sync && npx astro check`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Production build succeeds: `npm run build`
+- [x] 2.4 Existing pgTAP suites still pass: `npx supabase test db`
 
 #### Manual
 
-- [ ] 2.5 The S-01 admin settings page still saves and still shows errors (the form-helper move caused no regression)
-- [ ] 2.6 Signed in as `employee@meritly.local`, `/projects` and `POST /api/projects` return 403
+- [x] 2.5 The S-01 admin settings page still saves and still shows errors (the form-helper move caused no regression)
+- [x] 2.6 Signed in as `employee@meritly.local`, `/projects` and `POST /api/projects` return 403
 
 ### Phase 3: Pages, Navigation and Docs
 

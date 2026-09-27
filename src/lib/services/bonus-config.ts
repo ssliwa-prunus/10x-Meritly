@@ -1,5 +1,6 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import type { BonusSettings, JobRole } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -162,26 +163,15 @@ export const jobRoleIdSchema = z.uuid("invalid_id");
 
 /** First issue of a failed parse as an error code plus the offending field, if any. */
 export function firstIssueError(error: z.ZodError): SettingsError {
-  const issue = error.issues.at(0);
-  if (!issue || !isSettingsErrorCode(issue.message)) return { code: "invalid_form" };
-  const field = typeof issue.path[0] === "string" ? issue.path[0] : undefined;
-  return { code: issue.message, field };
+  return firstFormIssueError(error, isSettingsErrorCode);
 }
 
 /** Reads the request body as form data and validates it; a body that isn't form data is an error, not a 500. */
-export async function parseForm<T extends z.ZodType>(
+export function parseForm<T extends z.ZodType>(
   request: Request,
   schema: T,
 ): Promise<{ data: z.output<T>; error?: undefined } | { data?: undefined; error: SettingsError }> {
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return { error: { code: "invalid_form" } };
-  }
-  const parsed = schema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { error: firstIssueError(parsed.error) };
-  return { data: parsed.data };
+  return parseFormWith(request, schema, isSettingsErrorCode);
 }
 
 // ---------------------------------------------------------------------------

@@ -32,3 +32,39 @@ export interface BonusSettings {
   rating_factor_4: number;
   rating_factor_5: number;
 }
+
+/** Status of a project or milestone; mirrors the `projects_status_valid` / `milestones_status_valid` checks. */
+export type WorkStatus = "planned" | "active" | "completed" | "cancelled";
+
+/** Row of `public.projects` as exposed to the app (audit columns omitted). */
+export interface Project {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: WorkStatus;
+  total_budget: number;
+  notes: string | null;
+  supervisor_id: string;
+}
+
+/** Row of `public.milestones` as exposed to the app (audit columns omitted). */
+export interface Milestone {
+  id: string;
+  project_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: WorkStatus;
+  target_pool: number;
+  notes: string | null;
+}
+
+/** Row of the `public.project_budget_exposure` view (FR-017, informational only). */
+export interface ProjectExposure {
+  project_id: string;
+  total_budget: number;
+  reserved_total: number;
+  remaining: number;
+  over_budget: boolean;
+}
