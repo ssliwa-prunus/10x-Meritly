@@ -3,7 +3,7 @@ project: Meritly
 version: 1
 status: draft
 created: 2026-09-22
-updated: 2026-09-26
+updated: 2026-09-27
 prd_version: 1
 main_goal: quality
 top_blocker: time
@@ -29,26 +29,26 @@ milestone_status: open
 
 ## Vision recap
 
-A budget-holding supervisor today splits a milestone's bonus pool using a validated weighted formula (time share × role weight × contribution rating × milestone KPI multiplier) run manually across a multi-tab spreadsheet — slow, error-prone at every milestone close, and giving employees no way to see their own outcome without someone sending them the file. Meritly applies the same validated formula in a web app, keeps every payout provably within its pool, and makes each milestone's result visible directly to the employee it affects, once a Supervisor approves it.
+A budget-holding supervisor today splits a milestone's bonus pool using a validated weighted formula (time share × role weight × contribution rating × milestone KPI multiplier) run manually across a multi-tab spreadsheet — slow, error-prone at every milestone close, and giving employees no way to see their own outcome without someone sending them the file. Meritly applies the same weights in a web app — with the KPI multiplier scaling the milestone's target pool into its payout pool, and the weighted contributions splitting that payout pool — keeps every payout provably within its payout pool, and makes each milestone's result visible directly to the employee it affects, once a Supervisor approves it.
 
 ## North star
 
-**S-04: Supervisor scores a milestone and sees the computed per-employee bonus table, guaranteed never to exceed the pool.**
+**S-04: Supervisor scores a milestone and sees the computed per-employee bonus table, guaranteed never to exceed the payout pool (target pool × KPI multiplier).**
 
-> A reader-facing gloss: the north star is the smallest end-to-end slice whose successful delivery would prove the core product hypothesis — placed as early as Prerequisites allow because everything else only matters if this works. Here the hypothesis is narrower and higher-stakes than "will people use this": it's "does the already-validated formula compute correctly and stay inside the pool guardrail when it's the software doing the arithmetic, not a person." Draft/Approved gating, employee visibility, email, history, and reporting all sit downstream of trusting this number.
+> A reader-facing gloss: the north star is the smallest end-to-end slice whose successful delivery would prove the core product hypothesis — placed as early as Prerequisites allow because everything else only matters if this works. Here the hypothesis is narrower and higher-stakes than "will people use this": it's "does the formula compute correctly — the KPI multiplier sizing the payout pool, the weights splitting it — and stay inside the pool guardrail when it's the software doing the arithmetic, not a person." Draft/Approved gating, employee visibility, email, history, and reporting all sit downstream of trusting this number.
 
 ## At a glance
 
-| ID   | Change ID                                             | Outcome (user can …)                                                                                                                                | Prerequisites | PRD refs                         | Status   |
-| ---- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------- | -------- |
-| F-01 | role-and-rls-scaffold                                 | (foundation) role-based access + RLS scaffold in place                                                                                              | —             | Access Control, NFR (visibility) | done     |
-| S-01 | admin-configures-bonus-rules                          | Admin can configure role weights, KPI weights, and the rating→factor mapping                                                                        | F-01          | FR-001, FR-002, FR-003           | done     |
-| S-02 | supervisor-creates-project-and-milestones             | Supervisor can create a project (with a total bonus budget) and milestones within it, pool-checked against that budget                              | F-01          | FR-004, FR-005, FR-017           | proposed |
-| S-03 | supervisor-assigns-employee-engagement                | Supervisor can register employees and assign their engagement (time-share, contribution rating) to a milestone, with >100% total time-share flagged | S-02, F-01    | FR-007, FR-008, FR-011           | proposed |
-| S-04 | supervisor-scores-milestone-and-sees-computed-bonuses | Supervisor can score a milestone's four KPIs and see each employee's computed bonus, never exceeding the pool                                       | S-01, S-03    | FR-006, FR-009, FR-010           | proposed |
-| S-05 | supervisor-approves-milestone-employee-sees-bonus     | Supervisor can approve a milestone; the affected employee then sees their own bonus and receives an email — never another employee's                | S-04, F-01    | FR-012, FR-016, FR-018, US-01    | proposed |
-| S-06 | navigate-to-employee-detail-and-history               | Supervisor/Employee can drill into an employee's detail view and see their own history of past projects/milestones and bonuses                      | S-05          | FR-013, FR-014                   | proposed |
-| S-07 | aggregate-bonus-report                                | Supervisor/Admin can view or export an aggregate report of total bonus and milestone count per employee                                             | S-05          | FR-015                           | proposed |
+| ID   | Change ID                                             | Outcome (user can …)                                                                                                                                | Prerequisites | PRD refs                         | Status      |
+| ---- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------- | ----------- |
+| F-01 | role-and-rls-scaffold                                 | (foundation) role-based access + RLS scaffold in place                                                                                              | —             | Access Control, NFR (visibility) | done        |
+| S-01 | admin-configures-bonus-rules                          | Admin can configure role weights, KPI weights, and the rating→factor mapping                                                                        | F-01          | FR-001, FR-002, FR-003           | done        |
+| S-02 | supervisor-creates-project-and-milestones             | Supervisor can create a project (with a total bonus budget) and milestones with target pools, worst-case payout checked against that budget         | F-01          | FR-004, FR-005, FR-017           | in-progress |
+| S-03 | supervisor-assigns-employee-engagement                | Supervisor can register employees and assign their engagement (time-share, contribution rating) to a milestone, with >100% total time-share flagged | S-02, F-01    | FR-007, FR-008, FR-011           | proposed    |
+| S-04 | supervisor-scores-milestone-and-sees-computed-bonuses | Supervisor can score a milestone's four KPIs and see each employee's computed bonus, never exceeding the KPI-scaled payout pool                     | S-01, S-03    | FR-006, FR-009, FR-010           | proposed    |
+| S-05 | supervisor-approves-milestone-employee-sees-bonus     | Supervisor can approve a milestone; the affected employee then sees their own bonus and receives an email — never another employee's                | S-04, F-01    | FR-012, FR-016, FR-018, US-01    | proposed    |
+| S-06 | navigate-to-employee-detail-and-history               | Supervisor/Employee can drill into an employee's detail view and see their own history of past projects/milestones and bonuses                      | S-05          | FR-013, FR-014                   | proposed    |
+| S-07 | aggregate-bonus-report                                | Supervisor/Admin can view or export an aggregate report of total bonus and milestone count per employee                                             | S-05          | FR-015                           | proposed    |
 
 ## Streams
 
@@ -102,15 +102,15 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-02: Supervisor creates project and milestones
 
-- **Outcome:** Supervisor can create a project (name, period, status, total bonus budget, notes) and create milestones within it (name, period, bonus pool, status, notes), with milestone pools checked against the project's total budget.
+- **Outcome:** Supervisor can create a project (name, period, status, total bonus budget, notes) and create milestones within it (name, period, target bonus pool, status, notes), with the project's worst-case milestone payout (actual payout pool for Approved milestones, target pool × current maximum multiplier for the rest) checked against its total budget.
 - **Change ID:** supervisor-creates-project-and-milestones
 - **PRD refs:** FR-004, FR-005, FR-017
 - **Prerequisites:** F-01
 - **Parallel with:** S-01
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** PRD's own Socrates round already flagged period-validation (end date not before start date) as an explicit acceptance criterion — low residual risk otherwise.
-- **Status:** proposed
+- **Risk:** PRD's own Socrates round already flagged period-validation (end date not before start date) as an explicit acceptance criterion. The FR-017 budget check reads the multiplier maximum from S-01's settings and, once S-05 lands, Approved milestones' actual payout pools — until then every milestone is reserved at target × maximum. Low residual risk otherwise.
+- **Status:** in-progress
 
 ### S-03: Supervisor assigns employee engagement
 
@@ -127,14 +127,14 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-04: Supervisor scores milestone and sees computed bonuses
 
-- **Outcome:** Supervisor can enter a milestone's four KPI scores (Termin, Budżet, Jakość, Ryzyko) and see the computed per-employee bonus table, plus a milestone summary (pool, payout total, remaining) confirming the total never exceeds the pool.
+- **Outcome:** Supervisor can enter a milestone's four KPI scores (Termin, Budżet, Jakość, Ryzyko) and see the computed per-employee bonus table, plus a milestone summary (target pool, KPI multiplier, payout pool, payout total, rounding residual) confirming the total never exceeds the payout pool.
 - **Change ID:** supervisor-scores-milestone-and-sees-computed-bonuses
 - **PRD refs:** FR-006, FR-009, FR-010
 - **Prerequisites:** S-01, S-03
 - **Parallel with:** —
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** This is the north star and the highest-correctness-risk slice in the milestone — the formula (time share × role weight × contribution factor × milestone multiplier, rounded down) and the pool guardrail both live here. Per PRD, the guardrail is confirmatory (the formula mathematically cannot exceed the pool by construction), so the rounding-down logic is the detail `/10x-plan` must get exactly right.
+- **Risk:** This is the north star and the highest-correctness-risk slice in the milestone — the two-step formula (payout pool = floor(target pool × milestone multiplier); each bonus = floor(payout pool × e_i / Σe) with e_i = time share × role weight × contribution factor) and the pool guardrail both live here. The multiplier must scale the pool, never each employee's weight — inside a proportional split it would cancel out (PRD Business Logic, US-01 acceptance criteria). Per PRD, the guardrail is confirmatory (the split mathematically cannot exceed the payout pool by construction), so the multiplier placement and the rounding-down logic are the details `/10x-plan` must get exactly right.
 - **Status:** proposed
 
 ### S-05: Supervisor approves milestone, employee sees bonus

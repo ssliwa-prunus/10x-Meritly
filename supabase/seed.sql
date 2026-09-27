@@ -1,15 +1,19 @@
 -- LOCAL DEVELOPMENT / CI ONLY. Never run this against the hosted Supabase project.
 --
--- Creates one ready-to-use account per access role. Recreated on every `npx supabase db reset`.
+-- Creates one ready-to-use account per access role, plus a second supervisor to reassign
+-- projects to, and one sample project with two milestones owned by supervisor@meritly.local.
+-- Recreated on every `npx supabase db reset`.
 --
---   admin@meritly.local       role: admin
---   supervisor@meritly.local  role: supervisor
---   employee@meritly.local    role: employee
+--   admin@meritly.local        role: admin
+--   supervisor@meritly.local   role: supervisor  (owns "Local Demo Project")
+--   supervisor2@meritly.local  role: supervisor
+--   employee@meritly.local     role: employee
 --
--- Shared local password for all three: Meritly-Local-Passw0rd!
+-- Shared local password for all four: Meritly-Local-Passw0rd!
 --
--- Fixed UUIDs use the seed range 00000000-0000-4000-8000-0000000000xx. The pgTAP suite
--- (supabase/tests) uses the disjoint range 00000000-0000-4000-8000-0000000001xx.
+-- Fixed UUIDs use the seed range 00000000-0000-4000-8000-0000000000xx. The pgTAP suites
+-- (supabase/tests) use the disjoint ranges 00000000-0000-4000-8000-0000000001xx, ...02xx
+-- and ...03xx.
 
 insert into auth.users (
   instance_id,
@@ -48,7 +52,8 @@ from (
   values
     ('00000000-0000-4000-8000-000000000001'::uuid, 'admin@meritly.local', 'Local Admin'),
     ('00000000-0000-4000-8000-000000000002'::uuid, 'supervisor@meritly.local', 'Local Supervisor'),
-    ('00000000-0000-4000-8000-000000000003'::uuid, 'employee@meritly.local', 'Local Employee')
+    ('00000000-0000-4000-8000-000000000003'::uuid, 'employee@meritly.local', 'Local Employee'),
+    ('00000000-0000-4000-8000-000000000004'::uuid, 'supervisor2@meritly.local', 'Local Supervisor 2')
 ) as u (id, email, display_name);
 
 -- Password sign-in requires a matching email identity per user.
@@ -76,9 +81,30 @@ from auth.users u
 where u.id in (
   '00000000-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
-  '00000000-0000-4000-8000-000000000003'
+  '00000000-0000-4000-8000-000000000003',
+  '00000000-0000-4000-8000-000000000004'
 );
 
--- The signup trigger created every profile as 'employee'; promote admin and supervisor.
+-- The signup trigger created every profile as 'employee'; promote admin and supervisors.
 update public.profiles set role = 'admin' where id = '00000000-0000-4000-8000-000000000001';
 update public.profiles set role = 'supervisor' where id = '00000000-0000-4000-8000-000000000002';
+update public.profiles set role = 'supervisor' where id = '00000000-0000-4000-8000-000000000004';
+
+-- Sample project. Must come after the promotions (the owner trigger requires a supervisor), and
+-- supervisor_id is explicit because auth.uid() is null without a JWT. At the default
+-- multiplier_max 1.30 it reserves 7800.00 of 10000.00.
+insert into public.projects (id, name, start_date, end_date, status, total_budget, supervisor_id)
+values (
+  '00000000-0000-4000-8000-000000000011',
+  'Local Demo Project',
+  '2026-01-01',
+  '2026-12-31',
+  'active',
+  10000.00,
+  '00000000-0000-4000-8000-000000000002'
+);
+
+insert into public.milestones (id, project_id, name, start_date, end_date, status, target_pool)
+values
+  ('00000000-0000-4000-8000-000000000021', '00000000-0000-4000-8000-000000000011', 'Milestone 1', '2026-01-01', '2026-06-30', 'active', 3000.00),
+  ('00000000-0000-4000-8000-000000000022', '00000000-0000-4000-8000-000000000011', 'Milestone 2', '2026-07-01', '2026-12-31', 'active', 3000.00);
