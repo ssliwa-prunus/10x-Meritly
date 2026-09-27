@@ -1,0 +1,73 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Topbar from "@/components/Topbar.astro";
+import JobRolesSection from "@/components/admin/JobRolesSection.astro";
+import KpiSettingsSection from "@/components/admin/KpiSettingsSection.astro";
+import RatingFactorsSection from "@/components/admin/RatingFactorsSection.astro";
+import { createClient } from "@/lib/supabase";
+import {
+  getBonusSettings,
+  listJobRoles,
+  settingsErrorMessage,
+  type SettingsSection,
+} from "@/lib/services/bonus-config";
+
+const saved = Astro.url.searchParams.get("saved");
+const errorCode = Astro.url.searchParams.get("error");
+const errorField = Astro.url.searchParams.get("field");
+const section = Astro.url.searchParams.get("section");
+
+// The URL carries only an error code; the displayed text always comes from the fixed catalog.
+const statusFor = (name: SettingsSection) => ({
+  saved: saved === name,
+  error: errorCode && section === name ? settingsErrorMessage(errorCode, errorField) : null,
+});
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+
+let loadError: string | null;
+let rolesResult: Awaited<ReturnType<typeof listJobRoles>> = {};
+let settingsResult: Awaited<ReturnType<typeof getBonusSettings>> = {};
+
+if (!supabase) {
+  loadError = "Supabase is not configured";
+} else {
+  [rolesResult, settingsResult] = await Promise.all([listJobRoles(supabase), getBonusSettings(supabase)]);
+  loadError = rolesResult.error ?? settingsResult.error ?? null;
+}
+
+const roles = rolesResult.data;
+const settings = settingsResult.data;
+---
+
+<Layout title="Bonus settings">
+  <div class="bg-cosmic min-h-screen p-4 text-white">
+    <div class="mx-auto w-full max-w-4xl">
+      <Topbar />
+      <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <h1 class="bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
+          Bonus settings
+        </h1>
+        <a href="/admin" class="text-sm text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+          Back to admin
+        </a>
+      </div>
+      <p class="mb-6 text-sm text-blue-100/60">
+        Changes apply to future computations only. Approved milestones keep the values they were computed with.
+      </p>
+
+      {loadError || !roles || !settings ? (
+        <div role="alert" class="rounded-2xl border border-red-400/40 bg-red-500/15 p-6 text-red-100">
+          <p class="font-semibold">Could not load the bonus configuration.</p>
+          <p class="mt-1 text-sm text-red-100/80">{loadError ?? "Unknown error"}</p>
+        </div>
+      ) : (
+        <div class="flex flex-col gap-6">
+          <JobRolesSection roles={roles} {...statusFor("roles")} />
+          <KpiSettingsSection settings={settings} {...statusFor("kpi")} />
+          <RatingFactorsSection settings={settings} {...statusFor("factors")} />
+        </div>
+      )}
+    </div>
+  </div>
+</Layout>

@@ -2,8 +2,10 @@ import { defineMiddleware } from "astro:middleware";
 import { createClient } from "@/lib/supabase";
 import type { Profile } from "@/types";
 
-const PROTECTED_ROUTES = ["/dashboard", "/admin"];
-const ADMIN_ROUTES = ["/admin"];
+const PROTECTED_ROUTES = ["/dashboard", "/admin", "/api/admin", "/projects", "/api/projects"];
+const ADMIN_ROUTES = ["/admin", "/api/admin"];
+/** Shared Supervisor/Admin project pages; RLS decides which projects each role sees. */
+const PROJECT_ROUTES = ["/projects", "/api/projects"];
 
 const matchesRoute = (pathname: string, routes: string[]) => routes.some((route) => pathname.startsWith(route));
 
@@ -51,6 +53,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return new Response("Service temporarily unavailable", { status: 503 });
     }
     if (context.locals.profile?.role !== "admin") {
+      return new Response("Forbidden", { status: 403 });
+    }
+  }
+
+  if (matchesRoute(pathname, PROJECT_ROUTES)) {
+    if (context.locals.profileError) {
+      return new Response("Service temporarily unavailable", { status: 503 });
+    }
+    const role = context.locals.profile?.role;
+    if (role !== "supervisor" && role !== "admin") {
       return new Response("Forbidden", { status: 403 });
     }
   }

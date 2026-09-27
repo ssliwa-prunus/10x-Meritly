@@ -32,13 +32,16 @@ Employee — participates in one or more projects/milestones and needs to see th
 ## Success Criteria
 
 ### Primary
+
 - The 6-step flow works end to end: Admin configures global settings → Supervisor creates a project and its milestones → Supervisor records employee engagement (time share, contribution rating) → Supervisor enters milestone KPI scores → the system computes each employee's bonus for the milestone → the employee can view their own computed result.
 
 ### Secondary
+
 - A Supervisor/Admin can view or export an aggregate report of total bonus and milestone count per employee (equivalent to the workbook's Raport tab).
 
 ### Guardrails
-- The sum of bonus payouts for a milestone never exceeds that milestone's bonus pool.
+
+- The sum of bonus payouts for a milestone never exceeds that milestone's payout pool (target pool × milestone multiplier), and the payout pool never exceeds target pool × the maximum multiplier.
 - An employee can see only their own bonus results and history — never another employee's figures, including via direct URL manipulation.
 - An employee's total engagement (time share) across active milestones never exceeds 100%.
 
@@ -48,10 +51,13 @@ Employee — participates in one or more projects/milestones and needs to see th
 
 - **Given** a milestone with its four KPI scores entered and every assigned employee's time-share and contribution rating recorded
 - **When** the Supervisor reviews the computed results and marks the milestone Approved
-- **Then** each employee's bonus is computed per the formula, the total never exceeds the milestone's pool, and the affected employee can independently view their own result and receives an email notification of it
+- **Then** the milestone multiplier derived from the KPI scores sets the milestone's payout pool, each employee's bonus is computed per the formula, the total never exceeds the payout pool, and the affected employee can independently view their own result and receives an email notification of it
 
 #### Acceptance Criteria
-- The sum of all computed bonuses for the milestone is ≤ the milestone's bonus pool
+
+- The payout pool equals the target pool × the milestone multiplier, rounded down, and the multiplier stays within the Admin-defined min/max bounds
+- The sum of all computed bonuses for the milestone is ≤ the milestone's payout pool
+- Two milestones with identical engagement but different KPI scores pay out different totals (the multiplier is not cancelled out by the proportional split)
 - An employee viewing results sees only their own bonus, never another employee's
 - Before the Supervisor marks the milestone Approved, no employee can see or is emailed its results
 - If any employee's total time-share across active milestones exceeds 100%, this is flagged to the Supervisor
@@ -59,52 +65,61 @@ Employee — participates in one or more projects/milestones and needs to see th
 ## Functional Requirements
 
 ### Administracja i konfiguracja
+
 - FR-001: Admin can add, edit, and remove role entries and their associated role weight. Priority: must-have
   > Socrates: Counter-argument considered: changing a role's weight would retroactively change already-computed historical bonuses. Resolution: kept; a role-weight change applies only to future computations — milestones whose results are already Approved (see FR-018) keep their historical figures frozen.
 - FR-002: Admin can define/edit KPI weights and the min/max milestone-multiplier bounds. Priority: must-have
   > Socrates: Counter-argument considered: same retroactivity risk as FR-001. Resolution: kept; same rule — changes apply prospectively only, Approved milestones are not recalculated.
+  > Socrates: Counter-argument considered: applied uniformly to every employee of a milestone inside a proportional split of a fixed pool, the multiplier cancels out and never changes a payout, and a maximum above 1.0 could never take effect under a hard pool cap. Resolution: the multiplier scales the milestone's pool instead (see Business Logic) — below 1.0 it returns the difference to the budget, above 1.0 it pays out more than the target pool, up to target × maximum.
 - FR-003: Admin can define/edit the contribution-rating (1-5) → factor (0.8-1.2) mapping. Priority: must-have
   > Socrates: Counter-argument considered: same retroactivity risk. Resolution: kept; same prospective-only rule applies.
 
 ### Projekty i etapy
+
 - FR-004: Supervisor can create a project (name, period, status, total bonus budget, free-text notes describing what it's for and who it's for). Priority: must-have
   > Socrates: Counter-argument considered: without validating that the period's end date is not before its start date, inconsistent project periods become possible. Resolution: kept, with that validation added as an explicit acceptance criterion.
-- FR-005: Supervisor can create a milestone within a project (name, period, bonus pool, status, free-text notes). Priority: must-have
+- FR-005: Supervisor can create a milestone within a project (name, period, target bonus pool, status, free-text notes). The target pool is the payout at a milestone multiplier of 1.0. Priority: must-have
   > Socrates: Counter-argument considered: nothing checks whether the sum of a project's milestone pools stays within that project's total bonus budget (a gap inherited from the spreadsheet, which has no project-level budget field at all). Resolution: closed via new FR-017 below — the project now carries a total bonus budget (added to FR-004) and its milestone pools are checked against it.
-- FR-006: Supervisor can enter/update a milestone's four KPI scores (Termin, Budżet, Jakość, Ryzyko), from which the system computes the milestone multiplier. Priority: must-have
+- FR-006: Supervisor can enter/update a milestone's four KPI scores (Termin, Budżet, Jakość, Ryzyko), from which the system computes the milestone multiplier that scales the milestone's target pool into its payout pool. Priority: must-have
   > Socrates: Counter-argument considered: manual 0-100 scoring without guidance is subjective and may be inconsistent across supervisors. Resolution: kept as-is; this subjectivity is an inherent, unchanged property of the model already validated in the spreadsheet in use today — no new mechanism added in MVP.
 
 ### Pracownicy i zaangażowanie
+
 - FR-007: Admin/Supervisor can register an employee with a role, from which the role weight derives. Priority: must-have
   > Socrates: No counter-argument raised; stands as written.
 - FR-008: Supervisor can assign an employee to a milestone with a time-share (0-1) and a contribution rating (1-5). Priority: must-have
   > Socrates: No counter-argument raised; stands as written — manual entry is the accepted MVP tradeoff since RCP (automatic time capture) is explicitly out of scope (see Non-Goals).
 
 ### Wyliczenie i wyniki
+
 - FR-009: Supervisor can view, for any milestone, the computed bonus for every assigned employee, per the formula. Priority: must-have
   > Socrates: No counter-argument raised; stands as written — visibility into one's own team's bonuses is inherent to the Supervisor role.
-- FR-010: Supervisor can view a milestone summary showing the pool, the computed payout total, and the remaining/unallocated amount, flagged against whether the total stays within the pool. Priority: must-have
-  > Socrates: Counter-argument considered: an informational flag alone doesn't prevent exceeding the pool. Resolution: kept as informational; the proportional-split formula (rounded down) mathematically cannot exceed the pool by construction, so this flag is confirmatory, not preventive — the real guardrail is the formula itself.
+- FR-010: Supervisor can view a milestone summary showing the target pool, the milestone multiplier, the payout pool, the computed payout total, and the remaining/unallocated amount (rounding residual), flagged against whether the total stays within the payout pool. Priority: must-have
+  > Socrates: Counter-argument considered: an informational flag alone doesn't prevent exceeding the pool. Resolution: kept as informational; the proportional split of the payout pool (rounded down) mathematically cannot exceed it by construction, so this flag is confirmatory, not preventive — the real guardrail is the formula itself.
 - FR-011: Supervisor can view, per employee, whether their total time-share across active milestones exceeds 100%. Priority: must-have
   > Socrates: Counter-argument considered: >100% engagement is sometimes legitimate (overtime, multiple concurrent projects), so a rigid rule could cry wolf. Resolution: kept as an informational flag only, not a blocking rule — same as the spreadsheet's Kontrola tab; Supervisor judgment prevails.
 - FR-012: Employee can view their own computed bonus for a milestone once its results are Approved (see FR-018). Priority: must-have
   > Socrates: Counter-argument considered: an employee could see draft/not-yet-final data before the Supervisor confirms it. Resolution: closed via new FR-018 — a Draft/Approved state gates employee visibility.
 
 ### Nawigacja i historia
+
 - FR-013: Supervisor can navigate from a milestone's results directly to an employee's detail view. Priority: must-have
   > Socrates: Counter-argument considered: this is navigational convenience, not a new business capability, and could be deferred. Resolution: kept as must-have; it directly answers the reported pain (information trapped across disconnected tabs).
 - FR-014: Supervisor/Employee can view an employee's history of their own past projects/milestones and the bonuses received in each. Priority: must-have
   > Socrates: Counter-argument considered: "full employee history" could balloon into browsing every project company-wide. Resolution: kept, scoped explicitly to the employee's own participation history only — not a company-wide project browser.
 
 ### Powiadomienia i zatwierdzanie
+
 - FR-016: The system can send an employee an email with their computed bonus for a milestone once it is Approved (see FR-018), removing the need for a supervisor to manually copy and send it. Priority: must-have
   > Socrates: No counter-argument raised; stands as written — this directly answers a need the user raised explicitly.
-- FR-017: Supervisor can view, for a project, whether the sum of its milestones' bonus pools exceeds the project's total bonus budget. Priority: must-have
+- FR-017: Supervisor can view, for a project, whether its milestones' worst-case payout exceeds the project's total bonus budget — the actual payout pool for Approved milestones plus target pool × the current maximum multiplier for the rest. Priority: must-have
   > Socrates: This FR exists specifically to close the gap surfaced by FR-005's Socrates round — the spreadsheet has no project-level budget check at all.
+  > Socrates: Counter-argument considered: checking target pools alone understates exposure, since a multiplier above 1.0 pays out more than the target. Resolution: not-yet-Approved milestones are reserved at their maximum possible payout, so good KPI results can never push a project over budget.
 - FR-018: Supervisor can mark a milestone's computed results as Approved; before approval, results are Draft and are visible only to the Supervisor — not to the affected employees, and no email notification is sent. Priority: must-have
   > Socrates: This FR exists specifically to close the gap surfaced by FR-012's Socrates round — employees must not see or be emailed unconfirmed figures.
 
 ### Raport (drugorzędne)
+
 - FR-015: Supervisor/Admin can view or export an aggregate report of total bonus and milestone count per employee. Priority: nice-to-have
   > Socrates: Counter-argument considered: as a nice-to-have, should it be in MVP scope at all? Resolution: kept as nice-to-have — attempted if time allows, never blocking the release.
 
@@ -117,9 +132,21 @@ Employee — participates in one or more projects/milestones and needs to see th
 
 ## Business Logic
 
-Meritly computes each employee's project bonus by splitting a milestone's fixed bonus pool proportionally among the employees engaged in it, according to each employee's weighted contribution (time share × role weight × contribution rating), scaled by a milestone performance multiplier derived from schedule, budget, quality, and risk scores, and rounded down so the total payout never exceeds the pool.
+Meritly computes each employee's project bonus in two steps. First, milestone performance sets the size of the pool: a milestone multiplier derived from the schedule, budget, quality, and risk scores scales the milestone's target pool into its payout pool. Second, individual contribution sets each person's share: the payout pool is split proportionally among the employees engaged in the milestone according to each employee's weighted contribution (time share × role weight × contribution-rating factor), rounded down so the total payout never exceeds the payout pool.
 
-The rule consumes: the milestone's bonus pool amount; each engaged employee's time-share and contribution rating for that milestone; each employee's role (which carries a weight); and the milestone's four performance scores (schedule, budget, quality, risk). Its output is an approved, per-employee bonus amount for that milestone, alongside a check that the milestone's total payout stays within its pool and a check that the project's total milestone pools stay within its overall budget. The Supervisor encounters this rule by reviewing the computed per-employee table before marking a milestone Approved; the employee encounters it as their own bonus figure, visible in-app and delivered by email, only once approved.
+```
+M           = clamp(Σ KPI weight_k × KPI score_k → multiplier, multiplier_min, multiplier_max)
+payout_pool = floor(target_pool × M)
+e_i         = time_share_i × role_weight_i × rating_factor_i
+bonus_i     = floor(payout_pool × e_i / Σ e_j)
+residual    = payout_pool − Σ bonus_i
+```
+
+Every `floor` rounds down to 0.01 PLN (one grosz).
+
+The multiplier is the same for everyone in a milestone, so it must scale the pool rather than each employee's weight; inside a proportional split it would cancel out. A multiplier below 1.0 leaves part of the target pool unpaid (returned to the project budget); a multiplier above 1.0 pays out more than the target pool, which FR-017 reserves in the project budget in advance. The rounding residual is shown, not silently dropped.
+
+The rule consumes: the milestone's target pool amount; each engaged employee's time-share and contribution rating for that milestone; each employee's role (which carries a weight); the milestone's four performance scores (schedule, budget, quality, risk); and the Admin-defined KPI weights, multiplier bounds, and rating → factor mapping. Its output is an approved, per-employee bonus amount for that milestone, alongside the milestone's multiplier and payout pool, a check that the milestone's total payout stays within its payout pool, and a check that the project's worst-case milestone payouts stay within its overall budget. The Supervisor encounters this rule by reviewing the computed per-employee table before marking a milestone Approved; the employee encounters it as their own bonus figure, visible in-app and delivered by email, only once approved.
 
 ## Access Control
 
