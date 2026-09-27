@@ -558,19 +558,19 @@ This is an additive migration: two new tables, one view, two functions and four 
 
 #### Automated
 
-- [x] 3.1 Type-check passes: `npx astro sync && npx astro check`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Production build succeeds: `npm run build`
-- [x] 3.4 Auth smoke test passes against a running preview: `npm run smoke`
-- [x] 3.5 pgTAP suites pass: `npx supabase test db`
+- [x] 3.1 Type-check passes: `npx astro sync && npx astro check` — 696b9d0
+- [x] 3.2 Lint passes: `npm run lint` — 696b9d0
+- [x] 3.3 Production build succeeds: `npm run build` — 696b9d0
+- [x] 3.4 Auth smoke test passes against a running preview: `npm run smoke` — 696b9d0
+- [x] 3.5 pgTAP suites pass: `npx supabase test db` — 696b9d0
 
 #### Manual
 
-- [x] 3.6 As `supervisor@meritly.local`: the seeded project shows 7 800,00 zł reserved and not over budget; creating a milestone with target 2 000.00 flips it to over budget (10 400,00 zł reserved)
-- [x] 3.7 As the Supervisor: setting that milestone to `cancelled` clears the flag; `12.555` and `0` as a target are rejected with a readable message
-- [x] 3.8 As the Supervisor: a milestone ending after the project end, and a duplicate milestone name, are each rejected with a specific message
-- [x] 3.9 As the Supervisor: after setting the project to `completed`, milestone forms disappear; after reopening it to `active`, they are back
-- [x] 3.10 As `admin@meritly.local`: all projects are listed with owners; the Admin creates a project for `supervisor2@meritly.local`, then reassigns the seeded project to it; `supervisor@meritly.local` no longer sees it and `supervisor2` does
-- [x] 3.11 As the Admin: milestones are read-only, and a direct `POST` to a milestone route returns the "read-only for Admins" message
-- [x] 3.12 As the Admin: changing the budget of the seeded project so reserved > budget shows the over-budget badge on both the list and detail pages
-- [x] 3.13 The pages are usable at phone width (list and forms wrap, no horizontal scroll)
+- [x] 3.6 As `supervisor@meritly.local`: the seeded project shows 7 800,00 zł reserved and not over budget; creating a milestone with target 2 000.00 flips it to over budget (10 400,00 zł reserved) — 696b9d0
+- [x] 3.7 As the Supervisor: setting that milestone to `cancelled` clears the flag; `12.555` and `0` as a target are rejected with a readable message — 696b9d0
+- [x] 3.8 As the Supervisor: a milestone ending after the project end, and a duplicate milestone name, are each rejected with a specific message — 696b9d0
+- [x] 3.9 As the Supervisor: after setting the project to `completed`, milestone forms disappear; after reopening it to `active`, they are back — 696b9d0
+- [x] 3.10 As `admin@meritly.local`: all projects are listed with owners; the Admin creates a project for `supervisor2@meritly.local`, then reassigns the seeded project to it; `supervisor@meritly.local` no longer sees it and `supervisor2` does — 696b9d0
+- [x] 3.11 As the Admin: milestones are read-only, and a direct `POST` to a milestone route returns the "read-only for Admins" message — 696b9d0
+- [x] 3.12 As the Admin: changing the budget of the seeded project so reserved > budget shows the over-budget badge on both the list and detail pages — 696b9d0
+- [x] 3.13 The pages are usable at phone width (list and forms wrap, no horizontal scroll) — 696b9d0
