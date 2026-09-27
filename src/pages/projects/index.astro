@@ -1,0 +1,163 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Topbar from "@/components/Topbar.astro";
+import ProjectForm from "@/components/projects/ProjectForm.astro";
+import { createClient } from "@/lib/supabase";
+import { formatPln } from "@/lib/format";
+import { listProjectExposure, listProjects, listSupervisors, projectsErrorMessage } from "@/lib/services/projects";
+
+const isAdmin = Astro.locals.profile?.role === "admin";
+
+const errorCode = Astro.url.searchParams.get("error");
+const errorField = Astro.url.searchParams.get("field");
+const section = Astro.url.searchParams.get("section");
+
+// The URL carries only an error code; the displayed text always comes from the fixed catalog.
+const errorMessage = errorCode ? projectsErrorMessage(errorCode, errorField) : null;
+const newFormError = section === "new" ? errorMessage : null;
+const pageError = section === null ? errorMessage : null;
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+
+let loadError: string | null;
+let projectsResult: Awaited<ReturnType<typeof listProjects>> = {};
+let exposureResult: Awaited<ReturnType<typeof listProjectExposure>> = {};
+let supervisorsResult: Awaited<ReturnType<typeof listSupervisors>> = {};
+
+if (!supabase) {
+  loadError = "Supabase is not configured";
+} else {
+  [projectsResult, exposureResult, supervisorsResult] = await Promise.all([
+    listProjects(supabase),
+    listProjectExposure(supabase),
+    isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
+  ]);
+  loadError = projectsResult.error ?? exposureResult.error ?? supervisorsResult.error ?? null;
+}
+
+const projects = projectsResult.data;
+const exposureById = new Map((exposureResult.data ?? []).map((row) => [row.project_id, row]));
+const supervisors = supervisorsResult.data;
+const ownerById = new Map((supervisors ?? []).map((profile) => [profile.id, profile.display_name ?? profile.email]));
+
+const loaded = !loadError && projects && exposureResult.data && (!isAdmin || supervisors);
+---
+
+<Layout title="Projects">
+  <div class="bg-cosmic min-h-screen p-4 text-white">
+    <div class="mx-auto w-full max-w-5xl">
+      <Topbar />
+      <h1 class="mb-2 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
+        Projects
+      </h1>
+      <p class="mb-6 text-sm text-blue-100/60">
+        Reserved is the worst case: non-cancelled milestones × the maximum multiplier. Over budget is a warning only.
+      </p>
+
+      {pageError && (
+        <p role="alert" class="mb-6 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
+          {pageError}
+        </p>
+      )}
+
+      {!loaded ? (
+        <div role="alert" class="rounded-2xl border border-red-400/40 bg-red-500/15 p-6 text-red-100">
+          <p class="font-semibold">Could not load projects.</p>
+          <p class="mt-1 text-sm text-red-100/80">{loadError ?? "Unknown error"}</p>
+        </div>
+      ) : (
+        <div class="flex flex-col gap-6">
+          <section
+            id="list"
+            aria-labelledby="list-heading"
+            class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
+          >
+            <h2 id="list-heading" class="text-xl font-semibold">
+              {isAdmin ? "All projects" : "Your projects"}
+            </h2>
+            {projects.length === 0 ? (
+              <p class="mt-3 text-sm text-blue-100/60">No projects yet. Create one below.</p>
+            ) : (
+              <div class="mt-4 overflow-x-auto">
+                <table class="w-full min-w-[40rem] text-left text-sm">
+                  <thead class="text-blue-100/70">
+                    <tr class="border-b border-white/10">
+                      <th scope="col" class="py-2 pr-3 font-medium">
+                        Name
+                      </th>
+                      <th scope="col" class="py-2 pr-3 font-medium">
+                        Period
+                      </th>
+                      <th scope="col" class="py-2 pr-3 font-medium">
+                        Status
+                      </th>
+                      {isAdmin && (
+                        <th scope="col" class="py-2 pr-3 font-medium">
+                          Owner
+                        </th>
+                      )}
+                      <th scope="col" class="py-2 pr-3 text-right font-medium">
+                        Budget
+                      </th>
+                      <th scope="col" class="py-2 pr-3 text-right font-medium">
+                        Reserved
+                      </th>
+                      <th scope="col" class="py-2 pr-3 text-right font-medium">
+                        Remaining
+                      </th>
+                      <th scope="col" class="py-2 font-medium">
+                        <span class="sr-only">Budget flag</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projects.map((project) => {
+                      const exposure = exposureById.get(project.id);
+                      return (
+                        <tr class="border-b border-white/5 align-top">
+                          <td class="py-2 pr-3">
+                            <a
+                              href={`/projects/${project.id}`}
+                              class="text-purple-300 transition-colors hover:text-purple-100 hover:underline"
+                            >
+                              {project.name}
+                            </a>
+                          </td>
+                          <td class="py-2 pr-3 whitespace-nowrap text-blue-100/80">
+                            {project.start_date} – {project.end_date}
+                          </td>
+                          <td class="py-2 pr-3 capitalize">{project.status}</td>
+                          {isAdmin && (
+                            <td class="py-2 pr-3 text-blue-100/80">{ownerById.get(project.supervisor_id) ?? "—"}</td>
+                          )}
+                          <td class="py-2 pr-3 text-right whitespace-nowrap tabular-nums">
+                            {formatPln(project.total_budget)}
+                          </td>
+                          <td class="py-2 pr-3 text-right whitespace-nowrap tabular-nums">
+                            {exposure ? formatPln(exposure.reserved_total) : "—"}
+                          </td>
+                          <td class="py-2 pr-3 text-right whitespace-nowrap tabular-nums">
+                            {exposure ? formatPln(exposure.remaining) : "—"}
+                          </td>
+                          <td class="py-2">
+                            {exposure?.over_budget && (
+                              <span class="rounded-full border border-red-400/40 bg-red-500/20 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-red-100">
+                                Over budget
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <ProjectForm supervisors={isAdmin ? supervisors : undefined} saved={false} error={newFormError} />
+        </div>
+      )}
+    </div>
+  </div>
+</Layout>

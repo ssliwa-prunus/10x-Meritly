@@ -1,0 +1,110 @@
+---
+import { buttonClass, inputClass } from "@/components/admin/form-classes";
+import { WORK_STATUSES } from "@/lib/services/projects";
+import type { Profile, Project } from "@/types";
+
+interface Props {
+  /** The project to edit; omitted for the create form. */
+  project?: Project;
+  /** Owner choices. Given only to Admins; without it the owner select is not rendered. */
+  supervisors?: Profile[];
+  saved: boolean;
+  error: string | null;
+}
+
+const { project, supervisors, saved, error } = Astro.props;
+
+const sectionId = project ? "project" : "new";
+const headingId = `${sectionId}-heading`;
+const action = project ? `/api/projects/${project.id}` : "/api/projects";
+const currentStatus = project?.status ?? "planned";
+---
+
+<section
+  id={sectionId}
+  aria-labelledby={headingId}
+  class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
+>
+  <h2 id={headingId} class="text-xl font-semibold">
+    {project ? "Project details" : "New project"}
+  </h2>
+  <p class="mt-1 text-sm text-blue-100/60">
+    Amounts in PLN, above 0 with at most 2 decimals. The end date must be on or after the start date.
+  </p>
+
+  {saved && (
+    <p role="status" class="mt-3 rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">
+      Project saved.
+    </p>
+  )}
+  {error && (
+    <p role="alert" class="mt-3 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
+      {error}
+    </p>
+  )}
+
+  <form method="POST" action={action} class="mt-4 flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label class="flex flex-col gap-1 text-sm sm:col-span-2">
+        <span class="text-blue-100/80">Name</span>
+        <input type="text" name="name" value={project?.name} maxlength="100" required class:list={inputClass} />
+      </label>
+      <label class="flex flex-col gap-1 text-sm">
+        <span class="text-blue-100/80">Start date</span>
+        <input type="date" name="start_date" value={project?.start_date} required class:list={inputClass} />
+      </label>
+      <label class="flex flex-col gap-1 text-sm">
+        <span class="text-blue-100/80">End date</span>
+        <input type="date" name="end_date" value={project?.end_date} required class:list={inputClass} />
+      </label>
+      <label class="flex flex-col gap-1 text-sm">
+        <span class="text-blue-100/80">Status</span>
+        <select name="status" required class:list={inputClass}>
+          {WORK_STATUSES.map((status) => (
+            <option value={status} selected={status === currentStatus} class="bg-slate-900">
+              {status}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm">
+        <span class="text-blue-100/80">Total budget (PLN)</span>
+        <input
+          type="text"
+          inputmode="decimal"
+          name="total_budget"
+          value={project?.total_budget.toFixed(2)}
+          autocomplete="off"
+          required
+          class:list={inputClass}
+        />
+      </label>
+      {supervisors && (
+        <label class="flex flex-col gap-1 text-sm sm:col-span-2">
+          <span class="text-blue-100/80">Owner</span>
+          <select name="supervisor_id" required class:list={inputClass}>
+            {!project && (
+              <option value="" selected class="bg-slate-900">
+                Choose a supervisor
+              </option>
+            )}
+            {supervisors.map((supervisor) => (
+              <option value={supervisor.id} selected={supervisor.id === project?.supervisor_id} class="bg-slate-900">
+                {supervisor.display_name ? `${supervisor.display_name} (${supervisor.email})` : supervisor.email}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <label class="flex flex-col gap-1 text-sm sm:col-span-2">
+        <span class="text-blue-100/80">Notes</span>
+        <textarea name="notes" maxlength="2000" rows="3" class:list={inputClass}>{project?.notes ?? ""}</textarea>
+      </label>
+    </div>
+    <div>
+      <button type="submit" class:list={buttonClass}>
+        {project ? "Save project" : "Create project"}
+      </button>
+    </div>
+  </form>
+</section>

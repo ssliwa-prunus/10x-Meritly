@@ -1,0 +1,72 @@
+---
+import { buttonClass, inputClass } from "@/components/admin/form-classes";
+import { WORK_STATUSES } from "@/lib/services/projects";
+import type { Milestone } from "@/types";
+
+interface Props {
+  projectId: string;
+  /** The milestone to edit; omitted for the add form. */
+  milestone?: Milestone;
+  error: string | null;
+}
+
+const { projectId, milestone, error } = Astro.props;
+
+const action = milestone
+  ? `/api/projects/${projectId}/milestones/${milestone.id}`
+  : `/api/projects/${projectId}/milestones`;
+const currentStatus = milestone?.status ?? "planned";
+---
+
+<div class="flex flex-col gap-3">
+  {error && (
+    <p role="alert" class="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
+      {error}
+    </p>
+  )}
+  <form method="POST" action={action} class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <label class="flex flex-col gap-1 text-sm sm:col-span-2 lg:col-span-3">
+      <span class="text-blue-100/80">Name</span>
+      <input type="text" name="name" value={milestone?.name} maxlength="100" required class:list={inputClass} />
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">Start date</span>
+      <input type="date" name="start_date" value={milestone?.start_date} required class:list={inputClass} />
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">End date</span>
+      <input type="date" name="end_date" value={milestone?.end_date} required class:list={inputClass} />
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">Status</span>
+      <select name="status" required class:list={inputClass}>
+        {WORK_STATUSES.map((status) => (
+          <option value={status} selected={status === currentStatus} class="bg-slate-900">
+            {status}
+          </option>
+        ))}
+      </select>
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">Target pool (PLN)</span>
+      <input
+        type="text"
+        inputmode="decimal"
+        name="target_pool"
+        value={milestone?.target_pool.toFixed(2)}
+        autocomplete="off"
+        required
+        class:list={inputClass}
+      />
+    </label>
+    <label class="flex flex-col gap-1 text-sm sm:col-span-2">
+      <span class="text-blue-100/80">Notes</span>
+      <textarea name="notes" maxlength="2000" rows="2" class:list={inputClass}>{milestone?.notes ?? ""}</textarea>
+    </label>
+    <div class="sm:col-span-2 lg:col-span-3">
+      <button type="submit" class:list={buttonClass}>
+        {milestone ? "Save milestone" : "Add milestone"}
+      </button>
+    </div>
+  </form>
+</div>

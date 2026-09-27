@@ -544,33 +544,33 @@ This is an additive migration: two new tables, one view, two functions and four 
 
 #### Automated
 
-- [x] 2.1 Types regenerate and type-check passes: `npx astro sync && npx astro check`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Production build succeeds: `npm run build`
-- [x] 2.4 Existing pgTAP suites still pass: `npx supabase test db`
+- [x] 2.1 Types regenerate and type-check passes: `npx astro sync && npx astro check` — 3dd048b
+- [x] 2.2 Lint passes: `npm run lint` — 3dd048b
+- [x] 2.3 Production build succeeds: `npm run build` — 3dd048b
+- [x] 2.4 Existing pgTAP suites still pass: `npx supabase test db` — 3dd048b
 
 #### Manual
 
-- [x] 2.5 The S-01 admin settings page still saves and still shows errors (the form-helper move caused no regression)
-- [x] 2.6 Signed in as `employee@meritly.local`, `/projects` and `POST /api/projects` return 403
+- [x] 2.5 The S-01 admin settings page still saves and still shows errors (the form-helper move caused no regression) — 3dd048b
+- [x] 2.6 Signed in as `employee@meritly.local`, `/projects` and `POST /api/projects` return 403 — 3dd048b
 
 ### Phase 3: Pages, Navigation and Docs
 
 #### Automated
 
-- [ ] 3.1 Type-check passes: `npx astro sync && npx astro check`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Production build succeeds: `npm run build`
-- [ ] 3.4 Auth smoke test passes against a running preview: `npm run smoke`
-- [ ] 3.5 pgTAP suites pass: `npx supabase test db`
+- [x] 3.1 Type-check passes: `npx astro sync && npx astro check`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Production build succeeds: `npm run build`
+- [x] 3.4 Auth smoke test passes against a running preview: `npm run smoke`
+- [x] 3.5 pgTAP suites pass: `npx supabase test db`
 
 #### Manual
 
-- [ ] 3.6 As `supervisor@meritly.local`: the seeded project shows 7 800,00 zł reserved and not over budget; creating a milestone with target 2 000.00 flips it to over budget (10 400,00 zł reserved)
-- [ ] 3.7 As the Supervisor: setting that milestone to `cancelled` clears the flag; `12.555` and `0` as a target are rejected with a readable message
-- [ ] 3.8 As the Supervisor: a milestone ending after the project end, and a duplicate milestone name, are each rejected with a specific message
-- [ ] 3.9 As the Supervisor: after setting the project to `completed`, milestone forms disappear; after reopening it to `active`, they are back
-- [ ] 3.10 As `admin@meritly.local`: all projects are listed with owners; the Admin creates a project for `supervisor2@meritly.local`, then reassigns the seeded project to it; `supervisor@meritly.local` no longer sees it and `supervisor2` does
-- [ ] 3.11 As the Admin: milestones are read-only, and a direct `POST` to a milestone route returns the "read-only for Admins" message
-- [ ] 3.12 As the Admin: changing the budget of the seeded project so reserved > budget shows the over-budget badge on both the list and detail pages
-- [ ] 3.13 The pages are usable at phone width (list and forms wrap, no horizontal scroll)
+- [x] 3.6 As `supervisor@meritly.local`: the seeded project shows 7 800,00 zł reserved and not over budget; creating a milestone with target 2 000.00 flips it to over budget (10 400,00 zł reserved)
+- [x] 3.7 As the Supervisor: setting that milestone to `cancelled` clears the flag; `12.555` and `0` as a target are rejected with a readable message
+- [x] 3.8 As the Supervisor: a milestone ending after the project end, and a duplicate milestone name, are each rejected with a specific message
+- [x] 3.9 As the Supervisor: after setting the project to `completed`, milestone forms disappear; after reopening it to `active`, they are back
+- [x] 3.10 As `admin@meritly.local`: all projects are listed with owners; the Admin creates a project for `supervisor2@meritly.local`, then reassigns the seeded project to it; `supervisor@meritly.local` no longer sees it and `supervisor2` does
+- [x] 3.11 As the Admin: milestones are read-only, and a direct `POST` to a milestone route returns the "read-only for Admins" message
+- [x] 3.12 As the Admin: changing the budget of the seeded project so reserved > budget shows the over-budget badge on both the list and detail pages
+- [x] 3.13 The pages are usable at phone width (list and forms wrap, no horizontal scroll)

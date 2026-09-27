@@ -142,6 +142,8 @@ bonus_i     = floor(payout_pool × e_i / Σ e_j)
 residual    = payout_pool − Σ bonus_i
 ```
 
+Every `floor` rounds down to 0.01 PLN (one grosz).
+
 The multiplier is the same for everyone in a milestone, so it must scale the pool rather than each employee's weight; inside a proportional split it would cancel out. A multiplier below 1.0 leaves part of the target pool unpaid (returned to the project budget); a multiplier above 1.0 pays out more than the target pool, which FR-017 reserves in the project budget in advance. The rounding residual is shown, not silently dropped.
 
 The rule consumes: the milestone's target pool amount; each engaged employee's time-share and contribution rating for that milestone; each employee's role (which carries a weight); the milestone's four performance scores (schedule, budget, quality, risk); and the Admin-defined KPI weights, multiplier bounds, and rating → factor mapping. Its output is an approved, per-employee bonus amount for that milestone, alongside the milestone's multiplier and payout pool, a check that the milestone's total payout stays within its payout pool, and a check that the project's worst-case milestone payouts stay within its overall budget. The Supervisor encounters this rule by reviewing the computed per-employee table before marking a milestone Approved; the employee encounters it as their own bonus figure, visible in-app and delivered by email, only once approved.
