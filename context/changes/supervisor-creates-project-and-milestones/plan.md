@@ -477,6 +477,15 @@ Shared Supervisor/Admin pages for listing, creating and editing projects and mil
 
 ---
 
+## Implementation Notes
+
+Adaptations recorded after implementation (impl-review F3):
+
+- `MilestoneForm` takes only an `error` prop and serves both the add and row-edit forms. The milestones "saved" line lives in `[id].astro`.
+- The list page shows no saved flash, because creating a project redirects to its detail page.
+- The redirect helpers take an optional `section` (`projectsUrl`) and `milestoneId` (`projectUrl`), so errors land on the failing form or row.
+- Impl-review F1 added `supabase/migrations/20260927130000_milestones_guard_ownership.sql`. With it, `milestones_check_parent` raises `42501` for a non-owner with a JWT before `MR002`/`MR003`.
+
 ## Testing Strategy
 
 ### Unit Tests:

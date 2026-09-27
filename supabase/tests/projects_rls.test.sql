@@ -14,7 +14,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(72);
+select plan(75);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner)
@@ -22,6 +22,7 @@ select plan(72);
 --               ...0304 admin      ...0305 supervisor C (owns nothing)
 --   projects:   ...0311 A's (created by A)   ...0312 B's (owner-inserted)
 --               ...0313 A's second (created by A)   ...0314 B's (created by the admin)
+--               ...0315 B's closed (owner-inserted)
 --   milestones: ...0321/0322/0323 in 0311 (created by A)   ...0324 in 0312 (owner-inserted)
 --               ...0325 in 0313 (created by A)
 -- ---------------------------------------------------------------------------
@@ -53,6 +54,12 @@ insert into public.milestones (id, project_id, name, start_date, end_date, statu
 values (
   '00000000-0000-4000-8000-000000000324', '00000000-0000-4000-8000-000000000312', 'pgTAP B1',
   '2026-02-01', '2026-03-31', 'active', 1000.00
+);
+-- B's closed project: probes into it must not reveal its status (guard ownership check).
+insert into public.projects (id, name, start_date, end_date, status, total_budget, supervisor_id)
+values (
+  '00000000-0000-4000-8000-000000000315', 'pgTAP Project B closed', '2026-01-01', '2026-12-31', 'completed', 5000.00,
+  '00000000-0000-4000-8000-000000000303'
 );
 
 -- ---------------------------------------------------------------------------
@@ -126,6 +133,20 @@ select throws_ok(
   '42501',
   null,
   'supervisor A inserting a milestone into B''s project is denied'
+);
+select throws_ok(
+  $$ insert into public.milestones (project_id, name, start_date, end_date, target_pool)
+     values ('00000000-0000-4000-8000-000000000312', 'pgTAP A in B late', '2027-01-01', '2027-01-31', 100.00) $$,
+  '42501',
+  null,
+  'supervisor A inserting out-of-period dates into B''s project gets 42501, not MR002'
+);
+select throws_ok(
+  $$ insert into public.milestones (project_id, name, start_date, end_date, target_pool)
+     values ('00000000-0000-4000-8000-000000000315', 'pgTAP A in B closed', '2026-05-01', '2026-05-31', 100.00) $$,
+  '42501',
+  null,
+  'supervisor A inserting into B''s closed project gets 42501, not MR003'
 );
 select throws_ok(
   $$ insert into public.projects (name, start_date, end_date, total_budget, supervisor_id)
@@ -335,6 +356,13 @@ set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000301"}';
 select is_empty($$ select id from public.projects $$, 'employee sees 0 projects');
 select is_empty($$ select id from public.milestones $$, 'employee sees 0 milestones');
 select is_empty($$ select project_id from public.project_budget_exposure $$, 'employee sees 0 exposure rows');
+select throws_ok(
+  $$ insert into public.milestones (project_id, name, start_date, end_date, target_pool)
+     values ('00000000-0000-4000-8000-000000000315', 'pgTAP employee probe', '2027-01-01', '2027-01-31', 100.00) $$,
+  '42501',
+  null,
+  'employee inserting a milestone gets 42501, not a guard code'
+);
 
 -- ---------------------------------------------------------------------------
 -- Admin: reads everything, writes projects, never writes milestones

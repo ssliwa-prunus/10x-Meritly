@@ -51,6 +51,10 @@ Raised by the S-02 guard triggers (`supabase/migrations/20260927120000_projects_
 | `MR005`  | `supervisor_owns_projects`           | the role of a Supervisor who owns projects is changed                              |
 | `MR006`  | not user-reachable (`save_failed`)   | a milestone's `project_id` is changed                                              |
 
+`milestones_check_parent` raises `42501` before `MR002`/`MR003` when a caller with a JWT does not own the parent project (`supabase/migrations/20260927130000_milestones_guard_ownership.sql`), so the guards never reveal another project's status or period.
+
+Deleting an auth user who still owns projects fails with a foreign-key violation (`projects.supervisor_id` is `on delete restrict`), just as changing their role fails with `MR005`: reassign their projects first.
+
 ## Policy conventions
 
 - Role checks in policies call the helpers wrapped in a sub-select, e.g. `using ((select public.is_admin()))`, so Postgres evaluates them once per statement. Never sub-select `public.profiles` inline in a policy (it recurses into the profiles policies).

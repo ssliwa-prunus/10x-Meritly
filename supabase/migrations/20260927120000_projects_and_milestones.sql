@@ -243,6 +243,8 @@ create trigger projects_check_period
   for each row execute function public.projects_check_period();
 
 -- A Supervisor who owns projects keeps the role until an Admin reassigns them (MR005).
+-- Deleting such a user fails too (projects.supervisor_id is on delete restrict): reassign
+-- their projects first.
 create function public.profiles_block_owner_role_change()
 returns trigger
 language plpgsql
