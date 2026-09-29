@@ -1,8 +1,9 @@
 -- LOCAL DEVELOPMENT / CI ONLY. Never run this against the hosted Supabase project.
 --
 -- Creates one ready-to-use account per access role, plus a second supervisor to reassign
--- projects to, and one sample project with two milestones owned by supervisor@meritly.local.
--- Recreated on every `npx supabase db reset`.
+-- projects to, one sample project with two milestones owned by supervisor@meritly.local, and two
+-- employee records owned by that supervisor (one activated and over-allocated at 110%, one not
+-- yet invited). Recreated on every `npx supabase db reset`.
 --
 --   admin@meritly.local        role: admin
 --   supervisor@meritly.local   role: supervisor  (owns "Local Demo Project")
@@ -12,8 +13,8 @@
 -- Shared local password for all four: Meritly-Local-Passw0rd!
 --
 -- Fixed UUIDs use the seed range 00000000-0000-4000-8000-0000000000xx. The pgTAP suites
--- (supabase/tests) use the disjoint ranges 00000000-0000-4000-8000-0000000001xx, ...02xx
--- and ...03xx.
+-- (supabase/tests) use the disjoint ranges 00000000-0000-4000-8000-0000000001xx, ...02xx,
+-- ...03xx and ...04xx.
 
 insert into auth.users (
   instance_id,
@@ -108,3 +109,36 @@ insert into public.milestones (id, project_id, name, start_date, end_date, statu
 values
   ('00000000-0000-4000-8000-000000000021', '00000000-0000-4000-8000-000000000011', 'Milestone 1', '2026-01-01', '2026-06-30', 'active', 3000.00),
   ('00000000-0000-4000-8000-000000000022', '00000000-0000-4000-8000-000000000011', 'Milestone 2', '2026-07-01', '2026-12-31', 'active', 3000.00);
+
+-- Employee records owned by supervisor@meritly.local. supervisor_id is explicit because
+-- auth.uid() is null without a JWT. ...0031 is linked to the employee@meritly.local account as if
+-- the invite had been accepted; ...0032 has not been invited yet.
+insert into public.employees (id, supervisor_id, full_name, email, job_role_id, profile_id, invited_at, activated_at)
+values
+  (
+    '00000000-0000-4000-8000-000000000031',
+    '00000000-0000-4000-8000-000000000002',
+    'Local Employee',
+    'employee@meritly.local',
+    (select jr.id from public.job_roles jr where jr.name = 'Senior'),
+    '00000000-0000-4000-8000-000000000003',
+    now(),
+    now()
+  ),
+  (
+    '00000000-0000-4000-8000-000000000032',
+    '00000000-0000-4000-8000-000000000002',
+    'Pending Invitee',
+    'pending@meritly.local',
+    (select jr.id from public.job_roles jr where jr.name = 'Senior'),
+    null,
+    null,
+    null
+  );
+
+-- Assignments for Local Employee on both open milestones: an open total of 1.10, so the >100%
+-- flag shows in employee_time_share_totals.
+insert into public.milestone_engagements (id, milestone_id, employee_id, time_share, rating)
+values
+  ('00000000-0000-4000-8000-000000000041', '00000000-0000-4000-8000-000000000021', '00000000-0000-4000-8000-000000000031', 0.60, 4),
+  ('00000000-0000-4000-8000-000000000042', '00000000-0000-4000-8000-000000000022', '00000000-0000-4000-8000-000000000031', 0.50, 3);

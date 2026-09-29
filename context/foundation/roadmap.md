@@ -3,7 +3,7 @@ project: Meritly
 version: 1
 status: draft
 created: 2026-09-22
-updated: 2026-09-27
+updated: 2026-09-29
 prd_version: 1
 main_goal: quality
 top_blocker: time
@@ -39,16 +39,16 @@ A budget-holding supervisor today splits a milestone's bonus pool using a valida
 
 ## At a glance
 
-| ID   | Change ID                                             | Outcome (user can …)                                                                                                                                | Prerequisites | PRD refs                         | Status   |
-| ---- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------- | -------- |
-| F-01 | role-and-rls-scaffold                                 | (foundation) role-based access + RLS scaffold in place                                                                                              | —             | Access Control, NFR (visibility) | done     |
-| S-01 | admin-configures-bonus-rules                          | Admin can configure role weights, KPI weights, and the rating→factor mapping                                                                        | F-01          | FR-001, FR-002, FR-003           | done     |
-| S-02 | supervisor-creates-project-and-milestones             | Supervisor can create a project (with a total bonus budget) and milestones with target pools, worst-case payout checked against that budget         | F-01          | FR-004, FR-005, FR-017           | done     |
-| S-03 | supervisor-assigns-employee-engagement                | Supervisor can register employees and assign their engagement (time-share, contribution rating) to a milestone, with >100% total time-share flagged | S-02, F-01    | FR-007, FR-008, FR-011           | proposed |
-| S-04 | supervisor-scores-milestone-and-sees-computed-bonuses | Supervisor can score a milestone's four KPIs and see each employee's computed bonus, never exceeding the KPI-scaled payout pool                     | S-01, S-03    | FR-006, FR-009, FR-010           | proposed |
-| S-05 | supervisor-approves-milestone-employee-sees-bonus     | Supervisor can approve a milestone; the affected employee then sees their own bonus and receives an email — never another employee's                | S-04, F-01    | FR-012, FR-016, FR-018, US-01    | proposed |
-| S-06 | navigate-to-employee-detail-and-history               | Supervisor/Employee can drill into an employee's detail view and see their own history of past projects/milestones and bonuses                      | S-05          | FR-013, FR-014                   | proposed |
-| S-07 | aggregate-bonus-report                                | Supervisor/Admin can view or export an aggregate report of total bonus and milestone count per employee                                             | S-05          | FR-015                           | proposed |
+| ID   | Change ID                                             | Outcome (user can …)                                                                                                                                | Prerequisites | PRD refs                         | Status      |
+| ---- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------- | ----------- |
+| F-01 | role-and-rls-scaffold                                 | (foundation) role-based access + RLS scaffold in place                                                                                              | —             | Access Control, NFR (visibility) | done        |
+| S-01 | admin-configures-bonus-rules                          | Admin can configure role weights, KPI weights, and the rating→factor mapping                                                                        | F-01          | FR-001, FR-002, FR-003           | done        |
+| S-02 | supervisor-creates-project-and-milestones             | Supervisor can create a project (with a total bonus budget) and milestones with target pools, worst-case payout checked against that budget         | F-01          | FR-004, FR-005, FR-017           | done        |
+| S-03 | supervisor-assigns-employee-engagement                | Supervisor can register employees and assign their engagement (time-share, contribution rating) to a milestone, with >100% total time-share flagged | S-02, F-01    | FR-007, FR-008, FR-011           | in-progress |
+| S-04 | supervisor-scores-milestone-and-sees-computed-bonuses | Supervisor can score a milestone's four KPIs and see each employee's computed bonus, never exceeding the KPI-scaled payout pool                     | S-01, S-03    | FR-006, FR-009, FR-010           | proposed    |
+| S-05 | supervisor-approves-milestone-employee-sees-bonus     | Supervisor can approve a milestone; the affected employee then sees their own bonus and receives an email — never another employee's                | S-04, F-01    | FR-012, FR-016, FR-018, US-01    | proposed    |
+| S-06 | navigate-to-employee-detail-and-history               | Supervisor/Employee can drill into an employee's detail view and see their own history of past projects/milestones and bonuses                      | S-05          | FR-013, FR-014                   | proposed    |
+| S-07 | aggregate-bonus-report                                | Supervisor/Admin can view or export an aggregate report of total bonus and milestone count per employee                                             | S-05          | FR-015                           | proposed    |
 
 ## Streams
 
@@ -123,7 +123,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - The >100% flag aggregates one employee's engagement across every active milestone they're on, not just the current one — worth naming explicitly so `/10x-plan` scopes the query correctly. Owner: team. Block: no.
 - **Risk:** The cross-milestone aggregation is the one subtlety in an otherwise simple assignment slice; PRD treats it as informational only (Supervisor judgment prevails), not blocking.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-04: Supervisor scores milestone and sees computed bonuses
 
