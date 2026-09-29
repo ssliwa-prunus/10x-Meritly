@@ -177,7 +177,14 @@ const sectionError = rowErrorId || addFormError ? null : milestonesStatus.error;
                   {milestones.map((milestone) => (
                     <tbody class="border-b border-white/5">
                       <tr class="align-top">
-                        <td class="py-2 pr-3 break-words">{milestone.name}</td>
+                        <td class="py-2 pr-3 break-words">
+                          <a
+                            href={`/projects/${project.id}/milestones/${milestone.id}`}
+                            class="text-purple-300 transition-colors hover:text-purple-100 hover:underline"
+                          >
+                            {milestone.name}
+                          </a>
+                        </td>
                         <td class="py-2 pr-3 text-blue-100/80">
                           <span class="whitespace-nowrap">{milestone.start_date}</span> –{" "}
                           <span class="whitespace-nowrap">{milestone.end_date}</span>

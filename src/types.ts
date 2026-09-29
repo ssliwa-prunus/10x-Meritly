@@ -100,6 +100,20 @@ export interface Engagement {
   rating: number;
 }
 
+/**
+ * An engagement as listed on a milestone page: the row plus the employee's name and job role (null
+ * when the employee row is not visible) and their open time-share total (0 when none).
+ */
+export interface EngagementListItem extends Engagement {
+  employee_name: string | null;
+  job_role_name: string | null;
+  open_total: number;
+  over_allocated: boolean;
+}
+
+/** An employee the signed-in Supervisor owns and may still assign to a milestone. */
+export type AssignableEmployee = Pick<Employee, "id" | "full_name">;
+
 /** An employee as listed on /employees: the row plus its job role name and open time-share total (0 when none). */
 export interface EmployeeListItem extends Employee {
   job_role_name: string;

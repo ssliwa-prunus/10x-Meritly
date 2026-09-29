@@ -706,34 +706,34 @@ This phase documents the new surfaces and runbook, then rolls the feature out to
 
 #### Automated
 
-- [x] 3.1 Type check passes: `npx astro sync && npx astro check`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Build passes: `npm run build`
-- [x] 3.4 Smoke passes: `npm run smoke`
+- [x] 3.1 Type check passes: `npx astro sync && npx astro check` — c6a671b
+- [x] 3.2 Lint passes: `npm run lint` — c6a671b
+- [x] 3.3 Build passes: `npm run build` — c6a671b
+- [x] 3.4 Smoke passes: `npm run smoke` — c6a671b
 
 #### Manual
 
-- [x] 3.5 Seed Supervisor sees `…0031` (Active, 110% flagged) and `…0032` (Not invited)
-- [x] 3.6 Register and edit an employee; archived job role not offered; email locked after invite; Send invite works via Inbucket
-- [x] 3.7 supervisor2 sees none of supervisor1's employees; duplicate email shows only the generic message
-- [x] 3.8 Admin sees all with owner column, registers for supervisor2, and moving `…0031` is refused with the open-engagements message
-- [x] 3.9 Employee user gets 403 on `/employees`
+- [x] 3.5 Seed Supervisor sees `…0031` (Active, 110% flagged) and `…0032` (Not invited) — c6a671b
+- [x] 3.6 Register and edit an employee; archived job role not offered; email locked after invite; Send invite works via Inbucket — c6a671b
+- [x] 3.7 supervisor2 sees none of supervisor1's employees; duplicate email shows only the generic message — c6a671b
+- [x] 3.8 Admin sees all with owner column, registers for supervisor2, and moving `…0031` is refused with the open-engagements message — c6a671b
+- [x] 3.9 Employee user gets 403 on `/employees` — c6a671b
 
 ### Phase 4: Assignment UI
 
 #### Automated
 
-- [ ] 4.1 Type check passes: `npx astro sync && npx astro check`
-- [ ] 4.2 Lint passes: `npm run lint`
-- [ ] 4.3 Build passes: `npm run build`
-- [ ] 4.4 Smoke passes: `npm run smoke`
-- [ ] 4.5 DB tests pass: `npx supabase test db`
+- [x] 4.1 Type check passes: `npx astro sync && npx astro check`
+- [x] 4.2 Lint passes: `npm run lint`
+- [x] 4.3 Build passes: `npm run build`
+- [x] 4.4 Smoke passes: `npm run smoke`
+- [x] 4.5 DB tests pass: `npx supabase test db`
 
 #### Manual
 
-- [ ] 4.6 Milestone 1 shows `…0031` at 60%, rating 4, total 110% flagged; add, edit, range errors and delete for `…0032` work; no duplicate offer
-- [ ] 4.7 Completing Milestone 2 hides its forms, drops the total to 60% unflagged, and crafted POSTs return the closed message
-- [ ] 4.8 supervisor2 gets not-found on the milestone URL; Admin sees assignments read-only with all-milestone totals
+- [x] 4.6 Milestone 1 shows `…0031` at 60%, rating 4, total 110% flagged; add, edit, range errors and delete for `…0032` work; no duplicate offer
+- [x] 4.7 Completing Milestone 2 hides its forms, drops the total to 60% unflagged, and crafted POSTs return the closed message
+- [x] 4.8 supervisor2 gets not-found on the milestone URL; Admin sees assignments read-only with all-milestone totals
 
 ### Phase 5: Docs and production rollout
 

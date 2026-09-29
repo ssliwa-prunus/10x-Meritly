@@ -1,0 +1,73 @@
+---
+import { buttonClass, inputClass } from "@/components/form-classes";
+import type { AssignableEmployee, Engagement } from "@/types";
+
+interface Props {
+  projectId: string;
+  milestoneId: string;
+  /** The assignment to edit; omitted for the add form. */
+  engagement?: Engagement;
+  /** Employee choices for the add form: the Supervisor's own employees not yet on this milestone. */
+  employees?: AssignableEmployee[];
+  error: string | null;
+}
+
+const { projectId, milestoneId, engagement, employees = [], error } = Astro.props;
+
+const basePath = `/api/projects/${projectId}/milestones/${milestoneId}/engagements`;
+const action = engagement ? `${basePath}/${engagement.id}` : basePath;
+const currentRating = engagement?.rating ?? 3;
+---
+
+<div class="flex flex-col gap-3">
+  {error && (
+    <p role="alert" class="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
+      {error}
+    </p>
+  )}
+  <form method="POST" action={action} class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    {!engagement && (
+      <label class="flex flex-col gap-1 text-sm">
+        <span class="text-blue-100/80">Employee</span>
+        <select name="employee_id" required class:list={inputClass}>
+          <option value="" selected class="bg-slate-900">
+            Choose an employee
+          </option>
+          {employees.map((employee) => (
+            <option value={employee.id} class="bg-slate-900">
+              {employee.full_name}
+            </option>
+          ))}
+        </select>
+      </label>
+    )}
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">Time share (0.01–1.00)</span>
+      <input
+        type="text"
+        inputmode="decimal"
+        name="time_share"
+        value={engagement?.time_share.toFixed(2)}
+        placeholder="0.50"
+        autocomplete="off"
+        required
+        class:list={inputClass}
+      />
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">Rating (1–5)</span>
+      <select name="rating" required class:list={inputClass}>
+        {[1, 2, 3, 4, 5].map((rating) => (
+          <option value={String(rating)} selected={rating === currentRating} class="bg-slate-900">
+            {rating}
+          </option>
+        ))}
+      </select>
+    </label>
+    <div class="sm:col-span-3">
+      <button type="submit" class:list={buttonClass}>
+        {engagement ? "Save assignment" : "Assign employee"}
+      </button>
+    </div>
+  </form>
+</div>
