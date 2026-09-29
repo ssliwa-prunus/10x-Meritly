@@ -2,7 +2,16 @@ import { defineMiddleware } from "astro:middleware";
 import { createClient } from "@/lib/supabase";
 import type { Profile } from "@/types";
 
-const PROTECTED_ROUTES = ["/dashboard", "/admin", "/api/admin", "/projects", "/api/projects"];
+// /auth/confirm stays public: it is how an invited user gets signed in.
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/admin",
+  "/api/admin",
+  "/projects",
+  "/api/projects",
+  "/auth/set-password",
+  "/api/auth/set-password",
+];
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
 /** Shared Supervisor/Admin project pages; RLS decides which projects each role sees. */
 const PROJECT_ROUTES = ["/projects", "/api/projects"];

@@ -2,7 +2,16 @@
 import Layout from "@/layouts/Layout.astro";
 import SignInForm from "@/components/auth/SignInForm";
 
-const error = Astro.url.searchParams.get("error");
+// Known codes map to fixed text; any other value keeps the existing behaviour.
+const SIGNIN_ERROR_MESSAGES: Record<string, string> = {
+  invite_invalid: "This invite link is invalid or expired. Ask your supervisor to resend it.",
+};
+
+const errorParam = Astro.url.searchParams.get("error");
+const error =
+  errorParam !== null && Object.hasOwn(SIGNIN_ERROR_MESSAGES, errorParam)
+    ? SIGNIN_ERROR_MESSAGES[errorParam]
+    : errorParam;
 ---
 
 <Layout title="Sign in">

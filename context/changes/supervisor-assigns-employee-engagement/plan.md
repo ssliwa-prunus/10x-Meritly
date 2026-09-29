@@ -676,31 +676,31 @@ This phase documents the new surfaces and runbook, then rolls the feature out to
 
 #### Automated
 
-- [x] 1.1 Migration and seed apply cleanly: `npx supabase db reset`
-- [x] 1.2 All pgTAP suites pass, including the new one: `npx supabase test db`
-- [x] 1.3 Existing suites unchanged and green (profiles, bonus_config, projects), including the global "every view is security_invoker" check
+- [x] 1.1 Migration and seed apply cleanly: `npx supabase db reset` — 147f25f
+- [x] 1.2 All pgTAP suites pass, including the new one: `npx supabase test db` — 147f25f
+- [x] 1.3 Existing suites unchanged and green (profiles, bonus_config, projects), including the global "every view is security_invoker" check — 147f25f
 
 #### Manual
 
-- [x] 1.4 In Studio, the seeded employee `…0031` shows `open_total = 1.10` / `over_allocated = true` in `employee_time_share_totals` when queried as the seed Supervisor
+- [x] 1.4 In Studio, the seeded employee `…0031` shows `open_total = 1.10` / `over_allocated = true` in `employee_time_share_totals` when queried as the seed Supervisor — 147f25f
 
 ### Phase 2: Invite and account activation
 
 #### Automated
 
-- [ ] 2.1 Type check passes: `npx astro sync && npx astro check`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 DB tests still pass: `npx supabase test db`
-- [ ] 2.5 Smoke still passes against a local preview: `npm run smoke`
+- [x] 2.1 Type check passes: `npx astro sync && npx astro check`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 DB tests still pass: `npx supabase test db`
+- [x] 2.5 Smoke still passes against a local preview: `npm run smoke`
 
 #### Manual
 
-- [ ] 2.6 Function call as seed Supervisor for `…0032` returns 200, invite in Inbucket, `profile_id`/`invited_at` set
-- [ ] 2.7 Invite link lands on `/auth/set-password` signed in; password set; re-sign-in works; `activated_at` set
-- [ ] 2.8 Resend before acceptance delivers a fresh email; activated employee returns 409 `already_active`
-- [ ] 2.9 supervisor2 gets 404 and the employee user gets 403 from the function
-- [ ] 2.10 Expired or reused link lands on sign-in with the fixed invite message
+- [x] 2.6 Function call as seed Supervisor for `…0032` returns 200, invite in Inbucket, `profile_id`/`invited_at` set
+- [x] 2.7 Invite link lands on `/auth/set-password` signed in; password set; re-sign-in works; `activated_at` set
+- [x] 2.8 Resend before acceptance delivers a fresh email; activated employee returns 409 `already_active`
+- [x] 2.9 supervisor2 gets 404 and the employee user gets 403 from the function
+- [x] 2.10 Expired or reused link lands on sign-in with the fixed invite message
 
 ### Phase 3: Employees UI
 
