@@ -1,0 +1,93 @@
+---
+import { buttonClass, inputClass } from "@/components/form-classes";
+import { cn } from "@/lib/utils";
+import type { Employee, JobRole, Profile } from "@/types";
+
+interface Props {
+  /** The employee to edit; omitted for the register form. */
+  employee?: Employee;
+  /** Job role choices: active roles only (plus, when editing, the employee's current role). */
+  jobRoles: JobRole[];
+  /** Owner choices. Given only to Admins; without it the owner select is not rendered. */
+  supervisors?: Profile[];
+  error: string | null;
+}
+
+const { employee, jobRoles, supervisors, error } = Astro.props;
+
+const action = employee ? `/api/employees/${employee.id}` : "/api/employees";
+// The email is locked after the first invite; a disabled input is not posted, so the column stays untouched.
+const emailLocked = employee !== undefined && employee.invited_at !== null;
+---
+
+<div class="flex flex-col gap-3">
+  {error && (
+    <p role="alert" class="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
+      {error}
+    </p>
+  )}
+  <form method="POST" action={action} class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">Name</span>
+      <input
+        type="text"
+        name="full_name"
+        value={employee?.full_name}
+        maxlength="100"
+        required
+        class:list={inputClass}
+      />
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">Email</span>
+      <input
+        type="email"
+        name="email"
+        value={employee?.email}
+        maxlength="254"
+        autocomplete="off"
+        required={!emailLocked}
+        disabled={emailLocked}
+        class:list={cn(inputClass, emailLocked && "cursor-not-allowed opacity-60")}
+      />
+      {emailLocked && <span class="text-xs text-blue-100/50">Locked after the first invite.</span>}
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-blue-100/80">Job role</span>
+      <select name="job_role_id" required class:list={inputClass}>
+        {!employee && (
+          <option value="" selected class="bg-slate-900">
+            Choose a job role
+          </option>
+        )}
+        {jobRoles.map((role) => (
+          <option value={role.id} selected={role.id === employee?.job_role_id} class="bg-slate-900">
+            {role.archived_at === null ? role.name : `${role.name} (archived)`}
+          </option>
+        ))}
+      </select>
+    </label>
+    {supervisors && (
+      <label class="flex flex-col gap-1 text-sm">
+        <span class="text-blue-100/80">Owner</span>
+        <select name="supervisor_id" required class:list={inputClass}>
+          {!employee && (
+            <option value="" selected class="bg-slate-900">
+              Choose a supervisor
+            </option>
+          )}
+          {supervisors.map((supervisor) => (
+            <option value={supervisor.id} selected={supervisor.id === employee?.supervisor_id} class="bg-slate-900">
+              {supervisor.display_name ? `${supervisor.display_name} (${supervisor.email})` : supervisor.email}
+            </option>
+          ))}
+        </select>
+      </label>
+    )}
+    <div class="sm:col-span-2">
+      <button type="submit" class:list={buttonClass}>
+        {employee ? "Save employee" : "Register employee"}
+      </button>
+    </div>
+  </form>
+</div>

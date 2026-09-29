@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Catalog-agnostic form helpers. Each service owns its error catalog and passes its type guard;
@@ -38,3 +38,22 @@ export async function parseForm<T extends z.ZodType, C extends string>(
   if (!parsed.success) return { error: firstIssueError(parsed.error, isCode) };
   return { data: parsed.data };
 }
+
+// ---------------------------------------------------------------------------
+// Decimal form fields. Every decimal rule is compared in integer hundredths, because values like
+// 0.3 + 0.3 + 0.25 + 0.15 are not exactly 1 in floating point. Issue messages are catalog codes
+// (required, not_a_number, too_many_decimals), so a catalog using decimalField must define them.
+// ---------------------------------------------------------------------------
+
+export const toHundredths = (value: number) => Math.round(value * 100);
+
+export const hasAtMostTwoDecimals = (value: number) => Math.abs(value * 100 - toHundredths(value)) < 1e-6;
+
+/** A required decimal form field: non-empty string, coerced to a finite number, at most 2 decimals. */
+export const decimalField = () =>
+  z
+    .string({ error: "required" })
+    .trim()
+    .min(1, "required")
+    .pipe(z.coerce.number({ error: "not_a_number" }))
+    .refine(hasAtMostTwoDecimals, "too_many_decimals");

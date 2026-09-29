@@ -688,36 +688,36 @@ This phase documents the new surfaces and runbook, then rolls the feature out to
 
 #### Automated
 
-- [x] 2.1 Type check passes: `npx astro sync && npx astro check`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
-- [x] 2.4 DB tests still pass: `npx supabase test db`
-- [x] 2.5 Smoke still passes against a local preview: `npm run smoke`
+- [x] 2.1 Type check passes: `npx astro sync && npx astro check` — 1d0e811
+- [x] 2.2 Lint passes: `npm run lint` — 1d0e811
+- [x] 2.3 Build passes: `npm run build` — 1d0e811
+- [x] 2.4 DB tests still pass: `npx supabase test db` — 1d0e811
+- [x] 2.5 Smoke still passes against a local preview: `npm run smoke` — 1d0e811
 
 #### Manual
 
-- [x] 2.6 Function call as seed Supervisor for `…0032` returns 200, invite in Inbucket, `profile_id`/`invited_at` set
-- [x] 2.7 Invite link lands on `/auth/set-password` signed in; password set; re-sign-in works; `activated_at` set
-- [x] 2.8 Resend before acceptance delivers a fresh email; activated employee returns 409 `already_active`
-- [x] 2.9 supervisor2 gets 404 and the employee user gets 403 from the function
-- [x] 2.10 Expired or reused link lands on sign-in with the fixed invite message
+- [x] 2.6 Function call as seed Supervisor for `…0032` returns 200, invite in Inbucket, `profile_id`/`invited_at` set — 1d0e811
+- [x] 2.7 Invite link lands on `/auth/set-password` signed in; password set; re-sign-in works; `activated_at` set — 1d0e811
+- [x] 2.8 Resend before acceptance delivers a fresh email; activated employee returns 409 `already_active` — 1d0e811
+- [x] 2.9 supervisor2 gets 404 and the employee user gets 403 from the function — 1d0e811
+- [x] 2.10 Expired or reused link lands on sign-in with the fixed invite message — 1d0e811
 
 ### Phase 3: Employees UI
 
 #### Automated
 
-- [ ] 3.1 Type check passes: `npx astro sync && npx astro check`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
-- [ ] 3.4 Smoke passes: `npm run smoke`
+- [x] 3.1 Type check passes: `npx astro sync && npx astro check`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Build passes: `npm run build`
+- [x] 3.4 Smoke passes: `npm run smoke`
 
 #### Manual
 
-- [ ] 3.5 Seed Supervisor sees `…0031` (Active, 110% flagged) and `…0032` (Not invited)
-- [ ] 3.6 Register and edit an employee; archived job role not offered; email locked after invite; Send invite works via Inbucket
-- [ ] 3.7 supervisor2 sees none of supervisor1's employees; duplicate email shows only the generic message
-- [ ] 3.8 Admin sees all with owner column, registers for supervisor2, and moving `…0031` is refused with the open-engagements message
-- [ ] 3.9 Employee user gets 403 on `/employees`
+- [x] 3.5 Seed Supervisor sees `…0031` (Active, 110% flagged) and `…0032` (Not invited)
+- [x] 3.6 Register and edit an employee; archived job role not offered; email locked after invite; Send invite works via Inbucket
+- [x] 3.7 supervisor2 sees none of supervisor1's employees; duplicate email shows only the generic message
+- [x] 3.8 Admin sees all with owner column, registers for supervisor2, and moving `…0031` is refused with the open-engagements message
+- [x] 3.9 Employee user gets 403 on `/employees`
 
 ### Phase 4: Assignment UI
 

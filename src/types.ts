@@ -68,3 +68,41 @@ export interface ProjectExposure {
   remaining: number;
   over_budget: boolean;
 }
+
+/** Row of `public.employees` as exposed to the app (audit columns omitted). */
+export interface Employee {
+  id: string;
+  supervisor_id: string;
+  full_name: string;
+  email: string;
+  job_role_id: string;
+  profile_id: string | null;
+  invited_at: string | null;
+  activated_at: string | null;
+}
+
+/** Derived from `invited_at` / `activated_at`: never invited, invite sent, or invite accepted. */
+export type InviteStatus = "not_invited" | "invited" | "active";
+
+/** Row of the `public.employee_time_share_totals` view (FR-011, informational only). */
+export interface EmployeeTimeShare {
+  employee_id: string;
+  open_total: number;
+  over_allocated: boolean;
+}
+
+/** Row of `public.milestone_engagements` as exposed to the app (audit columns omitted). */
+export interface Engagement {
+  id: string;
+  milestone_id: string;
+  employee_id: string;
+  time_share: number;
+  rating: number;
+}
+
+/** An employee as listed on /employees: the row plus its job role name and open time-share total (0 when none). */
+export interface EmployeeListItem extends Employee {
+  job_role_name: string;
+  open_total: number;
+  over_allocated: boolean;
+}

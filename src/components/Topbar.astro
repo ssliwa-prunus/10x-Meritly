@@ -12,9 +12,14 @@ const canSeeProjects = profile?.role === "supervisor" || profile?.role === "admi
           Dashboard
         </a>
         {canSeeProjects && (
-          <a href="/projects" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-            Projects
-          </a>
+          <>
+            <a href="/projects" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+              Projects
+            </a>
+            <a href="/employees" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+              Employees
+            </a>
+          </>
         )}
         <form method="POST" action="/api/auth/signout">
           <button type="submit" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">

@@ -9,12 +9,14 @@ const PROTECTED_ROUTES = [
   "/api/admin",
   "/projects",
   "/api/projects",
+  "/employees",
+  "/api/employees",
   "/auth/set-password",
   "/api/auth/set-password",
 ];
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
-/** Shared Supervisor/Admin project pages; RLS decides which projects each role sees. */
-const PROJECT_ROUTES = ["/projects", "/api/projects"];
+/** Supervisor/Admin pages (projects, employees); RLS decides which rows each role sees. */
+const PROJECT_ROUTES = ["/projects", "/api/projects", "/employees", "/api/employees"];
 
 const matchesRoute = (pathname: string, routes: string[]) => routes.some((route) => pathname.startsWith(route));
 
