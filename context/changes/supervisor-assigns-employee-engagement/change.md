@@ -1,9 +1,9 @@
 ---
 change_id: supervisor-assigns-employee-engagement
 title: Supervisor assigns employee engagement
-status: implementing
+status: impl_reviewed
 created: 2026-09-29
-updated: 2026-09-29
+updated: 2026-09-30
 archived_at: null
 ---
 

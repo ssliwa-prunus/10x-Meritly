@@ -15,7 +15,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(72);
+select plan(75);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so supervisor_id is explicit)
@@ -23,15 +23,17 @@ select plan(72);
 --                ...0404 admin      ...0405 supervisor C (owns one employee, no projects)
 --                ...0406 invited employee account (email not confirmed yet)
 --   job roles:   ...0408 active     ...0409 archived
---   projects:    ...0411 A's   ...0412 B's   ...0413 A's (cancelled below)
+--   projects:    ...0411 A's   ...0412 B's   ...0413 A's (cancelled below)   ...0414 A's (closed history only)
 --   milestones:  ...0421 (0411, active)   ...0422 (0411, planned)   ...0423 (0411, completed below)
 --                ...0424 (0412, active)   ...0425 (0413, active; its project is cancelled below)
+--                ...0426 (0414, completed below)
 --   employees:   ...0431 EA1 (A)   ...0432 EA2 (A; closed-milestone history only)
 --                ...0433 EA3 (A; open engagement)   ...0434 EB1 (B)   ...0435 EC1 (C)
 --                ...0436 EX (B, moved to A below)   ...0437 EI (A; invited, linked to ...0406)
 --   engagements: ...0441 EA1@0421 0.60   ...0442 EA1@0422 0.50   ...0443 EA1@0423 0.30
 --                ...0444 EA2@0423 0.20   ...0445 EA3@0421 0.40   ...0446 EA3@0425 0.10
 --                ...0447 EX@0424 0.50 (B's milestone)   ...0448 EX@0421 0.50 (A's milestone)
+--                ...0449 EA2@0426 0.20
 -- ---------------------------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, raw_user_meta_data, created_at, updated_at)
 values
@@ -59,7 +61,8 @@ insert into public.projects (id, name, start_date, end_date, status, total_budge
 values
   ('00000000-0000-4000-8000-000000000411', 'pgTAP Employees Project A', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000402'),
   ('00000000-0000-4000-8000-000000000412', 'pgTAP Employees Project B', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000403'),
-  ('00000000-0000-4000-8000-000000000413', 'pgTAP Employees Project A2', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000402');
+  ('00000000-0000-4000-8000-000000000413', 'pgTAP Employees Project A2', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000402'),
+  ('00000000-0000-4000-8000-000000000414', 'pgTAP Employees Project A3', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000402');
 
 insert into public.milestones (id, project_id, name, start_date, end_date, status, target_pool)
 values
@@ -67,7 +70,8 @@ values
   ('00000000-0000-4000-8000-000000000422', '00000000-0000-4000-8000-000000000411', 'pgTAP E M2', '2026-04-01', '2026-06-30', 'planned', 1000.00),
   ('00000000-0000-4000-8000-000000000423', '00000000-0000-4000-8000-000000000411', 'pgTAP E M3', '2026-07-01', '2026-09-30', 'active', 1000.00),
   ('00000000-0000-4000-8000-000000000424', '00000000-0000-4000-8000-000000000412', 'pgTAP E B1', '2026-01-01', '2026-03-31', 'active', 1000.00),
-  ('00000000-0000-4000-8000-000000000425', '00000000-0000-4000-8000-000000000413', 'pgTAP E A2 M1', '2026-01-01', '2026-03-31', 'active', 1000.00);
+  ('00000000-0000-4000-8000-000000000425', '00000000-0000-4000-8000-000000000413', 'pgTAP E A2 M1', '2026-01-01', '2026-03-31', 'active', 1000.00),
+  ('00000000-0000-4000-8000-000000000426', '00000000-0000-4000-8000-000000000414', 'pgTAP E A3 M1', '2026-01-01', '2026-03-31', 'active', 1000.00);
 
 insert into public.employees (id, supervisor_id, full_name, email, job_role_id)
 values
@@ -94,7 +98,8 @@ values
   ('00000000-0000-4000-8000-000000000444', '00000000-0000-4000-8000-000000000423', '00000000-0000-4000-8000-000000000432', 0.20, 3),
   ('00000000-0000-4000-8000-000000000445', '00000000-0000-4000-8000-000000000421', '00000000-0000-4000-8000-000000000433', 0.40, 3),
   ('00000000-0000-4000-8000-000000000446', '00000000-0000-4000-8000-000000000425', '00000000-0000-4000-8000-000000000433', 0.10, 3),
-  ('00000000-0000-4000-8000-000000000447', '00000000-0000-4000-8000-000000000424', '00000000-0000-4000-8000-000000000436', 0.50, 3);
+  ('00000000-0000-4000-8000-000000000447', '00000000-0000-4000-8000-000000000424', '00000000-0000-4000-8000-000000000436', 0.50, 3),
+  ('00000000-0000-4000-8000-000000000449', '00000000-0000-4000-8000-000000000426', '00000000-0000-4000-8000-000000000432', 0.20, 3);
 
 -- EX gets engagements on both A's and B's open milestones: B's milestone is closed while EX
 -- moves from B to A (closed history does not block the move), then reopened.
@@ -107,7 +112,8 @@ insert into public.milestone_engagements (id, milestone_id, employee_id, time_sh
 values ('00000000-0000-4000-8000-000000000448', '00000000-0000-4000-8000-000000000421', '00000000-0000-4000-8000-000000000436', 0.50, 3);
 
 -- Close the parents last, after their engagements exist.
-update public.milestones set status = 'completed' where id = '00000000-0000-4000-8000-000000000423';
+update public.milestones set status = 'completed'
+where id in ('00000000-0000-4000-8000-000000000423', '00000000-0000-4000-8000-000000000426');
 update public.projects set status = 'cancelled' where id = '00000000-0000-4000-8000-000000000413';
 
 -- ---------------------------------------------------------------------------
@@ -475,6 +481,18 @@ select isnt_empty(
   'moving an employee whose only engagements are on closed milestones succeeds'
 );
 select throws_ok(
+  $$ update public.projects set supervisor_id = '00000000-0000-4000-8000-000000000403'
+     where id = '00000000-0000-4000-8000-000000000411' $$,
+  'MR012',
+  null,
+  'moving a project whose open milestones have engagements of the old owner''s employees raises MR012'
+);
+select isnt_empty(
+  $$ update public.projects set supervisor_id = '00000000-0000-4000-8000-000000000403'
+     where id = '00000000-0000-4000-8000-000000000414' returning id $$,
+  'moving a project whose only engagements are on closed milestones succeeds'
+);
+select throws_ok(
   $$ update public.profiles set role = 'employee' where id = '00000000-0000-4000-8000-000000000405' $$,
   'MR005',
   null,
@@ -564,6 +582,17 @@ update auth.users set email_confirmed_at = now() where id = '00000000-0000-4000-
 select ok(
   (select activated_at is not null from public.employees where id = '00000000-0000-4000-8000-000000000437'),
   'confirming the linked account''s email stamps activated_at'
+);
+
+delete from auth.users where id = '00000000-0000-4000-8000-000000000406';
+
+select ok(
+  (
+    select profile_id is null and invited_at is null and activated_at is null
+    from public.employees
+    where id = '00000000-0000-4000-8000-000000000437'
+  ),
+  'deleting the linked account clears profile_id and the invite stamps'
 );
 
 -- ---------------------------------------------------------------------------

@@ -27,6 +27,8 @@ const PROJECTS_ERROR_MESSAGES = {
   milestone_outside_project: "The milestone period must lie within the project period",
   project_closed: "The project is completed or cancelled; reopen it before changing its milestones",
   project_period_excludes_milestones: "The new project period would leave some milestones outside it",
+  project_has_foreign_engagements:
+    "Employees of the current owner are assigned to open milestones; remove those assignments first",
   admin_read_only: "Admins can view milestones but not change them",
   not_found: "Not found",
   save_failed: "Could not save changes. Please try again.",
@@ -226,6 +228,7 @@ const GUARD_ERROR_CODES: Record<string, ProjectsErrorCode> = {
   MR002: "milestone_outside_project",
   MR003: "project_closed",
   MR004: "project_period_excludes_milestones",
+  MR012: "project_has_foreign_engagements",
 };
 
 function mapPostgrestError(error: PostgrestError, context: string): ProjectsError {

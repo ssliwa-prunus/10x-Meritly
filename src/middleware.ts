@@ -1,4 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
+import { isInviteSession } from "@/lib/set-password";
 import { createClient } from "@/lib/supabase";
 import type { Profile } from "@/types";
 
@@ -17,6 +18,8 @@ const PROTECTED_ROUTES = [
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
 /** Supervisor/Admin pages (projects, employees); RLS decides which rows each role sees. */
 const PROJECT_ROUTES = ["/projects", "/api/projects", "/employees", "/api/employees"];
+/** Invite acceptance only: a session from a regular password sign-in cannot set a password here. */
+const SET_PASSWORD_ROUTES = ["/auth/set-password", "/api/auth/set-password"];
 
 const matchesRoute = (pathname: string, routes: string[]) => routes.some((route) => pathname.startsWith(route));
 
@@ -75,6 +78,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const role = context.locals.profile?.role;
     if (role !== "supervisor" && role !== "admin") {
       return new Response("Forbidden", { status: 403 });
+    }
+  }
+
+  if (matchesRoute(pathname, SET_PASSWORD_ROUTES)) {
+    if (!supabase || !(await isInviteSession(supabase))) {
+      return context.redirect("/dashboard");
     }
   }
 

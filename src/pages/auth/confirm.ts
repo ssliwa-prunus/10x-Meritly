@@ -27,6 +27,12 @@ export const GET: APIRoute = async (context) => {
     return context.redirect(INVITE_INVALID_URL);
   }
 
+  // Someone else may already be signed in in this browser (e.g. a Supervisor opening the invite
+  // they sent). End that session on this device explicitly before signing in as the invitee.
+  if (context.locals.user) {
+    await supabase.auth.signOut({ scope: "local" });
+  }
+
   const { error } = await supabase.auth.verifyOtp({ token_hash: parsed.data.token_hash, type: parsed.data.type });
   if (error) {
     return context.redirect(INVITE_INVALID_URL);

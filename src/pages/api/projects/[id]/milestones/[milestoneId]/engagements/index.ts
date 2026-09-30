@@ -3,11 +3,12 @@ import { createClient } from "@/lib/supabase";
 import {
   createEngagement,
   engagementInputSchema,
+  isMilestoneInProject,
   listAssignableEmployees,
   milestoneUrl,
   parseForm,
 } from "@/lib/services/engagements";
-import { listMilestones, projectIdSchema, projectsUrl, projectUrl } from "@/lib/services/projects";
+import { projectIdSchema, projectsUrl, projectUrl } from "@/lib/services/projects";
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
@@ -32,9 +33,12 @@ export const POST: APIRoute = async (context) => {
   }
 
   // The milestone must belong to the project in the URL, so a crafted project/milestone pair
-  // cannot insert under one project and redirect to another. RLS still guards the data itself.
-  const milestones = await listMilestones(supabase, projectId.data);
-  if (!milestones.data?.some((milestone) => milestone.id === milestoneId.data)) {
+  // cannot write under one project and redirect to another. RLS still guards the data itself.
+  const inProject = await isMilestoneInProject(supabase, projectId.data, milestoneId.data);
+  if (inProject.error) {
+    return context.redirect(projectUrl(projectId.data, "milestones", { error: { code: "save_failed" } }));
+  }
+  if (!inProject.data) {
     return context.redirect(projectUrl(projectId.data, "milestones", { error: { code: "not_found" } }));
   }
 

@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
@@ -44,3 +45,18 @@ export const setPasswordSchema = z
 
 export const setPasswordUrl = (code: SetPasswordErrorCode | "invalid_form") =>
   `/auth/set-password?${new URLSearchParams({ error: code }).toString()}`;
+
+const INVITE_AMR_METHODS = new Set(["invite", "otp"]);
+
+/**
+ * True when the current session was created by an invite link: the most recent sign-in method in
+ * the verified JWT's `amr` claim (most recent first, token refreshes skipped) is invite/otp. A
+ * password sign-in never qualifies, so a stolen regular session cannot set a new password here.
+ */
+export async function isInviteSession(supabase: SupabaseClient): Promise<boolean> {
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data) return false;
+  const methods = (data.claims.amr ?? []).map((entry) => (typeof entry === "string" ? entry : entry.method));
+  const latest = methods.find((method) => method !== "token_refresh");
+  return latest !== undefined && INVITE_AMR_METHODS.has(latest);
+}

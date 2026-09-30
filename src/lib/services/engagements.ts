@@ -276,6 +276,25 @@ export async function listAssignableEmployees(
   return { data: employees.data.filter((employee) => !assignedIds.has(employee.id)) };
 }
 
+/**
+ * Whether the milestone belongs to the project, as the caller sees them through RLS. Routes use it
+ * so a crafted project/milestone pair cannot write under one project and redirect to another.
+ */
+export async function isMilestoneInProject(
+  supabase: SupabaseClient,
+  projectId: string,
+  milestoneId: string,
+): Promise<ServiceResult<boolean>> {
+  const { data, error } = await supabase
+    .from("milestones")
+    .select("id")
+    .eq("id", milestoneId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (error) return { error: mapLoadError(error, "isMilestoneInProject") };
+  return { data: data !== null };
+}
+
 export async function createEngagement(
   supabase: SupabaseClient,
   milestoneId: string,
