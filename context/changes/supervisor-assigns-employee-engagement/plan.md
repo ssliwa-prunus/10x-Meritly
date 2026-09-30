@@ -723,24 +723,24 @@ This phase documents the new surfaces and runbook, then rolls the feature out to
 
 #### Automated
 
-- [x] 4.1 Type check passes: `npx astro sync && npx astro check`
-- [x] 4.2 Lint passes: `npm run lint`
-- [x] 4.3 Build passes: `npm run build`
-- [x] 4.4 Smoke passes: `npm run smoke`
-- [x] 4.5 DB tests pass: `npx supabase test db`
+- [x] 4.1 Type check passes: `npx astro sync && npx astro check` — c3a964c
+- [x] 4.2 Lint passes: `npm run lint` — c3a964c
+- [x] 4.3 Build passes: `npm run build` — c3a964c
+- [x] 4.4 Smoke passes: `npm run smoke` — c3a964c
+- [x] 4.5 DB tests pass: `npx supabase test db` — c3a964c
 
 #### Manual
 
-- [x] 4.6 Milestone 1 shows `…0031` at 60%, rating 4, total 110% flagged; add, edit, range errors and delete for `…0032` work; no duplicate offer
-- [x] 4.7 Completing Milestone 2 hides its forms, drops the total to 60% unflagged, and crafted POSTs return the closed message
-- [x] 4.8 supervisor2 gets not-found on the milestone URL; Admin sees assignments read-only with all-milestone totals
+- [x] 4.6 Milestone 1 shows `…0031` at 60%, rating 4, total 110% flagged; add, edit, range errors and delete for `…0032` work; no duplicate offer — c3a964c
+- [x] 4.7 Completing Milestone 2 hides its forms, drops the total to 60% unflagged, and crafted POSTs return the closed message — c3a964c
+- [x] 4.8 supervisor2 gets not-found on the milestone URL; Admin sees assignments read-only with all-milestone totals — c3a964c
 
 ### Phase 5: Docs and production rollout
 
 #### Automated
 
-- [ ] 5.1 Lint passes: `npm run lint`
-- [ ] 5.2 Type check and build still pass: `npx astro check && npm run build`
+- [x] 5.1 Lint passes: `npm run lint`
+- [x] 5.2 Type check and build still pass: `npx astro check && npm run build`
 - [ ] 5.3 Remote migrations match local: `npx supabase migration list` shows no pending migrations
 
 #### Manual

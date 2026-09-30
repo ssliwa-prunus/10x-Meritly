@@ -39,6 +39,7 @@ RLS rules for this project:
 
 - `npm run smoke` — dependency-free auth-flow smoke test (`scripts/smoke.mjs`) against a running server, `BASE_URL` env (default `http://localhost:4321`). Run after dependency upgrades; CI runs it against the production preview with a local Supabase. Needs Supabase reachable with email confirmation disabled.
 - `npx astro sync` / `npx astro check` — regenerate Astro types / type-check. CI runs both (sync before lint) but there is no npm script for them.
+- `npx supabase functions serve` — serves the Edge Functions locally; needed for employee invites (mail lands in the test inbox at `http://127.0.0.1:54324`). The Deno code in `supabase/functions/` is excluded from `tsconfig.json` and ESLint.
 
 There is no unit-test framework, so no single-test command; `npm run smoke` is the only automated test.
 
@@ -55,9 +56,11 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All pages a
 ### Auth flow
 
 - `src/lib/supabase.ts` — creates a Supabase SSR client using `@supabase/ssr` with cookie-based sessions. Uses `astro:env/server` for `SUPABASE_URL` and `SUPABASE_KEY` (server-only secrets declared in astro.config.mjs `env.schema`).
-- `src/middleware.ts` — runs on every request, resolves the current user, attaches to `context.locals.user`. Redirects unauthenticated users away from routes listed in `PROTECTED_ROUTES`. `ADMIN_ROUTES` (`/admin`, `/api/admin`) require the `admin` role and `PROJECT_ROUTES` (`/projects`, `/api/projects`) require `supervisor` or `admin` (403 otherwise, 503 when the profile lookup failed); RLS still decides which projects each role sees.
-- API endpoints: `src/pages/api/auth/{signin,signup,signout}.ts`
-- Auth pages: `src/pages/auth/{signin,signup,confirm-email}.astro`
+- `src/middleware.ts` — runs on every request, resolves the current user, attaches to `context.locals.user`. Redirects unauthenticated users away from routes listed in `PROTECTED_ROUTES`. `ADMIN_ROUTES` (`/admin`, `/api/admin`) require the `admin` role and `PROJECT_ROUTES` (`/projects`, `/api/projects`, `/employees`, `/api/employees`) require `supervisor` or `admin` (403 otherwise, 503 when the profile lookup failed); RLS still decides which projects and employees each role sees.
+- API endpoints: `src/pages/api/auth/{signin,signup,signout,set-password}.ts`
+- Auth pages: `src/pages/auth/{signin,signup,confirm-email,set-password}.astro`
+- `/auth/confirm` (`src/pages/auth/confirm.ts`) — public invite-link target: `verifyOtp` with the `token_hash` (type `invite`) signs the user in, then redirects to `/auth/set-password`, a protected page where the invited employee sets a password.
+- `invite-employee` Supabase Edge Function (`supabase/functions/invite-employee/`) sends invites. It is the only code that uses the secret key, and it runs in Supabase, not the Worker; the app calls it with the user's JWT via `supabase.functions.invoke`. The Worker still has only `SUPABASE_URL`/`SUPABASE_KEY`.
 - Protected page example: `src/pages/dashboard.astro`
 
 ### Environment
