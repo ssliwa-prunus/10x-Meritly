@@ -9,6 +9,7 @@
     "astro": "astro",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:ui": "node scripts/check-ui-literals.mjs",
     "format": "prettier --write .",
     "smoke": "node scripts/smoke.mjs",
     "prepare": "husky"
@@ -19,7 +20,6 @@
     "@astrojs/react": "^6.0.5",
     "@astrojs/sitemap": "^3.7.4",
     "@eslint/config-helpers": "^0.7.0",
-    "@radix-ui/react-slot": "^1.1.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.99.1",
     "@tailwindcss/vite": "^4.2.4",
@@ -29,6 +29,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
+    "radix-ui": "^1.6.7",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "tailwind-merge": "^3.5.0",
@@ -58,7 +59,8 @@
   },
   "lint-staged": {
     "*.{ts,tsx,astro}": [
-      "eslint --fix"
+      "eslint --fix",
+      "node scripts/check-ui-literals.mjs"
     ],
     "*.{json,css,md}": [
       "prettier --write"

@@ -1,4 +1,7 @@
 ---
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatPln } from "@/lib/format";
 import type { ProjectExposure } from "@/types";
@@ -20,45 +23,43 @@ const figures = exposure
   : [];
 ---
 
-<section
-  id="exposure"
-  aria-labelledby="exposure-heading"
-  class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
->
-  <div class="flex flex-wrap items-center gap-2">
-    <h2 id="exposure-heading" class="text-xl font-semibold">
-      Budget exposure
-    </h2>
-    {exposure?.over_budget && (
-      <span class="rounded-full border border-red-400/40 bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-100">
-        Over budget
-      </span>
-    )}
-  </div>
-  <p class="mt-1 text-sm text-blue-100/60">
-    Worst case: non-cancelled milestones × maximum multiplier {multiplierMax.toFixed(2)}. Informational only; nothing is
-    blocked.
-  </p>
+<section id="exposure" aria-labelledby="exposure-heading">
+  <Card>
+    <CardHeader>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 id="exposure-heading" class="text-xl leading-none font-semibold">
+          Budget exposure
+        </h2>
+        {exposure?.over_budget && <Badge variant="destructive">Over budget</Badge>}
+      </div>
+      <CardDescription>
+        Worst case: non-cancelled milestones × maximum multiplier {multiplierMax.toFixed(2)}. Informational only;
+        nothing is blocked.
+      </CardDescription>
+    </CardHeader>
 
-  {exposure ? (
-    <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {figures.map((figure) => (
-        <div class="rounded-xl border border-white/10 bg-white/5 p-3">
-          <dt class="text-sm text-blue-100/70">{figure.label}</dt>
-          <dd
-            class:list={cn(
-              "mt-1 text-lg font-semibold tabular-nums",
-              exposure.over_budget && figure.label !== "Budget" && "text-red-200",
-            )}
-          >
-            {formatPln(figure.value)}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  ) : (
-    <p role="alert" class="mt-3 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
-      Budget exposure is not available for this project.
-    </p>
-  )}
+    <CardContent>
+      {exposure ? (
+        <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {figures.map((figure) => (
+            <div class="bg-muted rounded-xl border p-3">
+              <dt class="text-muted-foreground text-sm">{figure.label}</dt>
+              <dd
+                class:list={cn(
+                  "mt-1 text-lg font-semibold tabular-nums",
+                  exposure.over_budget && figure.label !== "Budget" && "text-destructive",
+                )}
+              >
+                {formatPln(figure.value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <Alert variant="destructive">
+          <AlertDescription>Budget exposure is not available for this project.</AlertDescription>
+        </Alert>
+      )}
+    </CardContent>
+  </Card>
 </section>

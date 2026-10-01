@@ -1,6 +1,11 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
+import {
+  decimalField,
+  firstIssueError as firstFormIssueError,
+  parseForm as parseFormWith,
+  toHundredths,
+} from "@/lib/forms";
 import type { BonusSettings, JobRole } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -72,19 +77,6 @@ export function settingsErrorMessage(code: string, field: string | null): string
 // constraints enforce the same rules; these give readable messages first. Issue messages
 // are error codes; the field comes from the issue path.
 // ---------------------------------------------------------------------------
-
-const toHundredths = (value: number) => Math.round(value * 100);
-
-const hasAtMostTwoDecimals = (value: number) => Math.abs(value * 100 - toHundredths(value)) < 1e-6;
-
-/** A required decimal form field: non-empty string, coerced to a finite number, at most 2 decimals. */
-const decimalField = () =>
-  z
-    .string({ error: "required" })
-    .trim()
-    .min(1, "required")
-    .pipe(z.coerce.number({ error: "not_a_number" }))
-    .refine(hasAtMostTwoDecimals, "too_many_decimals");
 
 /** Decimal in (0, 3], the range shared by role weights, multipliers and rating factors. */
 const positiveUpToThree = () =>

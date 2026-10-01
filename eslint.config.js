@@ -81,6 +81,8 @@ export default defineConfig(
   includeIgnoreFile(gitignorePath),
   // Agent skill tooling, not app code.
   globalIgnores([".claude/"]),
+  // Supabase Edge Functions run on Deno (npm: imports, Deno globals) and are not part of the app's TS project.
+  globalIgnores(["supabase/functions/"]),
   baseConfig,
   reactConfig,
   eslintPluginAstro.configs["flat/recommended"],

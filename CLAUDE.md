@@ -39,10 +39,20 @@ RLS rules for this project:
 
 - `npm run smoke` — dependency-free auth-flow smoke test (`scripts/smoke.mjs`) against a running server, `BASE_URL` env (default `http://localhost:4321`). Run after dependency upgrades; CI runs it against the production preview with a local Supabase. Needs Supabase reachable with email confirmation disabled.
 - `npx astro sync` / `npx astro check` — regenerate Astro types / type-check. CI runs both (sync before lint) but there is no npm script for them.
+- `npx supabase functions serve` — serves the Edge Functions locally; needed for employee invites (mail lands in the test inbox at `http://127.0.0.1:54324`). The Deno code in `supabase/functions/` is excluded from `tsconfig.json` and ESLint.
+- `npm run lint:ui` — fails on literal colours, palette classes or arbitrary px/rem values in the views listed in `CLEAN_PATHS` (`scripts/check-ui-literals.mjs`). CI runs it after lint.
 
 There is no unit-test framework, so no single-test command; `npm run smoke` is the only automated test.
 
-Pre-commit hooks (installed by the `prepare` script on `npm install`): husky + lint-staged runs `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
+Pre-commit hooks (installed by the `prepare` script on `npm install`): husky + lint-staged runs `eslint --fix` and the UI literal check on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
+
+## UI
+
+- **Tokens** live in `src/styles/global.css`: values in `:root` / `.dark`, published as Tailwind colours through `@theme inline`. The app runs dark (`<html class="dark">` in `Layout.astro`). Beyond shadcn's set there are `success`, `success-foreground` and `background-accent`; `bg-cosmic` is the page-shell gradient built from tokens. Value sources: `context/archive/*-ui-projects-panel/tokens.md` (or `context/changes/ui-projects-panel/tokens.md` until archived).
+- **Components** live in `src/components/ui/` (shadcn). Check there before creating a component; add missing ones with `npx shadcn@latest add <name>`, then fix the `cn` import to `@/lib/utils` and drop any `"use client"`. Submit buttons use `src/components/SubmitButton.tsx` (`client:load`, shows a pending state).
+- **No literal colours, palette classes (`text-purple-300`, `bg-white/10`) or arbitrary values (`ring-[3px]`) in views** — use token classes (`bg-card`, `text-muted-foreground`, `text-primary`, `ring-3`). Dark-mode or palette changes go into token values, not view classes. Views not yet migrated still use `src/components/form-classes.ts`; don't copy it into new views.
+- **Kitchen sink**: `/dev/projects-kitchen-sink` (dev only, 404 in production) shows the project detail sections in all 7 states (default, hover, focus-visible, disabled, error, empty, loading). Use it as the visual gate when changing those components.
+- **Guard**: `npm run lint:ui` (pre-commit and CI) checks the views listed in `CLEAN_PATHS` in `scripts/check-ui-literals.mjs`. When you migrate another view onto tokens, add it there.
 
 ## Architecture
 
@@ -55,9 +65,11 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All pages a
 ### Auth flow
 
 - `src/lib/supabase.ts` — creates a Supabase SSR client using `@supabase/ssr` with cookie-based sessions. Uses `astro:env/server` for `SUPABASE_URL` and `SUPABASE_KEY` (server-only secrets declared in astro.config.mjs `env.schema`).
-- `src/middleware.ts` — runs on every request, resolves the current user, attaches to `context.locals.user`. Redirects unauthenticated users away from routes listed in `PROTECTED_ROUTES`. `ADMIN_ROUTES` (`/admin`, `/api/admin`) require the `admin` role and `PROJECT_ROUTES` (`/projects`, `/api/projects`) require `supervisor` or `admin` (403 otherwise, 503 when the profile lookup failed); RLS still decides which projects each role sees.
-- API endpoints: `src/pages/api/auth/{signin,signup,signout}.ts`
-- Auth pages: `src/pages/auth/{signin,signup,confirm-email}.astro`
+- `src/middleware.ts` — runs on every request, resolves the current user, attaches to `context.locals.user`. Redirects unauthenticated users away from routes listed in `PROTECTED_ROUTES`. `ADMIN_ROUTES` (`/admin`, `/api/admin`) require the `admin` role and `PROJECT_ROUTES` (`/projects`, `/api/projects`, `/employees`, `/api/employees`) require `supervisor` or `admin` (403 otherwise, 503 when the profile lookup failed); RLS still decides which projects and employees each role sees.
+- API endpoints: `src/pages/api/auth/{signin,signup,signout,set-password}.ts`
+- Auth pages: `src/pages/auth/{signin,signup,confirm-email,set-password}.astro`
+- `/auth/confirm` (`src/pages/auth/confirm.ts`) — public invite-link target: `verifyOtp` with the `token_hash` (type `invite`) signs the user in, then redirects to `/auth/set-password`, a protected page where the invited employee sets a password.
+- `invite-employee` Supabase Edge Function (`supabase/functions/invite-employee/`) sends invites. It is the only code that uses the secret key, and it runs in Supabase, not the Worker; the app calls it with the user's JWT via `supabase.functions.invoke`. The Worker still has only `SUPABASE_URL`/`SUPABASE_KEY`.
 - Protected page example: `src/pages/dashboard.astro`
 
 ### Environment

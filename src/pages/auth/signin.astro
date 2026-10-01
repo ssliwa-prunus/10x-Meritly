@@ -2,7 +2,23 @@
 import Layout from "@/layouts/Layout.astro";
 import SignInForm from "@/components/auth/SignInForm";
 
-const error = Astro.url.searchParams.get("error");
+// The URL carries only an error code; the displayed text always comes from this fixed catalog,
+// so a crafted ?error= link cannot put arbitrary text on the page.
+const SIGNIN_ERROR_MESSAGES: Record<string, string> = {
+  invalid_credentials: "Invalid login credentials",
+  email_not_confirmed: "Confirm your email before signing in",
+  invite_invalid: "This invite link is invalid or expired. Ask your supervisor to resend it.",
+  not_configured: "Supabase is not configured",
+  signin_failed: "Could not sign in. Please try again.",
+};
+
+const errorParam = Astro.url.searchParams.get("error");
+const error =
+  errorParam === null
+    ? null
+    : Object.hasOwn(SIGNIN_ERROR_MESSAGES, errorParam)
+      ? SIGNIN_ERROR_MESSAGES[errorParam]
+      : SIGNIN_ERROR_MESSAGES.signin_failed;
 ---
 
 <Layout title="Sign in">

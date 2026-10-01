@@ -8,12 +8,15 @@ export const POST: APIRoute = async (context) => {
 
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return context.redirect(`/auth/signin?error=${encodeURIComponent("Supabase is not configured")}`);
+    return context.redirect("/auth/signin?error=not_configured");
   }
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return context.redirect(`/auth/signin?error=${encodeURIComponent(error.message)}`);
+    // Only a fixed code travels in the URL; the sign-in page maps it to catalog text.
+    const code =
+      error.code === "invalid_credentials" || error.code === "email_not_confirmed" ? error.code : "signin_failed";
+    return context.redirect(`/auth/signin?error=${code}`);
   }
 
   return context.redirect("/");

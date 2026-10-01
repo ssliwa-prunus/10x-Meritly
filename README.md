@@ -112,7 +112,31 @@ npx supabase stop
 
 The local Studio UI is available at `http://localhost:54323`.
 
-`npx supabase start` (and `npx supabase db reset`) applies the migrations in `supabase/migrations/` and loads `supabase/seed.sql`, which creates three local accounts: `admin@meritly.local`, `supervisor@meritly.local` and `employee@meritly.local`, all with the password `Meritly-Local-Passw0rd!`. The seed is for local development and CI only.
+`npx supabase start` (and `npx supabase db reset`) applies the migrations in `supabase/migrations/` and loads `supabase/seed.sql`, which creates four local accounts, all with the password `Meritly-Local-Passw0rd!`:
+
+| Account                     | Role         | Notes                                                               |
+| --------------------------- | ------------ | ------------------------------------------------------------------- |
+| `admin@meritly.local`       | `admin`      |                                                                     |
+| `supervisor@meritly.local`  | `supervisor` | Owns "Local Demo Project" (two active milestones) and two employees |
+| `supervisor2@meritly.local` | `supervisor` | Owns nothing; use it for cross-owner checks and reassignments       |
+| `employee@meritly.local`    | `employee`   | Linked to the active employee record below                          |
+
+It also seeds two employee records owned by `supervisor@meritly.local`:
+
+- `…0031` "Local Employee" (`employee@meritly.local`): invited and active, assigned 0.60 + 0.50 on the two milestones, so the >100% flag shows at 110%.
+- `…0032` "Pending Invitee" (`pending@meritly.local`): not invited yet and has no account. Use it to test the invite flow.
+
+The seed is for local development and CI only.
+
+### Employee invites in local development
+
+Invites are sent by the `invite-employee` Supabase Edge Function, which `npm run dev` does not run. Serve it next to the dev server:
+
+```bash
+npx supabase functions serve
+```
+
+Local Supabase does not send real email. Open the test inbox at `http://127.0.0.1:54324`, open the invite and follow its link: it goes to `/auth/confirm` and then `/auth/set-password` on `http://localhost:4321`.
 
 Run the database RLS tests (pgTAP) against the running local stack with:
 
@@ -156,12 +180,14 @@ Users can then sign in immediately after sign-up without clicking a confirmation
 
 ### Auth routes
 
-| Route                 | Description                                                             |
-| --------------------- | ----------------------------------------------------------------------- |
-| `/auth/signin`        | Email/password sign-in form                                             |
-| `/auth/signup`        | Email/password sign-up form                                             |
-| `/auth/confirm-email` | Post-signup "check your inbox" page                                     |
-| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated) |
+| Route                 | Description                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/auth/signin`        | Email/password sign-in form                                                                          |
+| `/auth/signup`        | Email/password sign-up form                                                                          |
+| `/auth/confirm-email` | Post-signup "check your inbox" page                                                                  |
+| `/auth/confirm`       | Invite link target: exchanges the `token_hash` for a session, then redirects to `/auth/set-password` |
+| `/auth/set-password`  | Set-password form for a newly invited employee (requires sign-in)                                    |
+| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated)                              |
 
 Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_ROUTES` array there to require authentication.
 
@@ -182,6 +208,50 @@ npx wrangler deploy
 ```
 
 Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or via `npx wrangler secret put`.
+
+### Production deploy runbook (S-03 invites)
+
+Employee invites need Resend as Supabase Auth's SMTP provider, the invite template, the S-03 migrations and the `invite-employee` Edge Function in the hosted project. Run these steps in order. **[HUMAN]** steps are dashboard or account work; **[AGENT/HUMAN]** steps are commands.
+
+1. **[HUMAN]** Create a Resend account and add a domain you control. Publish its SPF/DKIM DNS records until Resend shows the domain as verified, then create an API key.
+2. **[HUMAN]** Supabase dashboard → **Authentication → SMTP Settings**: enable custom SMTP with host `smtp.resend.com`, port `465`, user `resend`, the Resend API key as the password, and a sender address on the verified domain.
+3. **[HUMAN]** Supabase dashboard → **Authentication → Email Templates → Invite user**: use the same link as `supabase/templates/invite.html`:
+
+   ```html
+   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">Accept the invite</a>
+   ```
+
+   In **Authentication → URL Configuration**, confirm the Site URL is `https://meritly.meritly.workers.dev` and that it is in Redirect URLs.
+
+4. **[AGENT/HUMAN]** Link the project and apply all pending migrations (this also applies any earlier migrations that were never pushed), then check that none are pending:
+
+   ```bash
+   npx supabase link --project-ref <ref>
+   npx supabase db push
+   npx supabase migration list
+   ```
+
+5. **[AGENT/HUMAN]** Deploy the Edge Function:
+
+   ```bash
+   npx supabase functions deploy invite-employee
+   ```
+
+6. **[AGENT/HUMAN]** Build and deploy the Worker:
+
+   ```bash
+   npm run build && npx wrangler deploy
+   ```
+
+7. **[HUMAN]** In the production SQL editor, promote your own account to `supervisor` (roles have no UI):
+
+   ```sql
+   update public.profiles set role = 'supervisor' where email = '<email>';
+   ```
+
+8. **[HUMAN]** On the production URL, register an employee with an external mailbox you control, send the invite, accept it, set a password and sign in. Check that the employee lands on the dashboard and that the employee's `activated_at` is set.
+
+The Worker still needs only `SUPABASE_URL` and `SUPABASE_KEY`. The secret key stays in Supabase, where the Edge Function runs.
 
 ## Smoke test
 

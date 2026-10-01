@@ -1,5 +1,10 @@
 ---
-import { buttonClass, inputClass } from "@/components/form-classes";
+import { SubmitButton } from "@/components/SubmitButton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import { WORK_STATUSES } from "@/lib/services/projects";
 import type { Milestone } from "@/types";
 
@@ -16,57 +21,66 @@ const action = milestone
   ? `/api/projects/${projectId}/milestones/${milestone.id}`
   : `/api/projects/${projectId}/milestones`;
 const currentStatus = milestone?.status ?? "planned";
+// Several MilestoneForms render on one page, so every field id carries the form instance.
+const fieldId = (field: string) => `milestone-${milestone?.id ?? "new"}-${field}`;
 ---
 
 <div class="flex flex-col gap-3">
   {error && (
-    <p role="alert" class="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
-      {error}
-    </p>
+    <Alert variant="destructive">
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
   )}
   <form method="POST" action={action} class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-    <label class="flex flex-col gap-1 text-sm sm:col-span-2 lg:col-span-3">
-      <span class="text-blue-100/80">Name</span>
-      <input type="text" name="name" value={milestone?.name} maxlength="100" required class:list={inputClass} />
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-blue-100/80">Start date</span>
-      <input type="date" name="start_date" value={milestone?.start_date} required class:list={inputClass} />
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-blue-100/80">End date</span>
-      <input type="date" name="end_date" value={milestone?.end_date} required class:list={inputClass} />
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-blue-100/80">Status</span>
-      <select name="status" required class:list={inputClass}>
+    <div class="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
+      <Label htmlFor={fieldId("name")}>Name</Label>
+      <Input id={fieldId("name")} type="text" name="name" defaultValue={milestone?.name} maxLength={100} required />
+    </div>
+    <div class="flex flex-col gap-2">
+      <Label htmlFor={fieldId("start-date")}>Start date</Label>
+      <Input id={fieldId("start-date")} type="date" name="start_date" defaultValue={milestone?.start_date} required />
+    </div>
+    <div class="flex flex-col gap-2">
+      <Label htmlFor={fieldId("end-date")}>End date</Label>
+      <Input id={fieldId("end-date")} type="date" name="end_date" defaultValue={milestone?.end_date} required />
+    </div>
+    <div class="flex flex-col gap-2 [&>[data-slot=native-select-wrapper]]:w-full">
+      <Label htmlFor={fieldId("status")}>Status</Label>
+      <NativeSelect id={fieldId("status")} name="status" required>
         {WORK_STATUSES.map((status) => (
-          <option value={status} selected={status === currentStatus} class="bg-slate-900">
+          <option value={status} selected={status === currentStatus}>
             {status}
           </option>
         ))}
-      </select>
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-blue-100/80">Target pool (PLN)</span>
-      <input
+      </NativeSelect>
+    </div>
+    <div class="flex flex-col gap-2">
+      <Label htmlFor={fieldId("target-pool")}>Target pool (PLN)</Label>
+      <Input
+        id={fieldId("target-pool")}
         type="text"
-        inputmode="decimal"
+        inputMode="decimal"
         name="target_pool"
-        value={milestone?.target_pool.toFixed(2)}
-        autocomplete="off"
+        defaultValue={milestone?.target_pool.toFixed(2)}
+        autoComplete="off"
         required
-        class:list={inputClass}
       />
-    </label>
-    <label class="flex flex-col gap-1 text-sm sm:col-span-2">
-      <span class="text-blue-100/80">Notes</span>
-      <textarea name="notes" maxlength="2000" rows="2" class:list={inputClass}>{milestone?.notes ?? ""}</textarea>
-    </label>
+    </div>
+    <div class="flex flex-col gap-2 sm:col-span-2">
+      <Label htmlFor={fieldId("notes")}>Notes</Label>
+      <Textarea id={fieldId("notes")} name="notes" maxLength={2000} rows={2} defaultValue={milestone?.notes ?? ""} />
+    </div>
     <div class="sm:col-span-2 lg:col-span-3">
-      <button type="submit" class:list={buttonClass}>
-        {milestone ? "Save milestone" : "Add milestone"}
-      </button>
+      {/* Edit forms sit inside a closed <details>; hydrate when the row is opened. */}
+      {milestone ? (
+        <SubmitButton client:visible pendingText="Saving…">
+          Save milestone
+        </SubmitButton>
+      ) : (
+        <SubmitButton client:load pendingText="Adding…">
+          Add milestone
+        </SubmitButton>
+      )}
     </div>
   </form>
 </div>
