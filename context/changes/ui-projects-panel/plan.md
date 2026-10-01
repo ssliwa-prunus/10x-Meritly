@@ -388,32 +388,32 @@ No data migration. Visual change on other pages is limited to: body background (
 
 #### Automated
 
-- [x] 1.1 `npx astro sync && npm run lint` passes
-- [x] 1.2 `npx astro check` passes
-- [x] 1.3 `npm run build` passes
-- [x] 1.4 No file under `src/` imports `@/components/auth/SubmitButton`
-- [x] 1.5 Scan on `src/components/SubmitButton.tsx` returns 0 hits
+- [x] 1.1 `npx astro sync && npm run lint` passes — 40f97bc
+- [x] 1.2 `npx astro check` passes — 40f97bc
+- [x] 1.3 `npm run build` passes — 40f97bc
+- [x] 1.4 No file under `src/` imports `@/components/auth/SubmitButton` — 40f97bc
+- [x] 1.5 Scan on `src/components/SubmitButton.tsx` returns 0 hits — 40f97bc
 
 #### Manual
 
-- [x] 1.6 `/auth/signin`: valid submit shows disabled "Signing in..."; client-validation failure leaves the button enabled
-- [x] 1.7 `/auth/signup` behaves the same
+- [x] 1.6 `/auth/signin`: valid submit shows disabled "Signing in..."; client-validation failure leaves the button enabled — 40f97bc
+- [x] 1.7 `/auth/signup` behaves the same — 40f97bc
 
 ### Phase 2: Token values — dark theme on, cosmic look in tokens
 
 #### Automated
 
-- [ ] 2.1 `npm run lint`, `npx astro check`, `npm run build` pass
-- [ ] 2.2 `grep -nE '#[0-9a-fA-F]{3,8}' src/styles/global.css` returns 0 hits
-- [ ] 2.3 Every `--color-*` line inside `@theme inline` uses `var(`
-- [ ] 2.4 View scan count on the 4 view files is still 54
+- [x] 2.1 `npm run lint`, `npx astro check`, `npm run build` pass
+- [x] 2.2 `grep -nE '#[0-9a-fA-F]{3,8}' src/styles/global.css` returns 0 hits
+- [x] 2.3 Every `--color-*` line inside `@theme inline` uses `var(`
+- [x] 2.4 View scan count on the 4 view files is still 54
 
 #### Manual
 
-- [ ] 2.5 Background gradient unchanged on `/projects/<id>`, `/projects`, `/dashboard`, `/admin`, `/employees`, `/auth/signin` (before/after screenshots)
-- [ ] 2.6 Auth submit button uses `--primary`; text readable
-- [ ] 2.7 Native date picker and select popups render dark
-- [ ] 2.8 Contrast checks pass and are recorded in `tokens.md`
+- [x] 2.5 Background gradient unchanged on `/projects/<id>`, `/projects`, `/dashboard`, `/admin`, `/employees`, `/auth/signin` (before/after screenshots)
+- [x] 2.6 Auth submit button uses `--primary`; text readable
+- [x] 2.7 Native date picker and select popups render dark
+- [x] 2.8 Contrast checks pass and are recorded in `tokens.md`
 
 ### Phase 3: The view — tokens, components, section order
 
