@@ -9,6 +9,7 @@
     "astro": "astro",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:ui": "node scripts/check-ui-literals.mjs",
     "format": "prettier --write .",
     "smoke": "node scripts/smoke.mjs",
     "prepare": "husky"
@@ -59,7 +60,8 @@
   },
   "lint-staged": {
     "*.{ts,tsx,astro}": [
-      "eslint --fix"
+      "eslint --fix",
+      "node scripts/check-ui-literals.mjs"
     ],
     "*.{json,css,md}": [
       "prettier --write"

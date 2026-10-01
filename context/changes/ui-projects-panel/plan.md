@@ -437,27 +437,27 @@ No data migration. Visual change on other pages is limited to: body background (
 
 #### Automated
 
-- [x] 4.1 `npm run lint`, `npx astro check`, `npm run build` pass
-- [x] 4.2 Scan on view files + `MilestonesSection.astro` + kitchen sink returns 0 hits
-- [x] 4.3 Production preview serves 404 for `/dev/projects-kitchen-sink`
+- [x] 4.1 `npm run lint`, `npx astro check`, `npm run build` pass — 2fb9d6a
+- [x] 4.2 Scan on view files + `MilestonesSection.astro` + kitchen sink returns 0 hits — 2fb9d6a
+- [x] 4.3 Production preview serves 404 for `/dev/projects-kitchen-sink` — 2fb9d6a
 
 #### Manual
 
-- [x] 4.4 Kitchen sink at 1280px and 390px shows every matrix row or N/A with reason; screenshots saved
-- [x] 4.5 Keyboard tab-through shows the ring on every control; `p4-focus.png` saved
-- [x] 4.6 Submit shows disabled "Saving…"; back-button return not stuck disabled
-- [x] 4.7 Errors sit next to their form, use `destructive`, carry text
+- [x] 4.4 Kitchen sink at 1280px and 390px shows every matrix row or N/A with reason; screenshots saved — 2fb9d6a
+- [x] 4.5 Keyboard tab-through shows the ring on every control; `p4-focus.png` saved — 2fb9d6a
+- [x] 4.6 Submit shows disabled "Saving…"; back-button return not stuck disabled — 2fb9d6a
+- [x] 4.7 Errors sit next to their form, use `destructive`, carry text — 2fb9d6a
 
 ### Phase 5: Make it stick — rule, check, deferred charges
 
 #### Automated
 
-- [ ] 5.1 `npm run lint:ui` exits 0
-- [ ] 5.2 Injected `text-purple-300` in `BudgetExposurePanel.astro` makes `npm run lint:ui` exit 1 (reverted)
-- [ ] 5.3 `npm run lint`, `npx astro check`, `npm run build` pass
-- [ ] 5.4 `CLAUDE.md` UI block sits outside the 10x-cli markers
+- [x] 5.1 `npm run lint:ui` exits 0
+- [x] 5.2 Injected `text-purple-300` in `BudgetExposurePanel.astro` makes `npm run lint:ui` exit 1 (reverted)
+- [x] 5.3 `npm run lint`, `npx astro check`, `npm run build` pass
+- [x] 5.4 `CLAUDE.md` UI block sits outside the 10x-cli markers
 
 #### Manual
 
-- [ ] 5.5 `CLAUDE.md` UI block names tokens, components, add path, no-literals rule, kitchen sink, `lint:ui`
-- [ ] 5.6 `research.md` lists every deferred charge with a reason
+- [x] 5.5 `CLAUDE.md` UI block names tokens, components, add path, no-literals rule, kitchen sink, `lint:ui`
+- [x] 5.6 `research.md` lists every deferred charge with a reason

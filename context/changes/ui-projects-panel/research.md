@@ -93,6 +93,17 @@ Scan baseline (pattern from the `/10x-ui` skill, `grep -cE` lines with ≥1 hit)
 - Agent rules: `CLAUDE.md` has no UI/token rule and no rule inviting arbitrary values (grep for `arbitrary|w-\[|token|color` in `CLAUDE.md`/`AGENTS.md`: only the `cn()` convention, `CLAUDE.md:30`). `AGENTS.md` is `@CLAUDE.md`. Nothing to remove; the change must add the UI block (skill "Make it stick").
 - Arbitrary values: none in the view files (the scan's `-[Npx|rem]` arm found 0 in the four view files; `min-w-[40rem]` exists only on `src/pages/projects/index.astro:82`).
 
+### Deferred (recorded 2026-10-01, after implementation)
+
+Charges or parts of charges that `plan.md` left for a later change:
+
+- **`src/components/form-classes.ts` and its 8 other importers** (admin sections, `EmployeeForm`, `EngagementForm`, `set-password.astro`, `employees/index.astro`, `projects/[id]/milestones/[milestoneId].astro`). This is the rest of C1/C3 outside this view. Reason: the change covers one view plus global tokens. Migrating those importers changes about 8 views and needs its own audit and screenshots.
+- **`src/components/Topbar.astro`** (9 scan hits; renders on every page). Reason: it is shared chrome, and restyling it would change every page.
+- **C5, mobile half: milestone edit `<details>` inside table rows** (`MilestonesSection.astro`). It still scrolls sideways at 390px. Reason: it is a structural change (card list rather than table), and the row-error opening logic needs retesting. The section reorder, the other half of C5, shipped in `98abd7d`.
+- **Raw-text `Forbidden` 403 for employees** (`src/middleware.ts:79-80`). Reason: the fix is in shared middleware and also affects `/employees`.
+- **The other 12 `bg-cosmic` pages' literal classes.** Reason: they look unchanged because `bg-cosmic` now comes from tokens. Moving each one onto token classes is its own per-view change.
+- **Kitchen-sink `ProjectForm` instances share field ids** (`project-name`, …) because ids come from a fixed section id. This affects the dev-only page and not `/projects/[id]`. Reason: fixing it would need a new id-prefix prop just for the demo page.
+
 ## Detailed Findings
 
 ### Token source → views
