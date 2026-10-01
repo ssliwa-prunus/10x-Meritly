@@ -1,0 +1,291 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import BudgetExposurePanel from "@/components/projects/BudgetExposurePanel.astro";
+import MilestonesSection from "@/components/projects/MilestonesSection.astro";
+import ProjectForm from "@/components/projects/ProjectForm.astro";
+import { SubmitButton } from "@/components/SubmitButton";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { Milestone, Profile, Project, ProjectExposure } from "@/types";
+
+// Dev-only review page: every state of the /projects/[id] view, rendered from inline fixtures.
+// Production gets an empty 404 (status set here, template skipped below). A top-level `return new Response()`
+// would also work in Astro, but it crashes @typescript-eslint/no-misused-promises in astro-eslint-parser.
+const isDev = import.meta.env.DEV;
+if (!isDev) {
+  Astro.response.status = 404;
+}
+
+const supervisor: Profile = {
+  id: "5d1f6c2a-3b4e-4f6a-8c9d-0e1f2a3b4c5d",
+  email: "anna.supervisor@example.com",
+  display_name: "Anna Nowak",
+  role: "supervisor",
+};
+const otherSupervisor: Profile = {
+  id: "6e2a7d3b-4c5f-4a7b-9d0e-1f2a3b4c5d6e",
+  email: "piotr.supervisor@example.com",
+  display_name: null,
+  role: "supervisor",
+};
+
+const activeProject: Project = {
+  id: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  name: "Customer portal relaunch",
+  start_date: "2026-01-01",
+  end_date: "2026-12-31",
+  status: "active",
+  total_budget: 120000,
+  notes: "Fixture project for the kitchen sink.",
+  supervisor_id: supervisor.id,
+};
+const closedProject: Project = { ...activeProject, status: "completed" };
+
+const milestone = (id: string, overrides: Partial<Milestone> = {}): Milestone => ({
+  id,
+  project_id: activeProject.id,
+  name: "Discovery and design",
+  start_date: "2026-01-01",
+  end_date: "2026-03-31",
+  status: "completed",
+  target_pool: 15000,
+  notes: null,
+  ...overrides,
+});
+
+// Distinct ids per section instance so the edit forms do not share element ids.
+const milestonesFor = (prefix: string): Milestone[] => [
+  milestone(`${prefix}000001-0000-4000-8000-000000000001`, {
+    notes: "Kick-off workshops, wireframes and the design system.",
+  }),
+  milestone(`${prefix}000002-0000-4000-8000-000000000002`, {
+    name: "Build and integration with a deliberately long milestone name to test wrapping",
+    start_date: "2026-04-01",
+    end_date: "2026-09-30",
+    status: "active",
+    target_pool: 42500.5,
+  }),
+  milestone(`${prefix}000003-0000-4000-8000-000000000003`, {
+    name: "Pilot rollout",
+    start_date: "2026-10-01",
+    end_date: "2026-11-30",
+    status: "cancelled",
+    target_pool: 8000,
+  }),
+];
+const editableMilestones = milestonesFor("aa");
+const adminMilestones = milestonesFor("bb");
+const closedMilestones = milestonesFor("cc");
+const savedMilestones = milestonesFor("dd");
+const errorRowId = editableMilestones[1].id;
+
+const exposureNormal: ProjectExposure = {
+  project_id: activeProject.id,
+  total_budget: 120000,
+  reserved_total: 87250.75,
+  remaining: 32749.25,
+  over_budget: false,
+};
+const exposureOver: ProjectExposure = {
+  project_id: activeProject.id,
+  total_budget: 60000,
+  reserved_total: 87250.75,
+  remaining: -27250.75,
+  over_budget: true,
+};
+const multiplierMax = 1.5;
+
+const states = [
+  { state: "default", where: "All sections below (first variant of each)." },
+  {
+    state: "hover",
+    where: "Manual (pointer): links and Edit summaries underline, buttons and table rows change background.",
+  },
+  {
+    state: "focus-visible",
+    where:
+      "Manual tab-through (see the note below): every link, summary, input, select, textarea and button shows the ring.",
+  },
+  { state: "disabled", where: "Section “Disabled and pending”: forced-pending SubmitButton and a disabled Button." },
+  {
+    state: "error",
+    where: "Project form error; milestones row error, add-form error and section error; exposure unavailable.",
+  },
+  { state: "empty", where: "Milestones: empty and editable." },
+  {
+    state: "loading",
+    where:
+      "N/A — the page is fully server-rendered after Promise.all, with no client fetch to skeleton. The pending submit covers in-flight feedback.",
+  },
+];
+
+const groupHeading = "text-foreground text-2xl font-bold";
+const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide uppercase";
+---
+
+{isDev && (
+  <Layout title="Projects kitchen sink">
+    <div class="bg-cosmic text-foreground min-h-screen p-4">
+      <div class="mx-auto flex w-full max-w-4xl flex-col gap-10">
+        <header class="flex flex-col gap-4">
+          <h1 class="text-foreground text-3xl font-bold">Projects view — kitchen sink</h1>
+          <p class="text-muted-foreground text-sm">
+            Dev-only page (404 in production). Every state of <code>/projects/[id]</code> from inline fixtures. Forms
+            here post to the real API routes; do not submit them.
+          </p>
+
+          <Card>
+            <CardHeader>
+              <h2 class="text-xl leading-none font-semibold">State matrix</h2>
+              <CardDescription>Where each of the 7 states is shown on this page.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table className="text-left">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead scope="col" className="text-muted-foreground">
+                      State
+                    </TableHead>
+                    <TableHead scope="col" className="text-muted-foreground">
+                      Where shown
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {states.map((row) => (
+                    <TableRow className="align-top">
+                      <TableCell className="align-top font-medium">{row.state}</TableCell>
+                      <TableCell className="align-top whitespace-normal">{row.where}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <p class="bg-muted text-muted-foreground rounded-lg border px-3 py-2 text-sm">
+            Focus-visible check: click on an empty area of the page, then press Tab repeatedly. Each link, Edit summary,
+            input, select, textarea and button must show the ring before moving on.
+          </p>
+        </header>
+
+        <section class="flex flex-col gap-6" aria-labelledby="ks-exposure">
+          <h2 id="ks-exposure" class:list={groupHeading}>
+            Budget exposure
+          </h2>
+          <h3 class:list={variantHeading}>Default (within budget)</h3>
+          <BudgetExposurePanel exposure={exposureNormal} multiplierMax={multiplierMax} />
+          <h3 class:list={variantHeading}>Over budget</h3>
+          <BudgetExposurePanel exposure={exposureOver} multiplierMax={multiplierMax} />
+          <h3 class:list={variantHeading}>Error — exposure unavailable</h3>
+          <BudgetExposurePanel exposure={null} multiplierMax={multiplierMax} />
+        </section>
+
+        <section class="flex flex-col gap-6" aria-labelledby="ks-milestones">
+          <h2 id="ks-milestones" class:list={groupHeading}>
+            Milestones
+          </h2>
+
+          <h3 class:list={variantHeading}>Empty — editable</h3>
+          <MilestonesSection
+            project={activeProject}
+            milestones={[]}
+            isAdmin={false}
+            canEditMilestones={true}
+            saved={false}
+            sectionError={null}
+            rowErrorId={null}
+            rowError={null}
+            addFormError="The milestone period must lie within the project's period."
+          />
+
+          <h3 class:list={variantHeading}>Rows — editable, one row error open</h3>
+          <MilestonesSection
+            project={activeProject}
+            milestones={editableMilestones}
+            isAdmin={false}
+            canEditMilestones={true}
+            saved={false}
+            sectionError={null}
+            rowErrorId={errorRowId}
+            rowError="Target pool must be above 0 with at most 2 decimals."
+            addFormError={null}
+          />
+
+          <h3 class:list={variantHeading}>Admin — read-only</h3>
+          <MilestonesSection
+            project={activeProject}
+            milestones={adminMilestones}
+            isAdmin={true}
+            canEditMilestones={false}
+            saved={false}
+            sectionError={null}
+            rowErrorId={null}
+            rowError={null}
+            addFormError={null}
+          />
+
+          <h3 class:list={variantHeading}>Closed project — section error</h3>
+          <MilestonesSection
+            project={closedProject}
+            milestones={closedMilestones}
+            isAdmin={false}
+            canEditMilestones={false}
+            saved={false}
+            sectionError="This project is closed; its milestones cannot be changed."
+            rowErrorId={null}
+            rowError={null}
+            addFormError={null}
+          />
+
+          <h3 class:list={variantHeading}>Saved banner</h3>
+          <MilestonesSection
+            project={activeProject}
+            milestones={savedMilestones}
+            isAdmin={false}
+            canEditMilestones={false}
+            saved={true}
+            sectionError={null}
+            rowErrorId={null}
+            rowError={null}
+            addFormError={null}
+          />
+        </section>
+
+        <section class="flex flex-col gap-6" aria-labelledby="ks-project">
+          <h2 id="ks-project" class:list={groupHeading}>
+            Project form
+          </h2>
+          <p class="text-muted-foreground text-sm">
+            The three forms share field ids (the form derives them from the section), so a label click may focus the
+            first form's field. This only affects this page.
+          </p>
+          <h3 class:list={variantHeading}>Default — Admin with owner select</h3>
+          <ProjectForm project={activeProject} supervisors={[supervisor, otherSupervisor]} saved={false} error={null} />
+          <h3 class:list={variantHeading}>Saved</h3>
+          <ProjectForm project={activeProject} saved={true} error={null} />
+          <h3 class:list={variantHeading}>Error</h3>
+          <ProjectForm project={activeProject} saved={false} error="The end date must be on or after the start date." />
+        </section>
+
+        <section class="flex flex-col gap-6" aria-labelledby="ks-disabled">
+          <h2 id="ks-disabled" class:list={groupHeading}>
+            Disabled and pending
+          </h2>
+          <Card>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <SubmitButton client:load pendingText="Saving…" pending>
+                Save project
+              </SubmitButton>
+              <Button disabled>Disabled button</Button>
+              <Button variant="outline" disabled>
+                Disabled outline
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </div>
+  </Layout>
+)}

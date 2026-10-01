@@ -419,34 +419,34 @@ No data migration. Visual change on other pages is limited to: body background (
 
 #### Automated
 
-- [x] 3.1 `npm run lint`, `npx astro check`, `npm run build` pass
-- [x] 3.2 Scan on `src/pages/projects/[id].astro src/components/projects/*.astro` returns 0 hits
-- [x] 3.3 No `form-classes` import in `src/components/projects` or `src/pages/projects/[id].astro`
-- [x] 3.4 `npm run smoke` passes
+- [x] 3.1 `npm run lint`, `npx astro check`, `npm run build` pass — 98abd7d
+- [x] 3.2 Scan on `src/pages/projects/[id].astro src/components/projects/*.astro` returns 0 hits — 98abd7d
+- [x] 3.3 No `form-classes` import in `src/components/projects` or `src/pages/projects/[id].astro` — 98abd7d
+- [x] 3.4 `npm run smoke` passes — 98abd7d
 
 #### Manual
 
-- [x] 3.5 `/projects/<id>` order exposure → milestones → details; screenshots `p3-{desktop,mobile}.png`
-- [x] 3.6 Save project, add/edit milestone (valid + invalid) work; invalid edit reopens the row with its error
-- [x] 3.7 Admin: owner select present, milestones read-only note
-- [x] 3.8 Closed project: reopen note, no edit forms
-- [x] 3.9 `/projects` create form renders and creates a project
-- [x] 3.10 No React "value without onChange" warning in the dev console
+- [x] 3.5 `/projects/<id>` order exposure → milestones → details; screenshots `p3-{desktop,mobile}.png` — 98abd7d
+- [x] 3.6 Save project, add/edit milestone (valid + invalid) work; invalid edit reopens the row with its error — 98abd7d
+- [x] 3.7 Admin: owner select present, milestones read-only note — 98abd7d
+- [x] 3.8 Closed project: reopen note, no edit forms — 98abd7d
+- [x] 3.9 `/projects` create form renders and creates a project — 98abd7d
+- [x] 3.10 No React "value without onChange" warning in the dev console — 98abd7d
 
 ### Phase 4: States and the visual gate
 
 #### Automated
 
-- [ ] 4.1 `npm run lint`, `npx astro check`, `npm run build` pass
-- [ ] 4.2 Scan on view files + `MilestonesSection.astro` + kitchen sink returns 0 hits
-- [ ] 4.3 Production preview serves 404 for `/dev/projects-kitchen-sink`
+- [x] 4.1 `npm run lint`, `npx astro check`, `npm run build` pass
+- [x] 4.2 Scan on view files + `MilestonesSection.astro` + kitchen sink returns 0 hits
+- [x] 4.3 Production preview serves 404 for `/dev/projects-kitchen-sink`
 
 #### Manual
 
-- [ ] 4.4 Kitchen sink at 1280px and 390px shows every matrix row or N/A with reason; screenshots saved
-- [ ] 4.5 Keyboard tab-through shows the ring on every control; `p4-focus.png` saved
-- [ ] 4.6 Submit shows disabled "Saving…"; back-button return not stuck disabled
-- [ ] 4.7 Errors sit next to their form, use `destructive`, carry text
+- [x] 4.4 Kitchen sink at 1280px and 390px shows every matrix row or N/A with reason; screenshots saved
+- [x] 4.5 Keyboard tab-through shows the ring on every control; `p4-focus.png` saved
+- [x] 4.6 Submit shows disabled "Saving…"; back-button return not stuck disabled
+- [x] 4.7 Errors sit next to their form, use `destructive`, carry text
 
 ### Phase 5: Make it stick — rule, check, deferred charges
 
