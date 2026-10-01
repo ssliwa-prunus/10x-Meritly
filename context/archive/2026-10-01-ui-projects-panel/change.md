@@ -1,10 +1,10 @@
 ---
 change_id: ui-projects-panel
 title: Ui projects panel
-status: impl_reviewed
+status: archived
 created: 2026-10-01
 updated: 2026-10-01
-archived_at: null
+archived_at: 2026-10-01T20:46:04Z
 ---
 
 ## Notes
