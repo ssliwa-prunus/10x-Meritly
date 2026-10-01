@@ -452,12 +452,12 @@ No data migration. Visual change on other pages is limited to: body background (
 
 #### Automated
 
-- [x] 5.1 `npm run lint:ui` exits 0
-- [x] 5.2 Injected `text-purple-300` in `BudgetExposurePanel.astro` makes `npm run lint:ui` exit 1 (reverted)
-- [x] 5.3 `npm run lint`, `npx astro check`, `npm run build` pass
-- [x] 5.4 `CLAUDE.md` UI block sits outside the 10x-cli markers
+- [x] 5.1 `npm run lint:ui` exits 0 — 0ae6e06
+- [x] 5.2 Injected `text-purple-300` in `BudgetExposurePanel.astro` makes `npm run lint:ui` exit 1 (reverted) — 0ae6e06
+- [x] 5.3 `npm run lint`, `npx astro check`, `npm run build` pass — 0ae6e06
+- [x] 5.4 `CLAUDE.md` UI block sits outside the 10x-cli markers — 0ae6e06
 
 #### Manual
 
-- [x] 5.5 `CLAUDE.md` UI block names tokens, components, add path, no-literals rule, kitchen sink, `lint:ui`
-- [x] 5.6 `research.md` lists every deferred charge with a reason
+- [x] 5.5 `CLAUDE.md` UI block names tokens, components, add path, no-literals rule, kitchen sink, `lint:ui` — 0ae6e06
+- [x] 5.6 `research.md` lists every deferred charge with a reason — 0ae6e06
