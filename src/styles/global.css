@@ -132,4 +132,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Native select popups can't paint the select's translucent background, so options need an opaque surface. */
+  option,
+  optgroup {
+    @apply bg-popover text-popover-foreground;
+  }
 }

@@ -54,3 +54,7 @@ WCAG 2.x ratios, oklch → linear sRGB → relative luminance; alpha composited 
 No token needed a lightness adjustment.
 
 Visually confirmed by the user on 2026-10-01 (Phase 2 manual checks 2.5–2.8).
+
+## Native select options (Phase 3 fix)
+
+`option, optgroup` get `bg-popover text-popover-foreground` in the `global.css` base layer. Chrome on Windows can't paint the select's translucent `dark:bg-input/30` in the popup and falls back to a light surface, while the options inherit white `--foreground`, so unselected options were invisible (found in the Phase 3 manual check). `.dark` `--popover` `oklch(0.205 0 0)` with `--popover-foreground` `oklch(0.985 0 0)` gives about 17:1.

@@ -403,35 +403,35 @@ No data migration. Visual change on other pages is limited to: body background (
 
 #### Automated
 
-- [x] 2.1 `npm run lint`, `npx astro check`, `npm run build` pass
-- [x] 2.2 `grep -nE '#[0-9a-fA-F]{3,8}' src/styles/global.css` returns 0 hits
-- [x] 2.3 Every `--color-*` line inside `@theme inline` uses `var(`
-- [x] 2.4 View scan count on the 4 view files is still 54
+- [x] 2.1 `npm run lint`, `npx astro check`, `npm run build` pass — 845cdbe
+- [x] 2.2 `grep -nE '#[0-9a-fA-F]{3,8}' src/styles/global.css` returns 0 hits — 845cdbe
+- [x] 2.3 Every `--color-*` line inside `@theme inline` uses `var(` — 845cdbe
+- [x] 2.4 View scan count on the 4 view files is still 54 — 845cdbe
 
 #### Manual
 
-- [x] 2.5 Background gradient unchanged on `/projects/<id>`, `/projects`, `/dashboard`, `/admin`, `/employees`, `/auth/signin` (before/after screenshots)
-- [x] 2.6 Auth submit button uses `--primary`; text readable
-- [x] 2.7 Native date picker and select popups render dark
-- [x] 2.8 Contrast checks pass and are recorded in `tokens.md`
+- [x] 2.5 Background gradient unchanged on `/projects/<id>`, `/projects`, `/dashboard`, `/admin`, `/employees`, `/auth/signin` (before/after screenshots) — 845cdbe
+- [x] 2.6 Auth submit button uses `--primary`; text readable — 845cdbe
+- [x] 2.7 Native date picker and select popups render dark — 845cdbe
+- [x] 2.8 Contrast checks pass and are recorded in `tokens.md` — 845cdbe
 
 ### Phase 3: The view — tokens, components, section order
 
 #### Automated
 
-- [ ] 3.1 `npm run lint`, `npx astro check`, `npm run build` pass
-- [ ] 3.2 Scan on `src/pages/projects/[id].astro src/components/projects/*.astro` returns 0 hits
-- [ ] 3.3 No `form-classes` import in `src/components/projects` or `src/pages/projects/[id].astro`
-- [ ] 3.4 `npm run smoke` passes
+- [x] 3.1 `npm run lint`, `npx astro check`, `npm run build` pass
+- [x] 3.2 Scan on `src/pages/projects/[id].astro src/components/projects/*.astro` returns 0 hits
+- [x] 3.3 No `form-classes` import in `src/components/projects` or `src/pages/projects/[id].astro`
+- [x] 3.4 `npm run smoke` passes
 
 #### Manual
 
-- [ ] 3.5 `/projects/<id>` order exposure → milestones → details; screenshots `p3-{desktop,mobile}.png`
-- [ ] 3.6 Save project, add/edit milestone (valid + invalid) work; invalid edit reopens the row with its error
-- [ ] 3.7 Admin: owner select present, milestones read-only note
-- [ ] 3.8 Closed project: reopen note, no edit forms
-- [ ] 3.9 `/projects` create form renders and creates a project
-- [ ] 3.10 No React "value without onChange" warning in the dev console
+- [x] 3.5 `/projects/<id>` order exposure → milestones → details; screenshots `p3-{desktop,mobile}.png`
+- [x] 3.6 Save project, add/edit milestone (valid + invalid) work; invalid edit reopens the row with its error
+- [x] 3.7 Admin: owner select present, milestones read-only note
+- [x] 3.8 Closed project: reopen note, no edit forms
+- [x] 3.9 `/projects` create form renders and creates a project
+- [x] 3.10 No React "value without onChange" warning in the dev console
 
 ### Phase 4: States and the visual gate
 
