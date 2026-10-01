@@ -102,7 +102,14 @@ Charges or parts of charges that `plan.md` left for a later change:
 - **C5, mobile half: milestone edit `<details>` inside table rows** (`MilestonesSection.astro`). It still scrolls sideways at 390px. Reason: it is a structural change (card list rather than table), and the row-error opening logic needs retesting. The section reorder, the other half of C5, shipped in `98abd7d`.
 - **Raw-text `Forbidden` 403 for employees** (`src/middleware.ts:79-80`). Reason: the fix is in shared middleware and also affects `/employees`.
 - **The other 12 `bg-cosmic` pages' literal classes.** Reason: they look unchanged because `bg-cosmic` now comes from tokens. Moving each one onto token classes is its own per-view change.
-- **Kitchen-sink `ProjectForm` instances share field ids** (`project-name`, …) because ids come from a fixed section id. This affects the dev-only page and not `/projects/[id]`. Reason: fixing it would need a new id-prefix prop just for the demo page.
+- **Form errors aren't tied to the failing field** (`MilestoneForm.astro`, `ProjectForm.astro`). The error is a destructive Alert above the form. No input gets `aria-invalid`/`aria-describedby`, even though `[id].astro` reads the `field` query param and the shadcn inputs already style `aria-invalid`. This was the same before this change. Reason: it needs `errorField` passed into both forms and mapped to input ids (review F5).
+- **Kitchen-sink ids repeat**:
+  - `milestones` / `milestones-heading` (5 `MilestonesSection` instances)
+  - `exposure` / `exposure-heading` (3 `BudgetExposurePanel` instances)
+  - the add form's `milestone-new-*` field ids (2×)
+  - `project-*` field ids (3 `ProjectForm` instances)
+
+  The ids come from fixed section ids. Label clicks and `aria-labelledby` resolve to the first match on that page, so focus and label checks belong on `/projects/[id]`, where every id is unique; the page says so in a note. Reason it stays: fixing it would need id-prefix props on four components just for the demo page (review F4).
 
 ## Detailed Findings
 

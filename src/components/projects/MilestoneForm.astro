@@ -71,9 +71,16 @@ const fieldId = (field: string) => `milestone-${milestone?.id ?? "new"}-${field}
       <Textarea id={fieldId("notes")} name="notes" maxLength={2000} rows={2} defaultValue={milestone?.notes ?? ""} />
     </div>
     <div class="sm:col-span-2 lg:col-span-3">
-      <SubmitButton client:load pendingText={milestone ? "Saving…" : "Adding…"}>
-        {milestone ? "Save milestone" : "Add milestone"}
-      </SubmitButton>
+      {/* Edit forms sit inside a closed <details>; hydrate when the row is opened. */}
+      {milestone ? (
+        <SubmitButton client:visible pendingText="Saving…">
+          Save milestone
+        </SubmitButton>
+      ) : (
+        <SubmitButton client:load pendingText="Adding…">
+          Add milestone
+        </SubmitButton>
+      )}
     </div>
   </form>
 </div>

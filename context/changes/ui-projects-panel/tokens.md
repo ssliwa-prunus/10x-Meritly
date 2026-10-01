@@ -39,17 +39,16 @@ The plan's starting values `oklch(0.155 0.02 266)` / `oklch(0.19 0.04 267)` map 
 
 WCAG 2.x ratios, oklch → linear sRGB → relative luminance; alpha composited in sRGB over the background first.
 
-| Pair                                                                           | Ratio   | ≥ 4.5:1 |
-| ------------------------------------------------------------------------------ | ------- | ------- |
-| `--muted-foreground` (70% over `--background`) on `--background`               | 8.00:1  | yes     |
-| `--muted-foreground` (70% over `--background-accent`) on `--background-accent` | 7.73:1  | yes     |
-| `--primary` on `--background`                                                  | 10.81:1 | yes     |
-| `--primary` on `--background-accent`                                           | 10.17:1 | yes     |
-| `--primary-foreground` on `--primary`                                          | 10.05:1 | yes     |
-| `--success` on `--background`                                                  | 9.96:1  | yes     |
-
-| `--muted-foreground` on `--card` (white 10% over `--background-accent`, ≈ `#272c3e`) | 6.38:1 | yes |
-| `--primary` on `--card` (same surface) | 7.75:1 | yes |
+| Pair                                                                                 | Ratio   | ≥ 4.5:1 |
+| ------------------------------------------------------------------------------------ | ------- | ------- |
+| `--muted-foreground` (70% over `--background`) on `--background`                     | 8.00:1  | yes     |
+| `--muted-foreground` (70% over `--background-accent`) on `--background-accent`       | 7.73:1  | yes     |
+| `--primary` on `--background`                                                        | 10.81:1 | yes     |
+| `--primary` on `--background-accent`                                                 | 10.17:1 | yes     |
+| `--primary-foreground` on `--primary`                                                | 10.05:1 | yes     |
+| `--success` on `--background`                                                        | 9.96:1  | yes     |
+| `--muted-foreground` on `--card` (white 10% over `--background-accent`, ≈ `#272c3e`) | 6.38:1  | yes     |
+| `--primary` on `--card` (same surface)                                               | 7.75:1  | yes     |
 
 No token needed a lightness adjustment.
 

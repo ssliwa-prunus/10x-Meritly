@@ -40,7 +40,6 @@ RLS rules for this project:
 - `npm run smoke` — dependency-free auth-flow smoke test (`scripts/smoke.mjs`) against a running server, `BASE_URL` env (default `http://localhost:4321`). Run after dependency upgrades; CI runs it against the production preview with a local Supabase. Needs Supabase reachable with email confirmation disabled.
 - `npx astro sync` / `npx astro check` — regenerate Astro types / type-check. CI runs both (sync before lint) but there is no npm script for them.
 - `npx supabase functions serve` — serves the Edge Functions locally; needed for employee invites (mail lands in the test inbox at `http://127.0.0.1:54324`). The Deno code in `supabase/functions/` is excluded from `tsconfig.json` and ESLint.
-
 - `npm run lint:ui` — fails on literal colours, palette classes or arbitrary px/rem values in the views listed in `CLEAN_PATHS` (`scripts/check-ui-literals.mjs`). CI runs it after lint.
 
 There is no unit-test framework, so no single-test command; `npm run smoke` is the only automated test.
@@ -53,6 +52,7 @@ Pre-commit hooks (installed by the `prepare` script on `npm install`): husky + l
 - **Components** live in `src/components/ui/` (shadcn). Check there before creating a component; add missing ones with `npx shadcn@latest add <name>`, then fix the `cn` import to `@/lib/utils` and drop any `"use client"`. Submit buttons use `src/components/SubmitButton.tsx` (`client:load`, shows a pending state).
 - **No literal colours, palette classes (`text-purple-300`, `bg-white/10`) or arbitrary values (`ring-[3px]`) in views** — use token classes (`bg-card`, `text-muted-foreground`, `text-primary`, `ring-3`). Dark-mode or palette changes go into token values, not view classes. Views not yet migrated still use `src/components/form-classes.ts`; don't copy it into new views.
 - **Kitchen sink**: `/dev/projects-kitchen-sink` (dev only, 404 in production) shows the project detail sections in all 7 states (default, hover, focus-visible, disabled, error, empty, loading). Use it as the visual gate when changing those components.
+- **Guard**: `npm run lint:ui` (pre-commit and CI) checks the views listed in `CLEAN_PATHS` in `scripts/check-ui-literals.mjs`. When you migrate another view onto tokens, add it there.
 
 ## Architecture
 
