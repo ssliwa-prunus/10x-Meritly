@@ -3,7 +3,8 @@
 -- Creates one ready-to-use account per access role, plus a second supervisor to reassign
 -- projects to, one sample project with two milestones owned by supervisor@meritly.local, and two
 -- employee records owned by that supervisor (one activated and over-allocated at 110%, one not
--- yet invited). Recreated on every `npx supabase db reset`.
+-- yet invited). Milestone 1 is KPI-scored (computed bonuses show), Milestone 2 is not. Recreated
+-- on every `npx supabase db reset`.
 --
 --   admin@meritly.local        role: admin
 --   supervisor@meritly.local   role: supervisor  (owns "Local Demo Project")
@@ -14,7 +15,7 @@
 --
 -- Fixed UUIDs use the seed range 00000000-0000-4000-8000-0000000000xx. The pgTAP suites
 -- (supabase/tests) use the disjoint ranges 00000000-0000-4000-8000-0000000001xx, ...02xx,
--- ...03xx and ...04xx.
+-- ...03xx, ...04xx and ...05xx.
 
 insert into auth.users (
   instance_id,
@@ -142,3 +143,10 @@ insert into public.milestone_engagements (id, milestone_id, employee_id, time_sh
 values
   ('00000000-0000-4000-8000-000000000041', '00000000-0000-4000-8000-000000000021', '00000000-0000-4000-8000-000000000031', 0.60, 4),
   ('00000000-0000-4000-8000-000000000042', '00000000-0000-4000-8000-000000000022', '00000000-0000-4000-8000-000000000031', 0.50, 3);
+
+-- KPI scores 80/90/85/60 on Milestone 1 (the S-04 worked example's scores): at the default config
+-- M = 1.1875, so its 3000.00 target pool becomes a 3562.50 payout pool, all of it Local Employee's
+-- bonus. Milestone 2 stays unscored (shares only, no PLN amounts).
+update public.milestones
+set kpi_schedule = 80, kpi_budget = 90, kpi_quality = 85, kpi_risk = 60
+where id = '00000000-0000-4000-8000-000000000021';
