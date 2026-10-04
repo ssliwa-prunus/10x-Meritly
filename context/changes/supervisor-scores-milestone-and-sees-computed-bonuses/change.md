@@ -1,7 +1,7 @@
 ---
 change_id: supervisor-scores-milestone-and-sees-computed-bonuses
 title: Supervisor scores milestone and sees computed bonuses
-status: implementing
+status: implemented
 created: 2026-10-04
 updated: 2026-10-04
 archived_at: null

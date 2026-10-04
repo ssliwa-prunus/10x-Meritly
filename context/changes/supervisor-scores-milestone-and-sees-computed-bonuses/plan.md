@@ -582,7 +582,7 @@ Additive: four nullable columns, one check, one trigger and three functions. Exi
 #### Manual
 
 - [x] 4.7 Seed milestone shows summary and bonuses; total + residual = pool — 1e13772
-- [x] 4.8 Worked example reproduces M 1,1875, pool 11 875,00 zł, bonuses 5 126,56 / 4 511,38 / 2 237,04 zł, residual 0,02 zł
+- [x] 4.8 Worked example reproduces M 1,1875, pool 11 875,00 zł, bonuses 5 126,56 / 4 511,38 / 2 237,04 zł, residual 0,02 zł — a3a598e
 - [x] 4.9 Raising only Ryzyko increases M and every bonus — 1e13772
 - [x] 4.10 Unscored shows shares without PLN; scored with no assignments shows total 0 and residual = pool — 1e13772
 - [x] 4.11 Editing an assignment after scoring changes bonuses on reload — 1e13772
@@ -594,17 +594,17 @@ Additive: four nullable columns, one check, one trigger and three functions. Exi
 
 #### Automated
 
-- [x] 5.1 Migrations and seed apply cleanly: `npx supabase db reset`
-- [x] 5.2 pgTAP suites pass with the re-baselined figures: `npx supabase test db`
-- [x] 5.3 UI literal check passes: `npm run lint:ui`
-- [x] 5.4 Lint passes: `npm run lint`
-- [x] 5.5 Type check passes: `npx astro check`
-- [x] 5.6 Build passes: `npm run build`
-- [x] 5.7 Smoke test passes: `npm run smoke`
+- [x] 5.1 Migrations and seed apply cleanly: `npx supabase db reset` — a3a598e
+- [x] 5.2 pgTAP suites pass with the re-baselined figures: `npx supabase test db` — a3a598e
+- [x] 5.3 UI literal check passes: `npm run lint:ui` — a3a598e
+- [x] 5.4 Lint passes: `npm run lint` — a3a598e
+- [x] 5.5 Type check passes: `npx astro check` — a3a598e
+- [x] 5.6 Build passes: `npm run build` — a3a598e
+- [x] 5.7 Smoke test passes: `npm run smoke` — a3a598e
 
 #### Manual
 
-- [x] 5.8 Seed milestone `…0021` shows payout pool 2 740,38 zł and share of target pool ≈ 91,3%
-- [x] 5.9 Worked example at 80/90/85/60 shows pool 9 134,61 zł, bonuses 3 943,51 / 3 470,29 / 1 720,80 zł, residual 0,01 zł; 100s pay exactly the target pool
-- [x] 5.10 Project budget panel reserves non-cancelled milestones at their target pool; copy updated
-- [x] 5.11 Kitchen sink payout and budget fixtures show the new figures
+- [x] 5.8 Seed milestone `…0021` shows payout pool 2 740,38 zł and share of target pool ≈ 91,3% — a3a598e
+- [x] 5.9 Worked example at 80/90/85/60 shows pool 9 134,61 zł, bonuses 3 943,51 / 3 470,29 / 1 720,80 zł, residual 0,01 zł; 100s pay exactly the target pool — a3a598e
+- [x] 5.10 Project budget panel reserves non-cancelled milestones at their target pool; copy updated — a3a598e
+- [x] 5.11 Kitchen sink payout and budget fixtures show the new figures — a3a598e
