@@ -379,3 +379,6 @@ pnpm-debug.log*
 .DS_Store
 # jetbrains setting folder
 .idea/
+
+# Supabase Studio scratch queries (local only)
+supabase/snippets/
