@@ -1,5 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import KpiScoresSection from "@/components/milestones/KpiScoresSection.astro";
+import PayoutSection from "@/components/milestones/PayoutSection.astro";
 import BudgetExposurePanel from "@/components/projects/BudgetExposurePanel.astro";
 import MilestonesSection from "@/components/projects/MilestonesSection.astro";
 import ProjectForm from "@/components/projects/ProjectForm.astro";
@@ -7,7 +9,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Milestone, Profile, Project, ProjectExposure } from "@/types";
+import type {
+  Milestone,
+  MilestonePayoutLine,
+  MilestonePayoutSummary,
+  Profile,
+  Project,
+  ProjectExposure,
+} from "@/types";
 
 // Dev-only review page: every state of the /projects/[id] view, rendered from inline fixtures.
 // Production gets an empty 404 (status set here, template skipped below). A top-level `return new Response()`
@@ -96,6 +105,86 @@ const exposureOver: ProjectExposure = {
 };
 const multiplierMax = 1.5;
 
+// KPI and computed-bonus fixtures: the worked example (M 1.1875, target 10 000 → pool 11 875).
+const kpiMilestoneId = "ee000001-0000-4000-8000-000000000001";
+const emptyScores = { kpi_schedule: null, kpi_budget: null, kpi_quality: null, kpi_risk: null };
+const workedScores = { kpi_schedule: 80, kpi_budget: 90, kpi_quality: 85, kpi_risk: 60 };
+
+const unscoredSummary: MilestonePayoutSummary = {
+  milestone_id: kpiMilestoneId,
+  target_pool: 10000,
+  ...emptyScores,
+  scored: false,
+  multiplier: null,
+  payout_pool: null,
+  payout_total: null,
+  residual: null,
+  within_pool: null,
+  engagement_count: 3,
+};
+const scoredSummary: MilestonePayoutSummary = {
+  ...unscoredSummary,
+  ...workedScores,
+  scored: true,
+  multiplier: 1.1875,
+  payout_pool: 11875,
+  payout_total: 11874.98,
+  residual: 0.02,
+  within_pool: true,
+};
+const noEngagementsSummary: MilestonePayoutSummary = {
+  ...scoredSummary,
+  payout_total: 0,
+  residual: 11875,
+  engagement_count: 0,
+};
+
+const payoutLine = (
+  n: number,
+  employee_name: string,
+  job_role_name: string,
+  figures: Pick<
+    MilestonePayoutLine,
+    "time_share" | "role_weight" | "rating" | "rating_factor" | "weighted_contribution" | "share" | "bonus"
+  >,
+): MilestonePayoutLine => ({
+  engagement_id: `ee00000${n}-0000-4000-8000-00000000000${n}`,
+  employee_id: `ff00000${n}-0000-4000-8000-00000000000${n}`,
+  employee_name,
+  job_role_name,
+  ...figures,
+});
+const scoredLines: MilestonePayoutLine[] = [
+  payoutLine(1, "Katarzyna Wiśniewska", "Tech lead", {
+    time_share: 0.5,
+    role_weight: 1.25,
+    rating: 4,
+    rating_factor: 1.1,
+    weighted_contribution: 0.6875,
+    share: 0.431711,
+    bonus: 5126.56,
+  }),
+  payoutLine(2, "Marek Zieliński", "Senior developer", {
+    time_share: 0.5,
+    role_weight: 1.1,
+    rating: 4,
+    rating_factor: 1.1,
+    weighted_contribution: 0.605,
+    share: 0.379906,
+    bonus: 4511.38,
+  }),
+  payoutLine(3, "Ola Kowalczyk", "Developer", {
+    time_share: 0.3,
+    role_weight: 1,
+    rating: 3,
+    rating_factor: 1,
+    weighted_contribution: 0.3,
+    share: 0.188383,
+    bonus: 2237.04,
+  }),
+];
+const unscoredLines = scoredLines.map((line) => ({ ...line, bonus: null }));
+
 const states = [
   { state: "default", where: "All sections below (first variant of each)." },
   {
@@ -110,9 +199,13 @@ const states = [
   { state: "disabled", where: "Section “Disabled and pending”: forced-pending SubmitButton and a disabled Button." },
   {
     state: "error",
-    where: "Project form error; milestones row error, add-form error and section error; exposure unavailable.",
+    where:
+      "Project form error; milestones row error, add-form error and section error; exposure unavailable; KPI scores error.",
   },
-  { state: "empty", where: "Milestones: empty and editable." },
+  {
+    state: "empty",
+    where: "Milestones: empty and editable. KPI scores: editable empty. Computed bonuses: no engagements.",
+  },
   {
     state: "loading",
     where:
@@ -136,10 +229,12 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
           </p>
           <p class="text-muted-foreground text-sm">
             The components render several times here, so ids repeat: <code>milestones</code> /
-            <code>milestones-heading</code> (5×), <code>exposure</code> / <code>exposure-heading</code> (3×), the add
-            form's <code>milestone-new-*</code> fields (2×) and the project form's <code>project-*</code> fields (3×).
-            Label clicks and <code>aria-labelledby</code> resolve to the first match, so check focus order and labels on
-            the real <code>/projects/[id]</code> page, where every id is unique.
+            <code>milestones-heading</code> (5×), <code>exposure</code> / <code>exposure-heading</code> (3×),{" "}
+            <code>kpi</code> / <code>kpi-heading</code> (5×) and the KPI form's
+            <code>kpi-*</code> fields (3×), <code>bonuses</code> / <code>bonuses-heading</code> (3×), the add form's{" "}
+            <code>milestone-new-*</code> fields (2×) and the project form's <code>project-*</code> fields (3×). Label
+            clicks and <code>aria-labelledby</code> resolve to the first match, so check focus order and labels on the
+            real <code>/projects/[id]</code> page, where every id is unique.
           </p>
 
           <Card>
@@ -258,6 +353,74 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             rowError={null}
             addFormError={null}
           />
+        </section>
+
+        <section class="flex flex-col gap-6" aria-labelledby="ks-kpi">
+          <h2 id="ks-kpi" class:list={groupHeading}>
+            KPI scores
+          </h2>
+          <h3 class:list={variantHeading}>Editable — empty</h3>
+          <KpiScoresSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            scores={emptyScores}
+            canEdit={true}
+            readOnlyReason={null}
+            saved={false}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Editable — prefilled, saved</h3>
+          <KpiScoresSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            scores={workedScores}
+            canEdit={true}
+            readOnlyReason={null}
+            saved={true}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Error</h3>
+          <KpiScoresSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            scores={workedScores}
+            canEdit={true}
+            readOnlyReason={null}
+            saved={false}
+            error="Ryzyko must be a whole number from 0 to 100"
+          />
+          <h3 class:list={variantHeading}>Read-only — Admin</h3>
+          <KpiScoresSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            scores={workedScores}
+            canEdit={false}
+            readOnlyReason="Admins can view KPI scores but not change them."
+            saved={false}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Read-only — cancelled milestone, unscored</h3>
+          <KpiScoresSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            scores={emptyScores}
+            canEdit={false}
+            readOnlyReason="This milestone is cancelled; its scores can't be changed."
+            saved={false}
+            error={null}
+          />
+        </section>
+
+        <section class="flex flex-col gap-6" aria-labelledby="ks-bonuses">
+          <h2 id="ks-bonuses" class:list={groupHeading}>
+            Computed bonuses
+          </h2>
+          <h3 class:list={variantHeading}>Unscored — shares only</h3>
+          <PayoutSection summary={unscoredSummary} lines={unscoredLines} />
+          <h3 class:list={variantHeading}>Scored — worked example</h3>
+          <PayoutSection summary={scoredSummary} lines={scoredLines} />
+          <h3 class:list={variantHeading}>Scored — no engagements</h3>
+          <PayoutSection summary={noEngagementsSummary} lines={[]} />
         </section>
 
         <section class="flex flex-col gap-6" aria-labelledby="ks-project">

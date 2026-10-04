@@ -1,0 +1,111 @@
+---
+import { SubmitButton } from "@/components/SubmitButton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+/** The four KPI scores; all null while the milestone is unscored. */
+export interface KpiScores {
+  kpi_schedule: number | null;
+  kpi_budget: number | null;
+  kpi_quality: number | null;
+  kpi_risk: number | null;
+}
+
+interface Props {
+  projectId: string;
+  milestoneId: string;
+  scores: KpiScores;
+  canEdit: boolean;
+  /** Notice shown when the scores are read-only (Admin, cancelled milestone, closed project). */
+  readOnlyReason: string | null;
+  saved: boolean;
+  error: string | null;
+}
+
+const { projectId, milestoneId, scores, canEdit, readOnlyReason, saved, error } = Astro.props;
+
+// Field names match kpiScoresInputSchema. 100 is the best score for every field, Ryzyko included.
+const fields = [
+  { name: "kpi_schedule", label: "Termin", id: "kpi-schedule" },
+  { name: "kpi_budget", label: "Budżet", id: "kpi-budget" },
+  { name: "kpi_quality", label: "Jakość", id: "kpi-quality" },
+  { name: "kpi_risk", label: "Ryzyko", id: "kpi-risk" },
+] as const;
+
+const action = `/api/projects/${projectId}/milestones/${milestoneId}/kpi`;
+const scored = fields.every((field) => scores[field.name] !== null);
+---
+
+<section id="kpi" aria-labelledby="kpi-heading">
+  <Card>
+    <CardHeader>
+      <h2 id="kpi-heading" class="text-xl leading-none font-semibold">
+        KPI scores
+      </h2>
+      <CardDescription>
+        Whole numbers from 0 to 100; higher is better for every score, Ryzyko included. Enter all four to compute the
+        bonuses.
+      </CardDescription>
+    </CardHeader>
+
+    <CardContent className="flex flex-col gap-4">
+      {saved && (
+        <Alert variant="success" role="status">
+          <AlertDescription>KPI scores saved.</AlertDescription>
+        </Alert>
+      )}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {!canEdit && readOnlyReason && (
+        <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{readOnlyReason}</p>
+      )}
+
+      {canEdit ? (
+        <form method="POST" action={action} class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {fields.map((field) => (
+            <div class="flex flex-col gap-2">
+              <Label htmlFor={field.id}>{field.label}</Label>
+              <Input
+                id={field.id}
+                type="number"
+                inputMode="numeric"
+                name={field.name}
+                min={0}
+                max={100}
+                step={1}
+                defaultValue={scores[field.name] ?? undefined}
+                aria-describedby={`${field.id}-hint`}
+                autoComplete="off"
+                required
+              />
+              <p id={`${field.id}-hint`} class="text-muted-foreground text-xs">
+                0–100, higher is better
+              </p>
+            </div>
+          ))}
+          <div class="sm:col-span-2 lg:col-span-4">
+            <SubmitButton client:load pendingText="Saving…">
+              Save KPI scores
+            </SubmitButton>
+          </div>
+        </form>
+      ) : scored ? (
+        <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {fields.map((field) => (
+            <div class="bg-muted rounded-xl border p-3">
+              <dt class="text-muted-foreground text-sm">{field.label}</dt>
+              <dd class="mt-1 text-lg font-semibold tabular-nums">{scores[field.name]}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p class="text-muted-foreground text-sm">No KPI scores entered yet.</p>
+      )}
+    </CardContent>
+  </Card>
+</section>

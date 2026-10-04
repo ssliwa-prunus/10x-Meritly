@@ -447,35 +447,35 @@ Additive: four nullable columns, one check, one trigger and three functions. Exi
 
 #### Automated
 
-- [x] 3.1 UI literal check passes with the two new paths: `npm run lint:ui`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Type check passes: `npx astro check`
-- [x] 3.4 Build passes: `npm run build`
+- [x] 3.1 UI literal check passes with the two new paths: `npm run lint:ui` — 26a32cd
+- [x] 3.2 Lint passes: `npm run lint` — 26a32cd
+- [x] 3.3 Type check passes: `npx astro check` — 26a32cd
+- [x] 3.4 Build passes: `npm run build` — 26a32cd
 
 #### Manual
 
-- [x] 3.5 Page consistent with project detail on desktop and phone width, no horizontal scroll
-- [x] 3.6 Assign, edit, delete and all error placements and notices behave as before
-- [x] 3.7 Focus-visible rings show on links, buttons and controls
+- [x] 3.5 Page consistent with project detail on desktop and phone width, no horizontal scroll — 26a32cd
+- [x] 3.6 Assign, edit, delete and all error placements and notices behave as before — 26a32cd
+- [x] 3.7 Focus-visible rings show on links, buttons and controls — 26a32cd
 
 ### Phase 4: KPI and bonus sections
 
 #### Automated
 
-- [ ] 4.1 UI literal check passes including the new components: `npm run lint:ui`
-- [ ] 4.2 Lint passes: `npm run lint`
-- [ ] 4.3 Type check passes: `npx astro check`
-- [ ] 4.4 Build passes: `npm run build`
-- [ ] 4.5 Smoke test passes: `npm run smoke`
-- [ ] 4.6 pgTAP still passes: `npx supabase test db`
+- [x] 4.1 UI literal check passes including the new components: `npm run lint:ui`
+- [x] 4.2 Lint passes: `npm run lint`
+- [x] 4.3 Type check passes: `npx astro check`
+- [x] 4.4 Build passes: `npm run build`
+- [x] 4.5 Smoke test passes: `npm run smoke`
+- [x] 4.6 pgTAP still passes: `npx supabase test db`
 
 #### Manual
 
-- [ ] 4.7 Seed milestone shows summary and bonuses; total + residual = pool
+- [x] 4.7 Seed milestone shows summary and bonuses; total + residual = pool
 - [ ] 4.8 Worked example reproduces M 1,1875, pool 11 875,00 zł, bonuses 5 126,56 / 4 511,38 / 2 237,04 zł, residual 0,02 zł
-- [ ] 4.9 Raising only Ryzyko increases M and every bonus
-- [ ] 4.10 Unscored shows shares without PLN; scored with no assignments shows total 0 and residual = pool
-- [ ] 4.11 Editing an assignment after scoring changes bonuses on reload
-- [ ] 4.12 Admin read-only, cancelled milestone read-only, closed project notice
-- [ ] 4.13 Kitchen sink shows every listed state across the 7-state matrix, usable at phone width
-- [ ] 4.14 Page loads within 2 seconds for the seed milestone
+- [x] 4.9 Raising only Ryzyko increases M and every bonus
+- [x] 4.10 Unscored shows shares without PLN; scored with no assignments shows total 0 and residual = pool
+- [x] 4.11 Editing an assignment after scoring changes bonuses on reload
+- [x] 4.12 Admin read-only, cancelled milestone read-only, closed project notice
+- [x] 4.13 Kitchen sink shows every listed state across the 7-state matrix, usable at phone width
+- [x] 4.14 Page loads within 2 seconds for the seed milestone
