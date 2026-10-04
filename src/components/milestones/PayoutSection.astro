@@ -1,0 +1,144 @@
+---
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatMultiplier, formatPercent, formatPln, formatShare } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { MilestonePayoutLine, MilestonePayoutSummary } from "@/types";
+
+interface Props {
+  summary: MilestonePayoutSummary;
+  lines: MilestonePayoutLine[];
+}
+
+const { summary, lines } = Astro.props;
+
+// Amounts arrive already computed and floored in SQL; this view only formats them.
+const UNSCORED = "Enter KPI scores";
+const money = (value: number | null) => (value === null ? UNSCORED : formatPln(value));
+
+const figures = [
+  { label: "Target pool (max)", value: formatPln(summary.target_pool) },
+  {
+    label: "KPI multiplier",
+    value: summary.multiplier === null ? UNSCORED : formatMultiplier(summary.multiplier),
+  },
+  {
+    label: "Share of target pool",
+    value: summary.budget_share === null ? UNSCORED : formatShare(summary.budget_share),
+  },
+  { label: "Payout pool", value: money(summary.payout_pool) },
+  { label: "Payout total", value: money(summary.payout_total) },
+  { label: "Rounding residual", value: money(summary.residual) },
+];
+
+const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+---
+
+<section id="bonuses" aria-labelledby="bonuses-heading">
+  <Card>
+    <CardHeader>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 id="bonuses-heading" class="text-xl leading-none font-semibold">
+          Computed bonuses
+        </h2>
+        {summary.within_pool === true && (
+          <Badge className="bg-success text-success-foreground">Within payout pool</Badge>
+        )}
+        {summary.within_pool === false && <Badge variant="destructive">Exceeds payout pool</Badge>}
+      </div>
+      <CardDescription>
+        Draft figures; employees do not see them until the milestone is approved. The target pool is the approved
+        maximum: the payout pool is the target pool × KPI multiplier ÷ maximum multiplier, so only the maximum score
+        pays out the whole target pool. It is split by time share × role weight × rating factor and each bonus is
+        rounded down to the grosz.
+      </CardDescription>
+    </CardHeader>
+
+    <CardContent className="flex flex-col gap-4">
+      <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {figures.map((figure) => (
+          <div class="bg-muted rounded-xl border p-3">
+            <dt class="text-muted-foreground text-sm">{figure.label}</dt>
+            <dd
+              class:list={cn(
+                "mt-1 font-semibold tabular-nums",
+                figure.value === UNSCORED ? "text-muted-foreground text-sm" : "text-lg",
+              )}
+            >
+              {figure.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {lines.length === 0 ? (
+        <p class="text-muted-foreground text-sm">
+          No employees assigned yet. Assign them in the{" "}
+          <a href="#assignments" class:list={cn("text-primary hover:underline", focusRing)}>
+            Assignments
+          </a>{" "}
+          section to split the pool.
+        </p>
+      ) : (
+        <Table className="min-w-3xl text-left">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead scope="col" className="text-muted-foreground">
+                Employee
+              </TableHead>
+              <TableHead scope="col" className="text-muted-foreground">
+                Job role
+              </TableHead>
+              <TableHead scope="col" className="text-muted-foreground text-right">
+                Time share
+              </TableHead>
+              <TableHead scope="col" className="text-muted-foreground text-right">
+                Role weight
+              </TableHead>
+              <TableHead scope="col" className="text-muted-foreground text-right">
+                Rating → factor
+              </TableHead>
+              <TableHead scope="col" className="text-muted-foreground text-right">
+                Weighted contribution
+              </TableHead>
+              <TableHead scope="col" className="text-muted-foreground text-right">
+                Share
+              </TableHead>
+              <TableHead scope="col" className="text-muted-foreground text-right">
+                Bonus
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lines.map((line) => (
+              <TableRow className="align-top hover:bg-transparent">
+                <TableCell className="align-top break-words whitespace-normal">{line.employee_name}</TableCell>
+                <TableCell className="align-top whitespace-normal">{line.job_role_name}</TableCell>
+                <TableCell className="text-right align-top tabular-nums">{formatPercent(line.time_share)}</TableCell>
+                <TableCell className="text-right align-top tabular-nums">
+                  {formatMultiplier(line.role_weight)}
+                </TableCell>
+                <TableCell className="text-right align-top tabular-nums">
+                  {line.rating} → {formatMultiplier(line.rating_factor)}
+                </TableCell>
+                <TableCell className="text-right align-top tabular-nums">
+                  {formatMultiplier(line.weighted_contribution)}
+                </TableCell>
+                <TableCell className="text-right align-top tabular-nums">{formatShare(line.share)}</TableCell>
+                <TableCell
+                  className={cn(
+                    "text-right align-top tabular-nums",
+                    line.bonus === null ? "text-muted-foreground" : "font-semibold",
+                  )}
+                >
+                  {money(line.bonus)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </CardContent>
+  </Card>
+</section>

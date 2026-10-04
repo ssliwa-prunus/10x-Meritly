@@ -2,11 +2,18 @@
 import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
 import EngagementForm from "@/components/engagements/EngagementForm.astro";
-import { buttonClass } from "@/components/form-classes";
+import KpiScoresSection from "@/components/milestones/KpiScoresSection.astro";
+import PayoutSection from "@/components/milestones/PayoutSection.astro";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase";
 import { formatPercent, formatPln } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { engagementsErrorMessage, listAssignableEmployees, listEngagements } from "@/lib/services/engagements";
+import { getMilestonePayout, kpiErrorMessage } from "@/lib/services/payouts";
 import { getProject, listMilestones, projectIdSchema } from "@/lib/services/projects";
 import type { WorkStatus } from "@/types";
 
@@ -17,9 +24,13 @@ const saved = Astro.url.searchParams.get("saved");
 const errorCode = Astro.url.searchParams.get("error");
 const errorField = Astro.url.searchParams.get("field");
 const errorEngagementId = Astro.url.searchParams.get("engagement");
+// section=kpi marks an error from the KPI form: it shows in the KPI card and never in the assignments.
+const isKpiError = Astro.url.searchParams.get("section") === "kpi";
 
 // The URL carries only codes; the displayed text always comes from fixed catalogs.
-const errorMessage = errorCode ? engagementsErrorMessage(errorCode, errorField) : null;
+const errorMessage = errorCode && !isKpiError ? engagementsErrorMessage(errorCode, errorField) : null;
+const kpiError = errorCode && isKpiError ? kpiErrorMessage(errorCode, errorField) : null;
+const kpiSaved = saved === "kpi";
 const SAVED_MESSAGES: Record<string, string> = {
   created: "Employee assigned.",
   updated: "Assignment saved.",
@@ -36,20 +47,25 @@ let projectResult: Awaited<ReturnType<typeof getProject>> = {};
 let milestonesResult: Awaited<ReturnType<typeof listMilestones>> = {};
 let engagementsResult: Awaited<ReturnType<typeof listEngagements>> = {};
 let assignableResult: Awaited<ReturnType<typeof listAssignableEmployees>> = {};
+let payoutResult: Awaited<ReturnType<typeof getMilestonePayout>> = {};
 
 if (!supabase || !profile) {
   loadError = supabase ? "Your profile could not be loaded" : "Supabase is not configured";
 } else if (projectId.success && milestoneId.success) {
-  [projectResult, milestonesResult, engagementsResult, assignableResult] = await Promise.all([
+  [projectResult, milestonesResult, engagementsResult, assignableResult, payoutResult] = await Promise.all([
     getProject(supabase, projectId.data),
     listMilestones(supabase, projectId.data),
     listEngagements(supabase, milestoneId.data),
     // Admins are read-only, so they get no picker. A Supervisor picks only employees they own.
     isAdmin ? Promise.resolve({}) : listAssignableEmployees(supabase, profile.id, milestoneId.data),
+    getMilestonePayout(supabase, milestoneId.data),
   ]);
   loadError =
     projectResult.error ?? milestonesResult.error ?? engagementsResult.error ?? assignableResult.error ?? null;
 }
+
+// A payout failure stays in its own card: the details and assignments (where the data is fixed) still render.
+const payoutError = payoutResult.error ?? null;
 
 // Invalid ids, a missing milestone, one of another project and one hidden by RLS all look the same: not found.
 const project = projectResult.data ?? null;
@@ -57,11 +73,24 @@ const milestone =
   project && milestoneId.success ? (milestonesResult.data?.find((row) => row.id === milestoneId.data) ?? null) : null;
 const engagements = engagementsResult.data ?? [];
 const assignable = assignableResult.data ?? [];
+const payoutSummary = payoutResult.data?.summary ?? null;
+const payoutLines = payoutResult.data?.lines ?? [];
 
 const isClosedStatus = (status: WorkStatus) => status === "completed" || status === "cancelled";
 const isClosed =
   project !== null && milestone !== null && (isClosedStatus(milestone.status) || isClosedStatus(project.status));
 const canEdit = !isAdmin && !isClosed;
+
+// KPI scores: a completed milestone can still be scored (only its assignments freeze); a cancelled
+// milestone or a closed project cannot. Admins are read-only.
+const kpiReadOnlyReason = isAdmin
+  ? "Admins can view KPI scores but not change them."
+  : milestone?.status === "cancelled"
+    ? "This milestone is cancelled; its scores can't be changed."
+    : project && isClosedStatus(project.status)
+      ? `This project is ${project.status}. Reopen it before changing KPI scores.`
+      : null;
+const canEditKpi = project !== null && milestone !== null && kpiReadOnlyReason === null;
 
 // Where an error shows: on the failing row, on the add form, or at the top of the page.
 const rowErrorId =
@@ -72,221 +101,261 @@ const addFormError = canEdit && errorEngagementId === null ? errorMessage : null
 const pageError = rowErrorId === null && addFormError === null ? errorMessage : null;
 
 const columnCount = canEdit ? 6 : 5;
+const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 ---
 
 <Layout title={milestone ? milestone.name : "Milestone"}>
-  <div class="bg-cosmic min-h-screen p-4 text-white">
+  <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
       <Topbar />
       <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 class="min-w-0 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold break-words text-transparent">
+        <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">
           {milestone ? milestone.name : "Milestone"}
         </h1>
         <a
           href={project ? `/projects/${project.id}` : "/projects"}
-          class="text-sm text-purple-300 transition-colors hover:text-purple-100 hover:underline"
+          class:list={cn("text-primary text-sm hover:underline", focusRing)}
         >
           {project ? `Back to ${project.name}` : "Back to projects"}
         </a>
       </div>
 
       {savedMessage && (
-        <p role="status" class="mb-6 rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">
-          {savedMessage}
-        </p>
+        <Alert variant="success" role="status" className="mb-6">
+          <AlertDescription>{savedMessage}</AlertDescription>
+        </Alert>
       )}
       {pageError && (
-        <p role="alert" class="mb-6 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
-          {pageError}
-        </p>
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{pageError}</AlertDescription>
+        </Alert>
       )}
 
       {loadError ? (
-        <div role="alert" class="rounded-2xl border border-red-400/40 bg-red-500/15 p-6 text-red-100">
-          <p class="font-semibold">Could not load the milestone.</p>
-          <p class="mt-1 text-sm text-red-100/80">{loadError}</p>
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Could not load the milestone.</AlertTitle>
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
       ) : !project || !milestone ? (
-        <div class="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur-xl">
-          <p class="font-semibold">Milestone not found.</p>
-          <p class="mt-1 text-sm text-blue-100/60">It does not exist or you do not have access to it.</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Milestone not found.</CardTitle>
+            <CardDescription>It does not exist or you do not have access to it.</CardDescription>
+          </CardHeader>
+        </Card>
       ) : (
         <div class="flex flex-col gap-6">
-          <section
-            aria-labelledby="details-heading"
-            class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
-          >
-            <h2 id="details-heading" class="sr-only">
-              Milestone details
-            </h2>
-            <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-              <div>
-                <dt class="text-blue-100/70">Period</dt>
-                <dd class="mt-1">
-                  <span class="whitespace-nowrap">{milestone.start_date}</span> –{" "}
-                  <span class="whitespace-nowrap">{milestone.end_date}</span>
-                </dd>
-              </div>
-              <div>
-                <dt class="text-blue-100/70">Status</dt>
-                <dd class="mt-1 capitalize">{milestone.status}</dd>
-              </div>
-              <div>
-                <dt class="text-blue-100/70">Target pool</dt>
-                <dd class="mt-1 tabular-nums">{formatPln(milestone.target_pool)}</dd>
-              </div>
-            </dl>
-            {milestone.notes && <p class="mt-3 text-xs whitespace-pre-line text-blue-100/60">{milestone.notes}</p>}
+          <section aria-labelledby="details-heading">
+            <Card>
+              <CardContent>
+                <h2 id="details-heading" class="sr-only">
+                  Milestone details
+                </h2>
+                <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                  <div>
+                    <dt class="text-muted-foreground">Period</dt>
+                    <dd class="mt-1">
+                      <span class="whitespace-nowrap">{milestone.start_date}</span> –{" "}
+                      <span class="whitespace-nowrap">{milestone.end_date}</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">Status</dt>
+                    <dd class="mt-1 capitalize">{milestone.status}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">Target pool</dt>
+                    <dd class="mt-1 tabular-nums">{formatPln(milestone.target_pool)}</dd>
+                  </div>
+                </dl>
+                {milestone.notes && (
+                  <p class="text-muted-foreground mt-3 text-xs whitespace-pre-line">{milestone.notes}</p>
+                )}
+              </CardContent>
+            </Card>
           </section>
 
-          <section
-            id="assignments"
-            aria-labelledby="assignments-heading"
-            class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
-          >
-            <h2 id="assignments-heading" class="text-xl font-semibold">
-              Assignments
-            </h2>
-            <p class="mt-1 text-sm text-blue-100/60">
-              The open total is the employee's time share across milestones that are not completed or cancelled. Above
-              100% is a warning only.
-            </p>
+          {payoutSummary && (
+            <KpiScoresSection
+              projectId={project.id}
+              milestoneId={milestone.id}
+              scores={payoutSummary}
+              canEdit={canEditKpi}
+              readOnlyReason={kpiReadOnlyReason}
+              saved={kpiSaved}
+              error={kpiError}
+            />
+          )}
+          {payoutSummary && <PayoutSection summary={payoutSummary} lines={payoutLines} />}
+          {payoutError && (
+            <section aria-labelledby="bonuses-heading">
+              <Card>
+                <CardHeader>
+                  <h2 id="bonuses-heading" class="text-xl leading-none font-semibold">
+                    Computed bonuses
+                  </h2>
+                </CardHeader>
+                <CardContent>
+                  <Alert variant="destructive">
+                    <AlertDescription>{payoutError}</AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            </section>
+          )}
 
-            {isAdmin ? (
-              <p class="mt-3 rounded-lg bg-white/5 px-3 py-2 text-sm text-blue-100/80">
-                Admins can view assignments but not change them.
-              </p>
-            ) : (
-              isClosed && (
-                <p class="mt-3 rounded-lg bg-white/5 px-3 py-2 text-sm text-blue-100/80">
-                  {isClosedStatus(milestone.status)
-                    ? `This milestone is ${milestone.status}.`
-                    : `This project is ${project.status}.`}{" "}
-                  Reopen it (set it to planned or active) before changing its assignments.
-                </p>
-              )
-            )}
+          <section id="assignments" aria-labelledby="assignments-heading">
+            <Card>
+              <CardHeader>
+                <h2 id="assignments-heading" class="text-xl leading-none font-semibold">
+                  Assignments
+                </h2>
+                <CardDescription>
+                  The open total is the employee's time share across milestones that are not completed or cancelled.
+                  Above 100% is a warning only.
+                </CardDescription>
+              </CardHeader>
 
-            {engagements.length === 0 ? (
-              <p class="mt-4 text-sm text-blue-100/60">No employees assigned yet.</p>
-            ) : (
-              <div class="mt-4 overflow-x-auto">
-                <table class="w-full min-w-[36rem] text-left text-sm">
-                  <thead class="text-blue-100/70">
-                    <tr class="border-b border-white/10">
-                      <th scope="col" class="py-2 pr-3 font-medium">
-                        Employee
-                      </th>
-                      <th scope="col" class="py-2 pr-3 font-medium">
-                        Job role
-                      </th>
-                      <th scope="col" class="py-2 pr-3 text-right font-medium">
-                        Time share
-                      </th>
-                      <th scope="col" class="py-2 pr-3 text-right font-medium">
-                        Rating
-                      </th>
-                      <th scope="col" class="py-2 pr-3 text-right font-medium">
-                        {isAdmin ? "Open total (all milestones)" : "Open total (your milestones)"}
-                      </th>
-                      {canEdit && (
-                        <th scope="col" class="py-2 font-medium">
-                          <span class="sr-only">Delete</span>
-                        </th>
-                      )}
-                    </tr>
-                  </thead>
-                  {engagements.map((engagement) => {
-                    const name = engagement.employee_name ?? "Former team member";
-                    return (
-                      <tbody class="border-b border-white/5">
-                        <tr class="align-top">
-                          <td class:list={cn("py-2 pr-3 break-words", engagement.employee_name === null && "italic")}>
-                            {name}
-                          </td>
-                          <td class="py-2 pr-3">{engagement.job_role_name ?? "—"}</td>
-                          <td class="py-2 pr-3 text-right whitespace-nowrap tabular-nums">
-                            {formatPercent(engagement.time_share)}
-                          </td>
-                          <td class="py-2 pr-3 text-right tabular-nums">{engagement.rating}</td>
-                          <td class="py-2 pr-3 text-right whitespace-nowrap tabular-nums">
-                            <span class="inline-flex items-center gap-2">
-                              {formatPercent(engagement.open_total)}
-                              {engagement.over_allocated && (
-                                <span class="rounded-full border border-red-400/40 bg-red-500/20 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-red-100">
-                                  Over 100%
-                                </span>
-                              )}
-                            </span>
-                          </td>
-                          {canEdit && (
-                            <td class="py-2 text-right">
-                              <form
-                                method="POST"
-                                action={`/api/projects/${project.id}/milestones/${milestone.id}/engagements/${engagement.id}/delete`}
-                              >
-                                <button
-                                  type="submit"
-                                  aria-label={`Delete assignment of ${name}`}
-                                  class:list={cn(buttonClass, "px-3 py-1 text-xs")}
-                                >
-                                  Delete
-                                </button>
-                              </form>
-                            </td>
-                          )}
-                        </tr>
-                        {canEdit && (
-                          <tr>
-                            <td colspan={columnCount} class="pb-3">
-                              <details
-                                open={rowErrorId === engagement.id}
-                                class="rounded-xl border border-white/10 bg-white/5 p-3"
-                              >
-                                <summary class="cursor-pointer text-sm text-purple-300 hover:text-purple-100">
-                                  Edit {name}
-                                </summary>
-                                <div class="mt-3">
-                                  <EngagementForm
-                                    projectId={project.id}
-                                    milestoneId={milestone.id}
-                                    engagement={engagement}
-                                    error={rowErrorId === engagement.id ? errorMessage : null}
-                                  />
-                                </div>
-                              </details>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    );
-                  })}
-                </table>
-              </div>
-            )}
-
-            {canEdit && (
-              <div class="mt-6 border-t border-white/10 pt-5">
-                <h3 class="mb-2 text-sm font-medium tracking-wide text-blue-100/70 uppercase">Assign employee</h3>
-                {assignable.length === 0 && !addFormError ? (
-                  <p class="text-sm text-blue-100/60">
-                    None of your employees is left to assign to this milestone. Register employees on the{" "}
-                    <a href="/employees" class="text-purple-300 hover:text-purple-100 hover:underline">
-                      Employees
-                    </a>{" "}
-                    page.
+              <CardContent className="flex flex-col gap-4">
+                {isAdmin ? (
+                  <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
+                    Admins can view assignments but not change them.
                   </p>
                 ) : (
-                  <EngagementForm
-                    projectId={project.id}
-                    milestoneId={milestone.id}
-                    employees={assignable}
-                    error={addFormError}
-                  />
+                  isClosed && (
+                    <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
+                      {isClosedStatus(milestone.status)
+                        ? `This milestone is ${milestone.status}.`
+                        : `This project is ${project.status}.`}{" "}
+                      Reopen it (set it to planned or active) before changing its assignments.
+                    </p>
+                  )
                 )}
-              </div>
-            )}
+
+                {engagements.length === 0 ? (
+                  <p class="text-muted-foreground text-sm">No employees assigned yet.</p>
+                ) : (
+                  <Table className="min-w-xl text-left">
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead scope="col" className="text-muted-foreground">
+                          Employee
+                        </TableHead>
+                        <TableHead scope="col" className="text-muted-foreground">
+                          Job role
+                        </TableHead>
+                        <TableHead scope="col" className="text-muted-foreground text-right">
+                          Time share
+                        </TableHead>
+                        <TableHead scope="col" className="text-muted-foreground text-right">
+                          Rating
+                        </TableHead>
+                        <TableHead scope="col" className="text-muted-foreground text-right">
+                          {isAdmin ? "Open total (all milestones)" : "Open total (your milestones)"}
+                        </TableHead>
+                        {canEdit && (
+                          <TableHead scope="col" className="text-muted-foreground">
+                            <span class="sr-only">Delete</span>
+                          </TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    {engagements.map((engagement) => {
+                      const name = engagement.employee_name ?? "Former team member";
+                      return (
+                        <TableBody className="border-b">
+                          <TableRow className="border-0 align-top hover:bg-transparent">
+                            <TableCell
+                              className={cn(
+                                "align-top break-words whitespace-normal",
+                                engagement.employee_name === null && "italic",
+                              )}
+                            >
+                              {name}
+                            </TableCell>
+                            <TableCell className="align-top whitespace-normal">
+                              {engagement.job_role_name ?? "—"}
+                            </TableCell>
+                            <TableCell className="text-right align-top tabular-nums">
+                              {formatPercent(engagement.time_share)}
+                            </TableCell>
+                            <TableCell className="text-right align-top tabular-nums">{engagement.rating}</TableCell>
+                            <TableCell className="text-right align-top tabular-nums">
+                              <span class="inline-flex items-center gap-2">
+                                {formatPercent(engagement.open_total)}
+                                {engagement.over_allocated && <Badge variant="destructive">Over 100%</Badge>}
+                              </span>
+                            </TableCell>
+                            {canEdit && (
+                              <TableCell className="text-right align-top">
+                                <form
+                                  method="POST"
+                                  action={`/api/projects/${project.id}/milestones/${milestone.id}/engagements/${engagement.id}/delete`}
+                                >
+                                  <Button
+                                    type="submit"
+                                    variant="outline"
+                                    size="sm"
+                                    aria-label={`Delete assignment of ${name}`}
+                                  >
+                                    Delete
+                                  </Button>
+                                </form>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                          {canEdit && (
+                            <TableRow className="border-0 hover:bg-transparent">
+                              <TableCell colSpan={columnCount} className="pt-0 pb-3 whitespace-normal">
+                                <details open={rowErrorId === engagement.id} class="bg-muted rounded-xl border p-3">
+                                  <summary
+                                    class:list={cn("text-primary cursor-pointer text-sm hover:underline", focusRing)}
+                                  >
+                                    Edit {name}
+                                  </summary>
+                                  <div class="mt-3">
+                                    <EngagementForm
+                                      projectId={project.id}
+                                      milestoneId={milestone.id}
+                                      engagement={engagement}
+                                      error={rowErrorId === engagement.id ? errorMessage : null}
+                                    />
+                                  </div>
+                                </details>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      );
+                    })}
+                  </Table>
+                )}
+
+                {canEdit && (
+                  <div class="mt-2 border-t pt-5">
+                    <h3 class="text-muted-foreground mb-2 text-sm font-medium tracking-wide uppercase">
+                      Assign employee
+                    </h3>
+                    {assignable.length === 0 && !addFormError ? (
+                      <p class="text-muted-foreground text-sm">
+                        None of your employees is left to assign to this milestone. Register employees on the{" "}
+                        <a href="/employees" class:list={cn("text-primary hover:underline", focusRing)}>
+                          Employees
+                        </a>{" "}
+                        page.
+                      </p>
+                    ) : (
+                      <EngagementForm
+                        projectId={project.id}
+                        milestoneId={milestone.id}
+                        employees={assignable}
+                        error={addFormError}
+                      />
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </section>
         </div>
       )}

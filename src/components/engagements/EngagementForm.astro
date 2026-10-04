@@ -1,5 +1,9 @@
 ---
-import { buttonClass, inputClass } from "@/components/form-classes";
+import { SubmitButton } from "@/components/SubmitButton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { AssignableEmployee, Engagement } from "@/types";
 
 interface Props {
@@ -17,57 +21,64 @@ const { projectId, milestoneId, engagement, employees = [], error } = Astro.prop
 const basePath = `/api/projects/${projectId}/milestones/${milestoneId}/engagements`;
 const action = engagement ? `${basePath}/${engagement.id}` : basePath;
 const currentRating = engagement?.rating ?? 3;
+// Several EngagementForms render on one page, so every field id carries the form instance.
+const fieldId = (field: string) => `engagement-${engagement?.id ?? "new"}-${field}`;
 ---
 
 <div class="flex flex-col gap-3">
   {error && (
-    <p role="alert" class="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
-      {error}
-    </p>
+    <Alert variant="destructive">
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
   )}
   <form method="POST" action={action} class="grid grid-cols-1 gap-3 sm:grid-cols-3">
     {!engagement && (
-      <label class="flex flex-col gap-1 text-sm">
-        <span class="text-blue-100/80">Employee</span>
-        <select name="employee_id" required class:list={inputClass}>
-          <option value="" selected class="bg-slate-900">
+      <div class="flex flex-col gap-2 [&>[data-slot=native-select-wrapper]]:w-full">
+        <Label htmlFor={fieldId("employee")}>Employee</Label>
+        <NativeSelect id={fieldId("employee")} name="employee_id" required>
+          <option value="" selected>
             Choose an employee
           </option>
           {employees.map((employee) => (
-            <option value={employee.id} class="bg-slate-900">
-              {employee.full_name}
-            </option>
+            <option value={employee.id}>{employee.full_name}</option>
           ))}
-        </select>
-      </label>
+        </NativeSelect>
+      </div>
     )}
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-blue-100/80">Time share (0.01–1.00)</span>
-      <input
+    <div class="flex flex-col gap-2">
+      <Label htmlFor={fieldId("time-share")}>Time share (0.01–1.00)</Label>
+      <Input
+        id={fieldId("time-share")}
         type="text"
-        inputmode="decimal"
+        inputMode="decimal"
         name="time_share"
-        value={engagement?.time_share.toFixed(2)}
+        defaultValue={engagement?.time_share.toFixed(2)}
         placeholder="0.50"
-        autocomplete="off"
+        autoComplete="off"
         required
-        class:list={inputClass}
       />
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-blue-100/80">Rating (1–5)</span>
-      <select name="rating" required class:list={inputClass}>
+    </div>
+    <div class="flex flex-col gap-2 [&>[data-slot=native-select-wrapper]]:w-full">
+      <Label htmlFor={fieldId("rating")}>Rating (1–5)</Label>
+      <NativeSelect id={fieldId("rating")} name="rating" required>
         {[1, 2, 3, 4, 5].map((rating) => (
-          <option value={String(rating)} selected={rating === currentRating} class="bg-slate-900">
+          <option value={String(rating)} selected={rating === currentRating}>
             {rating}
           </option>
         ))}
-      </select>
-    </label>
+      </NativeSelect>
+    </div>
     <div class="sm:col-span-3">
-      <button type="submit" class:list={buttonClass}>
-        {engagement ? "Save assignment" : "Assign employee"}
-      </button>
+      {/* Edit forms sit inside a closed <details>; hydrate when the row is opened. */}
+      {engagement ? (
+        <SubmitButton client:visible pendingText="Saving…">
+          Save assignment
+        </SubmitButton>
+      ) : (
+        <SubmitButton client:load pendingText="Assigning…">
+          Assign employee
+        </SubmitButton>
+      )}
     </div>
   </form>
 </div>

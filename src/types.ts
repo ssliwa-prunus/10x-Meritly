@@ -120,3 +120,48 @@ export interface EmployeeListItem extends Employee {
   open_total: number;
   over_allocated: boolean;
 }
+
+/**
+ * Row of `public.milestone_payout_summary(milestone_id)` (S-04, Draft, computed at read time). The
+ * target pool is the approved maximum: `payout_pool` is the target pool scaled by
+ * `budget_share` (M / multiplier_max) and never exceeds it. The money fields, `multiplier`,
+ * `budget_share` and `within_pool` are null while the milestone is unscored; scored with no
+ * engagements, `payout_total` is 0 and `residual` equals `payout_pool`. Amounts are already
+ * floored to the grosz in SQL: display them, never recompute them.
+ */
+export interface MilestonePayoutSummary {
+  milestone_id: string;
+  target_pool: number;
+  kpi_schedule: number | null;
+  kpi_budget: number | null;
+  kpi_quality: number | null;
+  kpi_risk: number | null;
+  scored: boolean;
+  multiplier: number | null;
+  /** M / multiplier_max (display only): the share of the target pool that is paid out. */
+  budget_share: number | null;
+  payout_pool: number | null;
+  payout_total: number | null;
+  residual: number | null;
+  within_pool: boolean | null;
+  engagement_count: number;
+}
+
+/**
+ * Row of `public.milestone_payout_lines(milestone_id)`: one engagement's weighted contribution
+ * (time share x role weight x rating factor), its share of the milestone total (display only) and
+ * its bonus (null while the milestone is unscored).
+ */
+export interface MilestonePayoutLine {
+  engagement_id: string;
+  employee_id: string;
+  employee_name: string;
+  job_role_name: string;
+  time_share: number;
+  role_weight: number;
+  rating: number;
+  rating_factor: number;
+  weighted_contribution: number;
+  share: number;
+  bonus: number | null;
+}
