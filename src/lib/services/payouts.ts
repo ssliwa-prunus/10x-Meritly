@@ -157,6 +157,7 @@ interface PayoutSummaryRow {
   kpi_risk: number | null;
   scored: boolean;
   multiplier: Numeric | null;
+  budget_share: Numeric | null;
   payout_pool: Numeric | null;
   payout_total: Numeric | null;
   residual: Numeric | null;
@@ -189,6 +190,7 @@ const toSummary = (row: PayoutSummaryRow): MilestonePayoutSummary => ({
   kpi_risk: toNullableNumber(row.kpi_risk),
   scored: row.scored,
   multiplier: toNullableNumber(row.multiplier),
+  budget_share: toNullableNumber(row.budget_share),
   payout_pool: toNullableNumber(row.payout_pool),
   payout_total: toNullableNumber(row.payout_total),
   residual: toNullableNumber(row.residual),

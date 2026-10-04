@@ -4,6 +4,8 @@
 
 Roadmap S-04 (north star; FR-006, FR-009, FR-010). A Supervisor enters a milestone's four KPI scores (Termin, Budżet, Jakość, Ryzyko, whole numbers 0–100). The system derives the milestone multiplier M from them, scales the target pool into the payout pool, and splits that pool among the milestone's engaged employees by weighted contribution, rounded down to the grosz. The milestone page shows a summary (target pool, M, payout pool, payout total, rounding residual, within-pool check) and the per-employee bonus table. All results are Draft and computed live on read; S-05 adds approval, freezing and employee visibility.
 
+> **Amendment (2026-10-04, after Phase 4):** the user clarified that a milestone's target pool is the amount approved by the president/director as the **maximum** for that milestone's payouts. The PRD rule "M above 1.0 pays out more than the target pool" was wrong. Phase 5 replaces `payout_pool = floor(target × M)` with `payout_pool = floor(target × M / multiplier_max)` (the full target pool only at the maximum multiplier) and reserves non-Approved milestones at their target pool in `project_budget_exposure`. Figures in Key Discoveries, Phase 1 and Phase 4 that use the old rule are superseded by Phase 5's; PRD and roadmap are corrected accordingly.
+
 ## Current State Analysis
 
 - `bonus_settings` (singleton) holds KPI weights (sum exactly 1, DB CHECK), `multiplier_min/max` and `rating_factor_1..5`; `job_roles.weight` holds role weights (`supabase/migrations/20260926120000_bonus_rules_config.sql:15-76`). Supervisors and Admins can read both; Employees read nothing.
@@ -40,12 +42,12 @@ Verify: `npx supabase db reset && npx supabase test db`, `npm run lint`, `npm ru
 ## What We're NOT Doing
 
 - No Approved status, no freezing or snapshot of config onto result rows, no employee visibility, no email (all S-05).
-- No change to `project_budget_exposure`. Every non-cancelled milestone stays reserved at target × max until S-05 counts Approved milestones at their payout pool.
+- No change to `project_budget_exposure` in Phases 1–4. (Superseded by Phase 5: non-cancelled milestones are reserved at their full target pool; S-05 still counts Approved milestones at their payout pool.)
 - No persisted result table. Draft figures follow the current config, role weights and engagements on every read.
 - No computed figures on the project detail page's milestones table; they appear on the milestone page only.
 - No clearing of KPI scores once set (they can be changed, not removed), and no partial scoring.
 - No fractional KPI scores, only whole numbers 0–100.
-- No reproduction of the spreadsheet's `MIN(M,1)` cap or its inverted Ryzyko. M above 1.0 pays out more than the target pool (PRD Business Logic).
+- No reproduction of the spreadsheet's `MIN(M,1)` cap or its inverted Ryzyko. (Phase 5: the target pool is a hard ceiling, reached by scaling with M / max rather than clipping at 1.0.)
 - No CSV/export and no per-employee drill-down link (S-06/S-07).
 
 ## Implementation Approach
@@ -370,6 +372,114 @@ Add the KPI scores card and the computed bonuses card to the milestone page, ren
 
 ---
 
+## Phase 5: Hard-cap payout pool
+
+### Overview
+
+Correct the business rule: the target pool is the approved maximum for a milestone, so the payout pool is `floor(target_pool × M / multiplier_max)`. It reaches the full target pool only at the maximum multiplier and never exceeds it. The project budget check reserves each non-Approved, non-cancelled milestone at its target pool. The KPI → M mapping, the split, the guards and the UI states are unchanged.
+
+New worked example (defaults; same engagements as Key Discoveries):
+
+| Scores          | M      | M / max  | Payout pool (target 10 000.00) | Bonuses                        | Total    | Residual |
+| --------------- | ------ | -------- | ------------------------------ | ------------------------------ | -------- | -------- |
+| 80/90/85/60     | 1.1875 | ≈ 91.35% | 9 134.61                       | 3 943.51 / 3 470.29 / 1 720.80 | 9 134.60 | 0.01     |
+| 0/0/0/0         | 0.70   | ≈ 53.85% | 5 384.61                       | 2 324.59 / 2 045.64 / 1 014.36 | 5 384.59 | 0.02     |
+| 100/100/100/100 | 1.30   | 100%     | 10 000.00                      | 4 317.11 / 3 799.05 / 1 883.83 | 9 999.99 | 0.01     |
+| 80/90/85/90     | 1.2145 | ≈ 93.42% | 9 342.30                       | 4 033.17 / 3 549.19 / 1 759.93 | 9 342.29 | 0.01     |
+
+Seed milestone `…0021` (target 3 000.00, one engagement, scores 80/90/85/60) gives a payout pool of 2 740.38, all of it paid to the one engagement.
+
+### Changes Required:
+
+#### 1. Migration
+
+**File**: `supabase/migrations/20261004130000_milestone_payout_hard_cap.sql`
+
+**Intent**: Replace the payout-pool rule in the S-04 functions and the reservation rule in the budget exposure view. The header comment records the business-rule correction and why (the approved amount is a hard ceiling). It also records that S-05's snapshot must store `multiplier_max` alongside M, because the pool now depends on it.
+
+**Contract**:
+
+- `public.capped_payout_pool(p_target_pool numeric, p_multiplier numeric) returns numeric`:
+  - stable, security invoker, `search_path = ''`; execute revoked from `public, anon` and granted to `authenticated`;
+  - reads `multiplier_max` from `bonus_settings`;
+  - returns `floor(p_target_pool × p_multiplier / multiplier_max)` to the grosz, or null when `p_multiplier` is null;
+  - the single place this rule lives.
+- `milestone_payout_summary` and `milestone_payout_lines` take the payout pool from `capped_payout_pool`, and keep the exact integer-grosze split.
+  - `milestone_payout_summary` gains a display-only `budget_share numeric` column (M / multiplier_max, null while unscored).
+  - Changing the return type requires drop and re-create; re-apply the revoke/grant afterwards.
+- `public.project_budget_exposure`: `create or replace` with the same columns and `security_invoker = true`. Each non-cancelled milestone reserves its `target_pool`, and `bonus_settings` is no longer joined. S-05 still swaps in Approved milestones' stored payout pool.
+
+**Contract snippet** (the pool must not go through numeric division before the floor):
+
+```sql
+-- M has at most 6 decimals, multiplier_max at most 2: scale both to integers so div() is exact.
+div(p_target_pool * 100 * (p_multiplier * 1000000), multiplier_max * 100 * 10000) * 0.01
+```
+
+#### 2. pgTAP
+
+**File**: `supabase/tests/milestone_payouts.test.sql`, `supabase/tests/projects_rls.test.sql`
+
+**Intent**: Re-baseline the expected figures to the new rule and prove the ceiling.
+
+**Contract**:
+
+- `milestone_payouts.test.sql`:
+  - The four rows of the table above (pool, bonuses, total, residual).
+  - The payout pool equals the target pool exactly at 100/100/100/100.
+  - The payout pool is ≤ the target pool for every fixture.
+  - `budget_share` equals M / max.
+  - The three-equal-engagements exact-floor fixture keeps its 33.33 / 0.01 expectation, with its target and scores chosen so the pool is exactly 100.00 under the new rule.
+- `projects_rls.test.sql`: the exposure assertions expect the sum of non-cancelled target pools (e.g. the 10 000-budget example now reserves 6 000, not 7 800).
+
+#### 3. Types, display and copy
+
+**File**: `src/types.ts`, `src/lib/services/payouts.ts`, `src/components/milestones/PayoutSection.astro`, `src/components/projects/BudgetExposurePanel.astro`, `src/pages/projects/[id].astro`, `src/pages/dev/projects-kitchen-sink.astro`
+
+**Intent**: Surface the new rule in the UI and keep the visual gate truthful.
+
+- `MilestonePayoutSummary` gains `budget_share: number | null`, and the loader converts it.
+- `PayoutSection` relabels the target pool to make clear it is the approved maximum (e.g. "Target pool (max)") and shows "Share of target pool" (`budget_share` as a percent) next to the multiplier.
+- `BudgetExposurePanel` copy no longer mentions the maximum multiplier. It says non-cancelled milestones are reserved at their target pool. Drop the `multiplierMax` prop if nothing else needs it.
+- The kitchen-sink payout fixtures use the 80/90/85/60 row above, and the budget-exposure fixtures are recomputed.
+
+**Contract**: No money arithmetic in TS. `lint:ui` stays green.
+
+#### 4. Registry
+
+**File**: `docs/reference/contract-surfaces.md`
+
+**Intent**: Register the new rule.
+
+**Contract**:
+
+- A row for `capped_payout_pool`.
+- `budget_share` added to the summary and TS-type rows.
+- The `project_budget_exposure` row updated to "reserves target_pool".
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Migrations and seed apply cleanly: `npx supabase db reset`
+- pgTAP suites pass with the re-baselined figures: `npx supabase test db`
+- UI literal check passes: `npm run lint:ui`
+- Lint passes: `npm run lint`
+- Type check passes: `npx astro check`
+- Build passes: `npm run build`
+- Smoke test passes: `npm run smoke`
+
+#### Manual Verification:
+
+- Seed milestone `…0021` shows payout pool 2 740,38 zł (≤ target pool 3 000,00 zł) and share of target pool ≈ 91,3%
+- A milestone reproducing the worked example at 80/90/85/60 shows payout pool 9 134,61 zł, bonuses 3 943,51 / 3 470,29 / 1 720,80 zł, residual 0,01 zł; scored 100/100/100/100 it pays out exactly the target pool (10 000,00 zł)
+- The project detail budget panel reserves each non-cancelled milestone at its target pool, and its copy no longer mentions the maximum multiplier
+- Kitchen sink payout and budget fixtures show the new figures
+
+**Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human. Progress row 4.8 (old figures) is superseded by 5.9 and is flipped together with it.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -462,20 +572,39 @@ Additive: four nullable columns, one check, one trigger and three functions. Exi
 
 #### Automated
 
-- [x] 4.1 UI literal check passes including the new components: `npm run lint:ui`
-- [x] 4.2 Lint passes: `npm run lint`
-- [x] 4.3 Type check passes: `npx astro check`
-- [x] 4.4 Build passes: `npm run build`
-- [x] 4.5 Smoke test passes: `npm run smoke`
-- [x] 4.6 pgTAP still passes: `npx supabase test db`
+- [x] 4.1 UI literal check passes including the new components: `npm run lint:ui` — 1e13772
+- [x] 4.2 Lint passes: `npm run lint` — 1e13772
+- [x] 4.3 Type check passes: `npx astro check` — 1e13772
+- [x] 4.4 Build passes: `npm run build` — 1e13772
+- [x] 4.5 Smoke test passes: `npm run smoke` — 1e13772
+- [x] 4.6 pgTAP still passes: `npx supabase test db` — 1e13772
 
 #### Manual
 
-- [x] 4.7 Seed milestone shows summary and bonuses; total + residual = pool
-- [ ] 4.8 Worked example reproduces M 1,1875, pool 11 875,00 zł, bonuses 5 126,56 / 4 511,38 / 2 237,04 zł, residual 0,02 zł
-- [x] 4.9 Raising only Ryzyko increases M and every bonus
-- [x] 4.10 Unscored shows shares without PLN; scored with no assignments shows total 0 and residual = pool
-- [x] 4.11 Editing an assignment after scoring changes bonuses on reload
-- [x] 4.12 Admin read-only, cancelled milestone read-only, closed project notice
-- [x] 4.13 Kitchen sink shows every listed state across the 7-state matrix, usable at phone width
-- [x] 4.14 Page loads within 2 seconds for the seed milestone
+- [x] 4.7 Seed milestone shows summary and bonuses; total + residual = pool — 1e13772
+- [x] 4.8 Worked example reproduces M 1,1875, pool 11 875,00 zł, bonuses 5 126,56 / 4 511,38 / 2 237,04 zł, residual 0,02 zł
+- [x] 4.9 Raising only Ryzyko increases M and every bonus — 1e13772
+- [x] 4.10 Unscored shows shares without PLN; scored with no assignments shows total 0 and residual = pool — 1e13772
+- [x] 4.11 Editing an assignment after scoring changes bonuses on reload — 1e13772
+- [x] 4.12 Admin read-only, cancelled milestone read-only, closed project notice — 1e13772
+- [x] 4.13 Kitchen sink shows every listed state across the 7-state matrix, usable at phone width — 1e13772
+- [x] 4.14 Page loads within 2 seconds for the seed milestone — 1e13772
+
+### Phase 5: Hard-cap payout pool
+
+#### Automated
+
+- [x] 5.1 Migrations and seed apply cleanly: `npx supabase db reset`
+- [x] 5.2 pgTAP suites pass with the re-baselined figures: `npx supabase test db`
+- [x] 5.3 UI literal check passes: `npm run lint:ui`
+- [x] 5.4 Lint passes: `npm run lint`
+- [x] 5.5 Type check passes: `npx astro check`
+- [x] 5.6 Build passes: `npm run build`
+- [x] 5.7 Smoke test passes: `npm run smoke`
+
+#### Manual
+
+- [x] 5.8 Seed milestone `…0021` shows payout pool 2 740,38 zł and share of target pool ≈ 91,3%
+- [x] 5.9 Worked example at 80/90/85/60 shows pool 9 134,61 zł, bonuses 3 943,51 / 3 470,29 / 1 720,80 zł, residual 0,01 zł; 100s pay exactly the target pool
+- [x] 5.10 Project budget panel reserves non-cancelled milestones at their target pool; copy updated
+- [x] 5.11 Kitchen sink payout and budget fixtures show the new figures

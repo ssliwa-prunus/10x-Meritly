@@ -6,7 +6,8 @@
 -- a reset, creates its own fixtures in the reserved UUID range 00000000-0000-4000-8000-0000000003xx
 -- with emails under @pgtap.test, never asserts absolute row counts (counts are scoped to fixture
 -- projects), and rolls everything back at the end. multiplier_min/max are pinned to the defaults
--- (0.70/1.30) inside the transaction, so the exposure figures do not depend on local edits.
+-- (0.70/1.30) inside the transaction; the exposure figures reserve each non-cancelled milestone at
+-- its target pool (the hard cap) and must not depend on multiplier_max at all.
 --
 -- Run with: npx supabase test db
 
@@ -280,13 +281,14 @@ select isnt_empty(
   'milestone update is allowed again after reopening the project'
 );
 
--- Exposure: 10000.00 budget, 3000.00 + 3000.00 active, 2000.00 cancelled, multiplier_max 1.30
+-- Exposure: 10000.00 budget, 3000.00 + 3000.00 active, 2000.00 cancelled; each non-cancelled
+-- milestone reserves its target pool
 select results_eq(
   $$ select reserved_total, remaining, over_budget
      from public.project_budget_exposure
      where project_id = '00000000-0000-4000-8000-000000000311' $$,
-  $$ values (7800.00::numeric, 2200.00::numeric, false) $$,
-  'exposure excludes the cancelled milestone (7800.00 reserved, 2200.00 remaining)'
+  $$ values (6000.00::numeric, 4000.00::numeric, false) $$,
+  'exposure excludes the cancelled milestone (6000.00 reserved, 4000.00 remaining)'
 );
 
 update public.milestones set status = 'active' where id = '00000000-0000-4000-8000-000000000323';
@@ -295,11 +297,11 @@ select results_eq(
   $$ select reserved_total, remaining, over_budget
      from public.project_budget_exposure
      where project_id = '00000000-0000-4000-8000-000000000311' $$,
-  $$ values (10400.00::numeric, -400.00::numeric, true) $$,
-  'un-cancelling the milestone gives 10400.00 reserved and over budget'
+  $$ values (8000.00::numeric, 2000.00::numeric, false) $$,
+  'un-cancelling the milestone gives 8000.00 reserved (the sum of the target pools)'
 );
 
-update public.projects set total_budget = 10400.00 where id = '00000000-0000-4000-8000-000000000311';
+update public.projects set total_budget = 8000.00 where id = '00000000-0000-4000-8000-000000000311';
 
 select is(
   (select over_budget from public.project_budget_exposure where project_id = '00000000-0000-4000-8000-000000000311'),
@@ -307,7 +309,7 @@ select is(
   'reserved_total equal to the budget is not over budget'
 );
 
-update public.projects set total_budget = 10399.99 where id = '00000000-0000-4000-8000-000000000311';
+update public.projects set total_budget = 7999.99 where id = '00000000-0000-4000-8000-000000000311';
 
 select is(
   (select over_budget from public.project_budget_exposure where project_id = '00000000-0000-4000-8000-000000000311'),
@@ -315,15 +317,15 @@ select is(
   'reserved_total 0.01 over the budget is over budget'
 );
 
--- multiplier_max is read at query time (changed as the owner, inside this transaction)
+-- multiplier_max does not affect the reservation (changed as the owner, inside this transaction)
 reset role;
 update public.bonus_settings set multiplier_max = 1.50 where id;
 set local role authenticated;
 
 select is(
   (select reserved_total from public.project_budget_exposure where project_id = '00000000-0000-4000-8000-000000000311'),
-  12000.00::numeric,
-  'a multiplier_max change is reflected on the next exposure read (8000.00 x 1.50)'
+  8000.00::numeric,
+  'a multiplier_max change does not change the reservation (still 8000.00 of target pools)'
 );
 
 reset role;

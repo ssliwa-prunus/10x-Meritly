@@ -7,7 +7,6 @@ import ProjectForm from "@/components/projects/ProjectForm.astro";
 import { createClient } from "@/lib/supabase";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getBonusSettings } from "@/lib/services/bonus-config";
 import {
   getProject,
   getProjectExposure,
@@ -41,32 +40,23 @@ let loadError: string | null = null;
 let projectResult: Awaited<ReturnType<typeof getProject>> = {};
 let milestonesResult: Awaited<ReturnType<typeof listMilestones>> = {};
 let exposureResult: Awaited<ReturnType<typeof getProjectExposure>> = {};
-let settingsResult: Awaited<ReturnType<typeof getBonusSettings>> = {};
 let supervisorsResult: Awaited<ReturnType<typeof listSupervisors>> = {};
 
 if (!supabase) {
   loadError = "Supabase is not configured";
 } else if (id.success) {
-  [projectResult, milestonesResult, exposureResult, settingsResult, supervisorsResult] = await Promise.all([
+  [projectResult, milestonesResult, exposureResult, supervisorsResult] = await Promise.all([
     getProject(supabase, id.data),
     listMilestones(supabase, id.data),
     getProjectExposure(supabase, id.data),
-    getBonusSettings(supabase),
     isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
   ]);
-  loadError =
-    projectResult.error ??
-    milestonesResult.error ??
-    exposureResult.error ??
-    settingsResult.error ??
-    supervisorsResult.error ??
-    null;
+  loadError = projectResult.error ?? milestonesResult.error ?? exposureResult.error ?? supervisorsResult.error ?? null;
 }
 
 // An invalid id, a missing project and one hidden by RLS all look the same: not found.
 const project = id.success ? (projectResult.data ?? null) : null;
 const milestones = milestonesResult.data ?? [];
-const settings = settingsResult.data;
 const supervisors = supervisorsResult.data;
 
 const isClosed = project?.status === "completed" || project?.status === "cancelled";
@@ -102,12 +92,12 @@ const sectionError = rowErrorId || addFormError ? null : milestonesStatus.error;
         </Alert>
       )}
 
-      {loadError || (project && !settings) ? (
+      {loadError ? (
         <Alert variant="destructive">
           <AlertTitle>Could not load the project.</AlertTitle>
-          <AlertDescription>{loadError ?? "Unknown error"}</AlertDescription>
+          <AlertDescription>{loadError}</AlertDescription>
         </Alert>
-      ) : !project || !settings ? (
+      ) : !project ? (
         <Card>
           <CardHeader>
             <CardTitle>Project not found.</CardTitle>
@@ -116,7 +106,7 @@ const sectionError = rowErrorId || addFormError ? null : milestonesStatus.error;
         </Card>
       ) : (
         <div class="flex flex-col gap-6">
-          <BudgetExposurePanel exposure={exposureResult.data ?? null} multiplierMax={settings.multiplier_max} />
+          <BudgetExposurePanel exposure={exposureResult.data ?? null} />
 
           <MilestonesSection
             project={project}

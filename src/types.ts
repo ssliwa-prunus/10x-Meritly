@@ -123,9 +123,11 @@ export interface EmployeeListItem extends Employee {
 
 /**
  * Row of `public.milestone_payout_summary(milestone_id)` (S-04, Draft, computed at read time). The
- * money fields, `multiplier` and `within_pool` are null while the milestone is unscored; scored
- * with no engagements, `payout_total` is 0 and `residual` equals `payout_pool`. Amounts are
- * already floored to the grosz in SQL: display them, never recompute them.
+ * target pool is the approved maximum: `payout_pool` is the target pool scaled by
+ * `budget_share` (M / multiplier_max) and never exceeds it. The money fields, `multiplier`,
+ * `budget_share` and `within_pool` are null while the milestone is unscored; scored with no
+ * engagements, `payout_total` is 0 and `residual` equals `payout_pool`. Amounts are already
+ * floored to the grosz in SQL: display them, never recompute them.
  */
 export interface MilestonePayoutSummary {
   milestone_id: string;
@@ -136,6 +138,8 @@ export interface MilestonePayoutSummary {
   kpi_risk: number | null;
   scored: boolean;
   multiplier: number | null;
+  /** M / multiplier_max (display only): the share of the target pool that is paid out. */
+  budget_share: number | null;
   payout_pool: number | null;
   payout_total: number | null;
   residual: number | null;

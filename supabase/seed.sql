@@ -93,8 +93,8 @@ update public.profiles set role = 'supervisor' where id = '00000000-0000-4000-80
 update public.profiles set role = 'supervisor' where id = '00000000-0000-4000-8000-000000000004';
 
 -- Sample project. Must come after the promotions (the owner trigger requires a supervisor), and
--- supervisor_id is explicit because auth.uid() is null without a JWT. At the default
--- multiplier_max 1.30 it reserves 7800.00 of 10000.00.
+-- supervisor_id is explicit because auth.uid() is null without a JWT. Its two milestones reserve
+-- their target pools, 6000.00 of 10000.00.
 insert into public.projects (id, name, start_date, end_date, status, total_budget, supervisor_id)
 values (
   '00000000-0000-4000-8000-000000000011',
@@ -145,8 +145,8 @@ values
   ('00000000-0000-4000-8000-000000000042', '00000000-0000-4000-8000-000000000022', '00000000-0000-4000-8000-000000000031', 0.50, 3);
 
 -- KPI scores 80/90/85/60 on Milestone 1 (the S-04 worked example's scores): at the default config
--- M = 1.1875, so its 3000.00 target pool becomes a 3562.50 payout pool, all of it Local Employee's
--- bonus. Milestone 2 stays unscored (shares only, no PLN amounts).
+-- M = 1.1875 of the maximum 1.30, so its 3000.00 target pool (the approved maximum) becomes a
+-- 2740.38 payout pool, all of it Local Employee's bonus. Milestone 2 stays unscored (shares only, no PLN amounts).
 update public.milestones
 set kpi_schedule = 80, kpi_budget = 90, kpi_quality = 85, kpi_risk = 60
 where id = '00000000-0000-4000-8000-000000000021';

@@ -1,6 +1,6 @@
 -- pgTAP suite for milestone KPI scores and computed bonuses (the milestones KPI columns and checks,
 -- public.milestones_check_scores(), public.kpi_multiplier(), public.milestone_payout_lines() and
--- public.milestone_payout_summary()).
+-- public.capped_payout_pool() and public.milestone_payout_summary()).
 --
 -- Isolation model: same as profiles_rls.test.sql. Runs against the live local database without
 -- a reset, creates its own fixtures in the reserved UUID range 00000000-0000-4000-8000-0000000005xx
@@ -9,9 +9,11 @@
 -- defaults inside the transaction and the suite uses its own job roles, so local config edits do
 -- not change the expected figures.
 --
--- Worked example (defaults, Ryzyko higher = better): scores 80/90/85/60 give M = 1.1875; target
--- 10000.00 gives a payout pool of 11875.00; engagements (0.50, 1.25, rating 4), (0.50, 1.10, 4),
--- (0.30, 1.00, 3) give bonuses 5126.56 / 4511.38 / 2237.04, total 11874.98, residual 0.02.
+-- Worked example (defaults, Ryzyko higher = better): scores 80/90/85/60 give M = 1.1875; the
+-- target pool 10000.00 is the approved maximum, so the payout pool is floor(10000.00 x 1.1875 /
+-- 1.30) = 9134.61; engagements (0.50, 1.25, rating 4), (0.50, 1.10, 4), (0.30, 1.00, 3) give
+-- bonuses 3943.51 / 3470.29 / 1720.80, total 9134.60, residual 0.01. Only M = multiplier_max
+-- (100/100/100/100) pays out the whole target pool.
 --
 -- Run with: npx supabase test db
 
@@ -19,7 +21,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(46);
+select plan(54);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so supervisor_id is explicit)
@@ -27,8 +29,8 @@ select plan(46);
 --   job roles:   ...0506 Lead 1.25   ...0507 Senior 1.10   ...0508 Specialist 1.00
 --   projects:    ...0511 A's (active)   ...0512 A's (completed below)
 --   milestones:  ...0521 worked example (0511, target 10000.00)
---                ...0522 recurring split (0511, target 100.00)
---                ...0523 no engagements (0511, target 1000.00)
+--                ...0522 recurring split (0511, target 100.00, scored 100s: pool 100.00)
+--                ...0523 no engagements (0511, target 1000.00, scored 100s: pool 1000.00)
 --                ...0524 cancelled (0511)   ...0525 unscored, no engagements (0511)
 --                ...0526 in the completed project 0512
 --   employees:   ...0531 E1 Lead   ...0532 E2 Senior   ...0533 E3 Specialist
@@ -136,6 +138,11 @@ select ok(
   'authenticated can execute milestone_payout_summary'
 );
 select ok(
+  not has_function_privilege('anon', 'public.capped_payout_pool(numeric, numeric)', 'execute')
+    and has_function_privilege('authenticated', 'public.capped_payout_pool(numeric, numeric)', 'execute'),
+  'capped_payout_pool is executable by authenticated, not anon'
+);
+select ok(
   not has_function_privilege('authenticated', 'public.milestones_check_scores()', 'execute'),
   'authenticated cannot execute the milestones_check_scores trigger function'
 );
@@ -170,6 +177,15 @@ select ok(
   public.kpi_multiplier(80::smallint, 90::smallint, 85::smallint, null) is null,
   'kpi_multiplier is null when any score is missing'
 );
+select is(
+  public.capped_payout_pool(10000.00, 1.1875),
+  9134.61::numeric,
+  'capped_payout_pool floors target x M / max to the grosz (10000.00 x 1.1875 / 1.30 = 9134.61)'
+);
+select ok(
+  public.capped_payout_pool(10000.00, null) is null,
+  'capped_payout_pool is null while unscored'
+);
 
 -- ---------------------------------------------------------------------------
 -- Supervisor A: unscored state of the worked-example milestone
@@ -193,9 +209,9 @@ select is(
   'unscored lines still show every share'
 );
 select results_eq(
-  $$ select scored, multiplier, payout_pool, payout_total, residual, within_pool, engagement_count
+  $$ select scored, multiplier, budget_share, payout_pool, payout_total, residual, within_pool, engagement_count
      from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521') $$,
-  $$ values (false, null::numeric, null::numeric, null::numeric, null::numeric, null::boolean, 3) $$,
+  $$ values (false, null::numeric, null::numeric, null::numeric, null::numeric, null::numeric, null::boolean, 3) $$,
   'unscored summary: scored false, money fields null, 3 engagements'
 );
 
@@ -210,19 +226,26 @@ select isnt_empty(
   'the owning supervisor can score a milestone'
 );
 select results_eq(
-  $$ select scored, target_pool, multiplier, payout_pool, payout_total, residual, within_pool
+  $$ select scored, target_pool, multiplier, budget_share, payout_pool, payout_total, residual, within_pool
      from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521') $$,
-  $$ values (true, 10000.00::numeric, 1.1875::numeric, 11875.00::numeric, 11874.98::numeric, 0.02::numeric, true) $$,
-  'worked example summary: M 1.1875, pool 11875.00, total 11874.98, residual 0.02, within pool'
+  $$ values (true, 10000.00::numeric, 1.1875::numeric, 0.913462::numeric, 9134.61::numeric, 9134.60::numeric, 0.01::numeric, true) $$,
+  'worked example summary: M 1.1875, share 0.913462, pool 9134.61, total 9134.60, residual 0.01, within pool'
+);
+select ok(
+  (
+    select budget_share = round(multiplier / 1.30, 6) and payout_pool <= target_pool
+    from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521')
+  ),
+  'worked example: budget_share equals M / multiplier_max and the payout pool stays within the target pool'
 );
 select results_eq(
   $$ select employee_name, bonus
      from public.milestone_payout_lines('00000000-0000-4000-8000-000000000521') $$,
   $$ values
-       ('pgTAP Payouts E1', 5126.56::numeric),
-       ('pgTAP Payouts E2', 4511.38::numeric),
-       ('pgTAP Payouts E3', 2237.04::numeric) $$,
-  'worked example bonuses: 5126.56 / 4511.38 / 2237.04'
+       ('pgTAP Payouts E1', 3943.51::numeric),
+       ('pgTAP Payouts E2', 3470.29::numeric),
+       ('pgTAP Payouts E3', 1720.80::numeric) $$,
+  'worked example bonuses: 3943.51 / 3470.29 / 1720.80'
 );
 select results_eq(
   $$ select role_weight, rating_factor
@@ -237,16 +260,20 @@ set kpi_schedule = 0, kpi_budget = 0, kpi_quality = 0, kpi_risk = 0
 where id = '00000000-0000-4000-8000-000000000521';
 
 select results_eq(
-  $$ select multiplier, payout_pool, payout_total, residual
+  $$ select multiplier, budget_share, payout_pool, payout_total, residual
      from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521') $$,
-  $$ values (0.70::numeric, 7000.00::numeric, 6999.99::numeric, 0.01::numeric) $$,
-  'scored 0/0/0/0 the same engagements share a 7000.00 pool (total 6999.99)'
+  $$ values (0.70::numeric, 0.538462::numeric, 5384.61::numeric, 5384.59::numeric, 0.02::numeric) $$,
+  'scored 0/0/0/0 the same engagements share a 5384.61 pool (total 5384.59, residual 0.02)'
 );
 select results_eq(
   $$ select bonus
      from public.milestone_payout_lines('00000000-0000-4000-8000-000000000521') $$,
-  $$ values (3021.97::numeric), (2659.34::numeric), (1318.68::numeric) $$,
+  $$ values (2324.59::numeric), (2045.64::numeric), (1014.36::numeric) $$,
   'scored 0/0/0/0 every bonus is lower than in the worked example'
+);
+select ok(
+  (select payout_pool <= target_pool from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521')),
+  'scored 0/0/0/0 the payout pool stays within the target pool'
 );
 
 update public.milestones
@@ -254,17 +281,23 @@ set kpi_schedule = 100, kpi_budget = 100, kpi_quality = 100, kpi_risk = 100
 where id = '00000000-0000-4000-8000-000000000521';
 
 select results_eq(
-  $$ select multiplier, payout_pool, payout_total, residual, within_pool
+  $$ select multiplier, budget_share, payout_pool, payout_total, residual, within_pool
      from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521') $$,
-  $$ values (1.30::numeric, 13000.00::numeric, 12999.98::numeric, 0.02::numeric, true) $$,
-  'scored 100/100/100/100: M 1.30, pool 13000.00, total 12999.98'
+  $$ values (1.30::numeric, 1::numeric, 10000.00::numeric, 9999.99::numeric, 0.01::numeric, true) $$,
+  'scored 100/100/100/100: M 1.30, share 1, pool 10000.00, total 9999.99, residual 0.01'
 );
 select ok(
   (
-    select multiplier > 1 and payout_pool > target_pool and payout_pool <= target_pool * 1.30
+    select multiplier > 1 and payout_pool = target_pool
     from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521')
   ),
-  'M above 1.0 pays out more than the target pool, never more than target x multiplier_max'
+  'at M = multiplier_max the payout pool equals the target pool exactly, never more'
+);
+select results_eq(
+  $$ select bonus
+     from public.milestone_payout_lines('00000000-0000-4000-8000-000000000521') $$,
+  $$ values (4317.11::numeric), (3799.05::numeric), (1883.83::numeric) $$,
+  'scored 100/100/100/100 bonuses: 4317.11 / 3799.05 / 1883.83'
 );
 
 update public.milestones
@@ -272,23 +305,33 @@ set kpi_schedule = 80, kpi_budget = 90, kpi_quality = 85, kpi_risk = 90
 where id = '00000000-0000-4000-8000-000000000521';
 
 select results_eq(
-  $$ select multiplier, payout_pool
+  $$ select multiplier, payout_pool, payout_total, residual
      from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521') $$,
-  $$ values (1.2145::numeric, 12145.00::numeric) $$,
-  'raising only Ryzyko from 60 to 90 raises M (1.1875 -> 1.2145) and the pool'
+  $$ values (1.2145::numeric, 9342.30::numeric, 9342.29::numeric, 0.01::numeric) $$,
+  'raising only Ryzyko from 60 to 90 raises M (1.1875 -> 1.2145) and the pool (9134.61 -> 9342.30)'
+);
+select results_eq(
+  $$ select bonus
+     from public.milestone_payout_lines('00000000-0000-4000-8000-000000000521') $$,
+  $$ values (4033.17::numeric), (3549.19::numeric), (1759.93::numeric) $$,
+  'scored 80/90/85/90 bonuses: 4033.17 / 3549.19 / 1759.93'
+);
+select ok(
+  (select payout_pool <= target_pool from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521')),
+  'scored 80/90/85/90 the payout pool stays within the target pool'
 );
 
 -- ---------------------------------------------------------------------------
--- Supervisor A: exact floor and the empty milestone
+-- Supervisor A: exact floor and the empty milestone (scored 100s, so the pool is the whole target)
 -- ---------------------------------------------------------------------------
 update public.milestones
-set kpi_schedule = 50, kpi_budget = 50, kpi_quality = 50, kpi_risk = 50
+set kpi_schedule = 100, kpi_budget = 100, kpi_quality = 100, kpi_risk = 100
 where id in ('00000000-0000-4000-8000-000000000522', '00000000-0000-4000-8000-000000000523');
 
 select results_eq(
   $$ select multiplier, payout_pool, payout_total, residual, within_pool
      from public.milestone_payout_summary('00000000-0000-4000-8000-000000000522') $$,
-  $$ values (1.00::numeric, 100.00::numeric, 99.99::numeric, 0.01::numeric, true) $$,
+  $$ values (1.30::numeric, 100.00::numeric, 99.99::numeric, 0.01::numeric, true) $$,
   'three equal shares of a 100.00 pool: total 99.99, residual 0.01'
 );
 select results_eq(
@@ -399,7 +442,7 @@ set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000504"}';
 select results_eq(
   $$ select multiplier, payout_pool
      from public.milestone_payout_summary('00000000-0000-4000-8000-000000000521') $$,
-  $$ values (1.2145::numeric, 12145.00::numeric) $$,
+  $$ values (1.2145::numeric, 9342.30::numeric) $$,
   'admin reads the summary of any milestone'
 );
 select is(

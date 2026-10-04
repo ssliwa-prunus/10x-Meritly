@@ -18,10 +18,14 @@ const UNSCORED = "Enter KPI scores";
 const money = (value: number | null) => (value === null ? UNSCORED : formatPln(value));
 
 const figures = [
-  { label: "Target pool", value: formatPln(summary.target_pool) },
+  { label: "Target pool (max)", value: formatPln(summary.target_pool) },
   {
     label: "KPI multiplier",
     value: summary.multiplier === null ? UNSCORED : formatMultiplier(summary.multiplier),
+  },
+  {
+    label: "Share of target pool",
+    value: summary.budget_share === null ? UNSCORED : formatShare(summary.budget_share),
   },
   { label: "Payout pool", value: money(summary.payout_pool) },
   { label: "Payout total", value: money(summary.payout_total) },
@@ -44,14 +48,15 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
         {summary.within_pool === false && <Badge variant="destructive">Exceeds payout pool</Badge>}
       </div>
       <CardDescription>
-        Draft figures; employees do not see them until the milestone is approved. The payout pool is the target pool ×
-        the KPI multiplier; it is split by time share × role weight × rating factor and each bonus is rounded down to
-        the grosz.
+        Draft figures; employees do not see them until the milestone is approved. The target pool is the approved
+        maximum: the payout pool is the target pool × KPI multiplier ÷ maximum multiplier, so only the maximum score
+        pays out the whole target pool. It is split by time share × role weight × rating factor and each bonus is
+        rounded down to the grosz.
       </CardDescription>
     </CardHeader>
 
     <CardContent className="flex flex-col gap-4">
-      <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {figures.map((figure) => (
           <div class="bg-muted rounded-xl border p-3">
             <dt class="text-muted-foreground text-sm">{figure.label}</dt>

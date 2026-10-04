@@ -16,17 +16,17 @@ On the milestone page a Supervisor saves four whole-number scores (0–100). The
 
 ## Key Decisions Made
 
-| Decision                | Choice                                                                                          | Why (1 sentence)                                                                                                       |
-| ----------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| KPI → multiplier        | `M = min + (Σ w_k·score_k/100)·(max − min)`, linear between the Admin bounds; no `MIN(M,1)` cap | The only defined mapping (spreadsheet `Milestones!M`); the PRD lets M > 1 pay more than the target pool.               |
-| Ryzyko direction        | Higher is better, like the other three                                                          | One mental model for all four fields; it matches the instruction doc's scale and example, not the spreadsheet formula. |
-| Results storage         | Computed live on read by SQL functions; nothing persisted                                       | Draft results can't go stale, and S-05 snapshots on approval.                                                          |
-| Where the math lives    | SQL, exact integer-grosz `div` split, reusing `money_floor_mul`                                 | Avoids numeric-division rounding up to a grosz; proven by pgTAP.                                                       |
-| Unscored milestone      | Table shows weighted contribution and share; PLN fields read "Enter KPI scores"                 | The split can be checked before scoring, with no fake PLN figures.                                                     |
-| When scoring is allowed | Any status except cancelled, while the project is open                                          | Scoring a completed milestone is the natural close-out step.                                                           |
-| Score input             | Whole numbers 0–100; all four set together, no clearing                                         | Matches the spreadsheet; the all-or-none check keeps M well-defined.                                                   |
-| UI styling              | Migrate the whole milestone page onto tokens and shadcn                                         | Avoids a mixed-style page and closes the deferred charge.                                                              |
-| Project page            | No computed columns; milestone page only                                                        | Keeps the slice tight; budget exposure changes in S-05.                                                                |
+| Decision                | Choice                                                                                                                            | Why (1 sentence)                                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| KPI → multiplier        | `M = min + (Σ w_k·score_k/100)·(max − min)`, linear between the Admin bounds; payout pool = target × M / max (amended in Phase 5) | The only defined mapping (spreadsheet `Milestones!M`); the target pool is the approved maximum, paid in full only at max M. |
+| Ryzyko direction        | Higher is better, like the other three                                                                                            | One mental model for all four fields; it matches the instruction doc's scale and example, not the spreadsheet formula.      |
+| Results storage         | Computed live on read by SQL functions; nothing persisted                                                                         | Draft results can't go stale, and S-05 snapshots on approval.                                                               |
+| Where the math lives    | SQL, exact integer-grosz `div` split, reusing `money_floor_mul`                                                                   | Avoids numeric-division rounding up to a grosz; proven by pgTAP.                                                            |
+| Unscored milestone      | Table shows weighted contribution and share; PLN fields read "Enter KPI scores"                                                   | The split can be checked before scoring, with no fake PLN figures.                                                          |
+| When scoring is allowed | Any status except cancelled, while the project is open                                                                            | Scoring a completed milestone is the natural close-out step.                                                                |
+| Score input             | Whole numbers 0–100; all four set together, no clearing                                                                           | Matches the spreadsheet; the all-or-none check keeps M well-defined.                                                        |
+| UI styling              | Migrate the whole milestone page onto tokens and shadcn                                                                           | Avoids a mixed-style page and closes the deferred charge.                                                                   |
+| Project page            | No computed columns; milestone page only                                                                                          | Keeps the slice tight; budget exposure changes in S-05.                                                                     |
 
 ## Scope
 
@@ -55,20 +55,21 @@ Scores live on `milestones`. `kpi_multiplier()` holds the KPI→M mapping. `mile
 **Worked example (pgTAP and manual):**
 
 - Scores 80/90/85/60 with the default config give M = 1.1875.
-- Target 10 000,00 gives a pool of 11 875,00.
-- Bonuses are 5 126,56 / 4 511,38 / 2 237,04, residual 0,02.
+- Target 10 000,00 gives a pool of 9 134,61 (= floor(10 000 × 1.1875 / 1.30), Phase 5 rule).
+- Bonuses are 3 943,51 / 3 470,29 / 1 720,80, residual 0,01. At 100/100/100/100 the pool is exactly the target pool.
 
 ## Phases at a Glance
 
-| Phase                            | What it delivers                                               | Key risk                                                  |
-| -------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------- |
-| 1. Schema, computation and pgTAP | Columns, guard, 3 functions, test suite, seed, types, registry | Exact rounding and trigger ordering (42501 before MR012)  |
-| 2. Service and API               | zod schema, error catalog, RPC loaders, KPI route              | Error codes leaking free text; Admin path                 |
-| 3. Milestone page onto tokens    | Existing page and EngagementForm restyled and guarded          | Behaviour regressions in assignments                      |
-| 4. KPI and bonus sections        | Two new cards, page wiring, kitchen-sink states                | Error routing between KPI and assignments; unscored state |
+| Phase                               | What it delivers                                                                           | Key risk                                                                      |
+| ----------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| 1. Schema, computation and pgTAP    | Columns, guard, 3 functions, test suite, seed, types, registry                             | Exact rounding and trigger ordering (42501 before MR012)                      |
+| 2. Service and API                  | zod schema, error catalog, RPC loaders, KPI route                                          | Error codes leaking free text; Admin path                                     |
+| 3. Milestone page onto tokens       | Existing page and EngagementForm restyled and guarded                                      | Behaviour regressions in assignments                                          |
+| 4. KPI and bonus sections           | Two new cards, page wiring, kitchen-sink states                                            | Error routing between KPI and assignments; unscored state                     |
+| 5. Hard-cap payout pool (amendment) | Pool = target × M / max; budget exposure reserves target pool; re-baselined tests and copy | Exact division before the floor; consistent figures across tests, UI and docs |
 
 **Prerequisites:** S-01 and S-03 done (yes). Local Supabase running.
-**Estimated effort:** ~3 sessions across 4 phases.
+**Estimated effort:** ~3 sessions across 4 phases, plus 1 for the Phase 5 amendment.
 
 ## Open Risks & Assumptions
 

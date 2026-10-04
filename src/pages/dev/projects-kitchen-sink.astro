@@ -89,23 +89,23 @@ const closedMilestones = milestonesFor("cc");
 const savedMilestones = milestonesFor("dd");
 const errorRowId = editableMilestones[1].id;
 
+// Exposure of the fixture milestones: the non-cancelled target pools 15 000 + 42 500,50 = 57 500,50.
 const exposureNormal: ProjectExposure = {
   project_id: activeProject.id,
   total_budget: 120000,
-  reserved_total: 87250.75,
-  remaining: 32749.25,
+  reserved_total: 57500.5,
+  remaining: 62499.5,
   over_budget: false,
 };
 const exposureOver: ProjectExposure = {
   project_id: activeProject.id,
-  total_budget: 60000,
-  reserved_total: 87250.75,
-  remaining: -27250.75,
+  total_budget: 50000,
+  reserved_total: 57500.5,
+  remaining: -7500.5,
   over_budget: true,
 };
-const multiplierMax = 1.5;
 
-// KPI and computed-bonus fixtures: the worked example (M 1.1875, target 10 000 → pool 11 875).
+// KPI and computed-bonus fixtures: the worked example (M 1.1875 of max 1.30, target 10 000 → pool 9 134,61).
 const kpiMilestoneId = "ee000001-0000-4000-8000-000000000001";
 const emptyScores = { kpi_schedule: null, kpi_budget: null, kpi_quality: null, kpi_risk: null };
 const workedScores = { kpi_schedule: 80, kpi_budget: 90, kpi_quality: 85, kpi_risk: 60 };
@@ -116,6 +116,7 @@ const unscoredSummary: MilestonePayoutSummary = {
   ...emptyScores,
   scored: false,
   multiplier: null,
+  budget_share: null,
   payout_pool: null,
   payout_total: null,
   residual: null,
@@ -127,15 +128,16 @@ const scoredSummary: MilestonePayoutSummary = {
   ...workedScores,
   scored: true,
   multiplier: 1.1875,
-  payout_pool: 11875,
-  payout_total: 11874.98,
-  residual: 0.02,
+  budget_share: 0.913462,
+  payout_pool: 9134.61,
+  payout_total: 9134.6,
+  residual: 0.01,
   within_pool: true,
 };
 const noEngagementsSummary: MilestonePayoutSummary = {
   ...scoredSummary,
   payout_total: 0,
-  residual: 11875,
+  residual: 9134.61,
   engagement_count: 0,
 };
 
@@ -162,7 +164,7 @@ const scoredLines: MilestonePayoutLine[] = [
     rating_factor: 1.1,
     weighted_contribution: 0.6875,
     share: 0.431711,
-    bonus: 5126.56,
+    bonus: 3943.51,
   }),
   payoutLine(2, "Marek Zieliński", "Senior developer", {
     time_share: 0.5,
@@ -171,7 +173,7 @@ const scoredLines: MilestonePayoutLine[] = [
     rating_factor: 1.1,
     weighted_contribution: 0.605,
     share: 0.379906,
-    bonus: 4511.38,
+    bonus: 3470.29,
   }),
   payoutLine(3, "Ola Kowalczyk", "Developer", {
     time_share: 0.3,
@@ -180,7 +182,7 @@ const scoredLines: MilestonePayoutLine[] = [
     rating_factor: 1,
     weighted_contribution: 0.3,
     share: 0.188383,
-    bonus: 2237.04,
+    bonus: 1720.8,
   }),
 ];
 const unscoredLines = scoredLines.map((line) => ({ ...line, bonus: null }));
@@ -277,11 +279,11 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             Budget exposure
           </h2>
           <h3 class:list={variantHeading}>Default (within budget)</h3>
-          <BudgetExposurePanel exposure={exposureNormal} multiplierMax={multiplierMax} />
+          <BudgetExposurePanel exposure={exposureNormal} />
           <h3 class:list={variantHeading}>Over budget</h3>
-          <BudgetExposurePanel exposure={exposureOver} multiplierMax={multiplierMax} />
+          <BudgetExposurePanel exposure={exposureOver} />
           <h3 class:list={variantHeading}>Error — exposure unavailable</h3>
-          <BudgetExposurePanel exposure={null} multiplierMax={multiplierMax} />
+          <BudgetExposurePanel exposure={null} />
         </section>
 
         <section class="flex flex-col gap-6" aria-labelledby="ks-milestones">

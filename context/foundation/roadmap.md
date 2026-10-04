@@ -29,11 +29,11 @@ milestone_status: open
 
 ## Vision recap
 
-A budget-holding supervisor today splits a milestone's bonus pool using a validated weighted formula (time share × role weight × contribution rating × milestone KPI multiplier) run manually across a multi-tab spreadsheet — slow, error-prone at every milestone close, and giving employees no way to see their own outcome without someone sending them the file. Meritly applies the same weights in a web app — with the KPI multiplier scaling the milestone's target pool into its payout pool, and the weighted contributions splitting that payout pool — keeps every payout provably within its payout pool, and makes each milestone's result visible directly to the employee it affects, once a Supervisor approves it.
+A budget-holding supervisor today splits a milestone's bonus pool using a validated weighted formula (time share × role weight × contribution rating × milestone KPI multiplier) run manually across a multi-tab spreadsheet — slow, error-prone at every milestone close, and giving employees no way to see their own outcome without someone sending them the file. Meritly applies the same weights in a web app — with the KPI multiplier scaling the milestone's target pool (the approved maximum) into its payout pool, and the weighted contributions splitting that payout pool — keeps every payout provably within its payout pool, and makes each milestone's result visible directly to the employee it affects, once a Supervisor approves it.
 
 ## North star
 
-**S-04: Supervisor scores a milestone and sees the computed per-employee bonus table, guaranteed never to exceed the payout pool (target pool × KPI multiplier).**
+**S-04: Supervisor scores a milestone and sees the computed per-employee bonus table, guaranteed never to exceed the payout pool (target pool × KPI multiplier ÷ maximum multiplier), which itself never exceeds the approved target pool.**
 
 > A reader-facing gloss: the north star is the smallest end-to-end slice whose successful delivery would prove the core product hypothesis — placed as early as Prerequisites allow because everything else only matters if this works. Here the hypothesis is narrower and higher-stakes than "will people use this": it's "does the formula compute correctly — the KPI multiplier sizing the payout pool, the weights splitting it — and stay inside the pool guardrail when it's the software doing the arithmetic, not a person." Draft/Approved gating, employee visibility, email, history, and reporting all sit downstream of trusting this number.
 
@@ -102,7 +102,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-02: Supervisor creates project and milestones
 
-- **Outcome:** Supervisor can create a project (name, period, status, total bonus budget, notes) and create milestones within it (name, period, target bonus pool, status, notes), with the project's worst-case milestone payout (actual payout pool for Approved milestones, target pool × current maximum multiplier for the rest) checked against its total budget.
+- **Outcome:** Supervisor can create a project (name, period, status, total bonus budget, notes) and create milestones within it (name, period, target bonus pool, status, notes), with the project's worst-case milestone payout (actual payout pool for Approved milestones, target pool × current maximum multiplier for the rest) checked against its total budget. (Corrected by S-04 on 2026-10-04: the target pool is a hard ceiling, so non-Approved milestones are now reserved at their full target pool, not target × maximum multiplier.)
 - **Change ID:** supervisor-creates-project-and-milestones
 - **PRD refs:** FR-004, FR-005, FR-017
 - **Prerequisites:** F-01
@@ -134,7 +134,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** —
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** This is the north star and the highest-correctness-risk slice in the milestone — the two-step formula (payout pool = floor(target pool × milestone multiplier); each bonus = floor(payout pool × e_i / Σe) with e_i = time share × role weight × contribution factor) and the pool guardrail both live here. The multiplier must scale the pool, never each employee's weight — inside a proportional split it would cancel out (PRD Business Logic, US-01 acceptance criteria). Per PRD, the guardrail is confirmatory (the split mathematically cannot exceed the payout pool by construction), so the multiplier placement and the rounding-down logic are the details `/10x-plan` must get exactly right.
+- **Risk:** This is the north star and the highest-correctness-risk slice in the milestone — the two-step formula (payout pool = floor(target pool × milestone multiplier ÷ maximum multiplier), never above the approved target pool (corrected 2026-10-04); each bonus = floor(payout pool × e_i / Σe) with e_i = time share × role weight × contribution factor) and the pool guardrail both live here. The multiplier must scale the pool, never each employee's weight — inside a proportional split it would cancel out (PRD Business Logic, US-01 acceptance criteria). Per PRD, the guardrail is confirmatory (the split mathematically cannot exceed the payout pool by construction), so the multiplier placement and the rounding-down logic are the details `/10x-plan` must get exactly right.
 - **Status:** in-progress
 
 ### S-05: Supervisor approves milestone, employee sees bonus
