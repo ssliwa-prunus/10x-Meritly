@@ -61,13 +61,11 @@ if (!supabase || !profile) {
     getMilestonePayout(supabase, milestoneId.data),
   ]);
   loadError =
-    projectResult.error ??
-    milestonesResult.error ??
-    engagementsResult.error ??
-    assignableResult.error ??
-    payoutResult.error ??
-    null;
+    projectResult.error ?? milestonesResult.error ?? engagementsResult.error ?? assignableResult.error ?? null;
 }
+
+// A payout failure stays in its own card: the details and assignments (where the data is fixed) still render.
+const payoutError = payoutResult.error ?? null;
 
 // Invalid ids, a missing milestone, one of another project and one hidden by RLS all look the same: not found.
 const project = projectResult.data ?? null;
@@ -189,6 +187,22 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             />
           )}
           {payoutSummary && <PayoutSection summary={payoutSummary} lines={payoutLines} />}
+          {payoutError && (
+            <section aria-labelledby="bonuses-heading">
+              <Card>
+                <CardHeader>
+                  <h2 id="bonuses-heading" class="text-xl leading-none font-semibold">
+                    Computed bonuses
+                  </h2>
+                </CardHeader>
+                <CardContent>
+                  <Alert variant="destructive">
+                    <AlertDescription>{payoutError}</AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            </section>
+          )}
 
           <section id="assignments" aria-labelledby="assignments-heading">
             <Card>

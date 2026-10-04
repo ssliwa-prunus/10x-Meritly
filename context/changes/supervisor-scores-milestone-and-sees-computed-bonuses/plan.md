@@ -6,6 +6,13 @@ Roadmap S-04 (north star; FR-006, FR-009, FR-010). A Supervisor enters a milesto
 
 > **Amendment (2026-10-04, after Phase 4):** the user clarified that a milestone's target pool is the amount approved by the president/director as the **maximum** for that milestone's payouts. The PRD rule "M above 1.0 pays out more than the target pool" was wrong. Phase 5 replaces `payout_pool = floor(target × M)` with `payout_pool = floor(target × M / multiplier_max)` (the full target pool only at the maximum multiplier) and reserves non-Approved milestones at their target pool in `project_budget_exposure`. Figures in Key Discoveries, Phase 1 and Phase 4 that use the old rule are superseded by Phase 5's; PRD and roadmap are corrected accordingly.
 
+> **Deviations during implementation** (accepted; recorded by impl-review F5). Where the Phase blocks below say otherwise, these hold:
+>
+> - The cancelled-milestone guard raises **MR013** (`milestone_cancelled`), not MR012, because MR012 was already `project_has_foreign_engagements` (`20260930120000_projects_guard_engaged_owner_change.sql`).
+> - pgTAP fixtures use the reserved range **`…0005xx`**, because `…0004xx` belongs to `employees_rls.test.sql`.
+> - A non-owning Supervisor's score update affects **0 rows** (RLS filters the row before any trigger), not 42501. The 42501-before-MR013 ordering is proven with an insert into another Supervisor's project instead.
+> - Phase 5 also fixed stale reservation copy in `src/pages/projects/index.astro` and dropped the bonus-settings load from `src/pages/projects/[id].astro`, which existed only for the removed `multiplierMax` prop.
+
 ## Current State Analysis
 
 - `bonus_settings` (singleton) holds KPI weights (sum exactly 1, DB CHECK), `multiplier_min/max` and `rating_factor_1..5`; `job_roles.weight` holds role weights (`supabase/migrations/20260926120000_bonus_rules_config.sql:15-76`). Supervisors and Admins can read both; Employees read nothing.

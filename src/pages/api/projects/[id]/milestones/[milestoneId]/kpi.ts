@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
 import { kpiScoresInputSchema, kpiUrl, parseForm, updateKpiScores } from "@/lib/services/payouts";
-import { projectIdSchema, projectsUrl, projectUrl } from "@/lib/services/projects";
+import { firstIssueError, projectIdSchema, projectsUrl, projectUrl } from "@/lib/services/projects";
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
@@ -12,12 +12,12 @@ export const POST: APIRoute = async (context) => {
   // Until both ids are valid UUIDs there is no milestone page to return to.
   const projectId = projectIdSchema.safeParse(context.params.id);
   if (!projectId.success) {
-    return context.redirect(projectsUrl({ error: { code: "invalid_id" } }));
+    return context.redirect(projectsUrl({ error: firstIssueError(projectId.error) }));
   }
 
   const milestoneId = projectIdSchema.safeParse(context.params.milestoneId);
   if (!milestoneId.success) {
-    return context.redirect(projectUrl(projectId.data, "milestones", { error: { code: "invalid_id" } }));
+    return context.redirect(projectUrl(projectId.data, "milestones", { error: firstIssueError(milestoneId.error) }));
   }
 
   // Friendly early exit only; RLS (no Admin update policy on milestones) is the real enforcement.

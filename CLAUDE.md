@@ -10,7 +10,7 @@ Roles: **Admin** (global config, sees everything), **Supervisor** (own projects,
 
 Invariants that must hold in code and in the database:
 
-- A milestone's payouts never exceed its payout pool (target pool × KPI multiplier, within the Admin min/max bounds). A project's worst-case payout (actual payout pool for Approved milestones, target pool × current maximum multiplier for the rest) is flagged against the project budget.
+- A milestone's payouts never exceed its payout pool (target pool × KPI multiplier ÷ maximum multiplier, rounded down), and the payout pool never exceeds the target pool, which is the approved maximum. A project's worst-case payout (actual payout pool for Approved milestones, target pool for the rest) is flagged against the project budget.
 - An employee's total time-share across active milestones is flagged when it exceeds 100%.
 - Results are Draft (Supervisor-only, no email) until the Supervisor marks the milestone Approved (FR-018). Only then can the employee see them and get the email.
 - Approved milestones are frozen: changes to role weights, KPI weights or the rating→factor mapping apply to future computations only.

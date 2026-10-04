@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(54);
+select plan(55);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so supervisor_id is explicit)
@@ -500,6 +500,30 @@ select throws_ok(
   '42501',
   null,
   'anon cannot execute milestone_payout_summary'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- No silent shrinking: when the owner cannot resolve one engagement's role weight, the split
+-- raises instead of dividing the pool among the remaining people. A restrictive policy (rolled
+-- back with everything else) hides the Specialist job role from authenticated callers.
+-- ---------------------------------------------------------------------------
+create policy pgtap_hide_specialist_role
+  on public.job_roles
+  as restrictive
+  for select
+  to authenticated
+  using (id <> '00000000-0000-4000-8000-000000000508');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000502"}';
+
+select throws_ok(
+  $$ select * from public.milestone_payout_lines('00000000-0000-4000-8000-000000000521') $$,
+  'P0001',
+  null,
+  'an engagement with no visible role weight makes the split raise instead of shrinking it'
 );
 
 reset role;
