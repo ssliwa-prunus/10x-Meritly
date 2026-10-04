@@ -8,6 +8,8 @@ import path from "node:path";
 
 const CLEAN_PATHS = [
   "src/pages/projects/[id].astro",
+  "src/pages/projects/[id]/milestones/[milestoneId].astro",
+  "src/components/engagements/EngagementForm.astro",
   "src/components/projects/BudgetExposurePanel.astro",
   "src/components/projects/MilestoneForm.astro",
   "src/components/projects/MilestonesSection.astro",

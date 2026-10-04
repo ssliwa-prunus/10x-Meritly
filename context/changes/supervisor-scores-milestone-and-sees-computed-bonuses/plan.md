@@ -432,31 +432,31 @@ Additive: four nullable columns, one check, one trigger and three functions. Exi
 
 #### Automated
 
-- [x] 2.1 Type check passes: `npx astro check`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
-- [x] 2.4 Smoke test passes: `npm run smoke`
+- [x] 2.1 Type check passes: `npx astro check` — cb49fc8
+- [x] 2.2 Lint passes: `npm run lint` — cb49fc8
+- [x] 2.3 Build passes: `npm run build` — cb49fc8
+- [x] 2.4 Smoke test passes: `npm run smoke` — cb49fc8
 
 #### Manual
 
-- [x] 2.5 Valid scores save and redirect with `saved=kpi`
-- [x] 2.6 Invalid input redirects with the matching catalog code and field
-- [x] 2.7 Admin gets `admin_read_only`; cancelled milestone gets `milestone_cancelled`
+- [x] 2.5 Valid scores save and redirect with `saved=kpi` — cb49fc8
+- [x] 2.6 Invalid input redirects with the matching catalog code and field — cb49fc8
+- [x] 2.7 Admin gets `admin_read_only`; cancelled milestone gets `milestone_cancelled` — cb49fc8
 
 ### Phase 3: Milestone page onto tokens
 
 #### Automated
 
-- [ ] 3.1 UI literal check passes with the two new paths: `npm run lint:ui`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Type check passes: `npx astro check`
-- [ ] 3.4 Build passes: `npm run build`
+- [x] 3.1 UI literal check passes with the two new paths: `npm run lint:ui`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Type check passes: `npx astro check`
+- [x] 3.4 Build passes: `npm run build`
 
 #### Manual
 
-- [ ] 3.5 Page consistent with project detail on desktop and phone width, no horizontal scroll
-- [ ] 3.6 Assign, edit, delete and all error placements and notices behave as before
-- [ ] 3.7 Focus-visible rings show on links, buttons and controls
+- [x] 3.5 Page consistent with project detail on desktop and phone width, no horizontal scroll
+- [x] 3.6 Assign, edit, delete and all error placements and notices behave as before
+- [x] 3.7 Focus-visible rings show on links, buttons and controls
 
 ### Phase 4: KPI and bonus sections
 
