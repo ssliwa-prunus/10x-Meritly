@@ -418,30 +418,30 @@ Additive: four nullable columns, one check, one trigger and three functions. Exi
 
 #### Automated
 
-- [x] 1.1 Migration and seed apply cleanly: `npx supabase db reset`
-- [x] 1.2 pgTAP suites pass, including the new one: `npx supabase test db`
-- [x] 1.3 Type check passes: `npx astro sync && npx astro check`
-- [x] 1.4 Lint passes: `npm run lint`
+- [x] 1.1 Migration and seed apply cleanly: `npx supabase db reset` — 40655e9
+- [x] 1.2 pgTAP suites pass, including the new one: `npx supabase test db` — 40655e9
+- [x] 1.3 Type check passes: `npx astro sync && npx astro check` — 40655e9
+- [x] 1.4 Lint passes: `npm run lint` — 40655e9
 
 #### Manual
 
-- [x] 1.5 Studio check of `milestone_payout_summary` for scored `…0021` and unscored `…0022`
-- [x] 1.6 Migration header documents formula, Ryzyko direction and the S-05 snapshot obligation
+- [x] 1.5 Studio check of `milestone_payout_summary` for scored `…0021` and unscored `…0022` — 40655e9
+- [x] 1.6 Migration header documents formula, Ryzyko direction and the S-05 snapshot obligation — 40655e9
 
 ### Phase 2: Service and API
 
 #### Automated
 
-- [ ] 2.1 Type check passes: `npx astro check`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 Smoke test passes: `npm run smoke`
+- [x] 2.1 Type check passes: `npx astro check`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 Smoke test passes: `npm run smoke`
 
 #### Manual
 
-- [ ] 2.5 Valid scores save and redirect with `saved=kpi`
-- [ ] 2.6 Invalid input redirects with the matching catalog code and field
-- [ ] 2.7 Admin gets `admin_read_only`; cancelled milestone gets `milestone_cancelled`
+- [x] 2.5 Valid scores save and redirect with `saved=kpi`
+- [x] 2.6 Invalid input redirects with the matching catalog code and field
+- [x] 2.7 Admin gets `admin_read_only`; cancelled milestone gets `milestone_cancelled`
 
 ### Phase 3: Milestone page onto tokens
 
