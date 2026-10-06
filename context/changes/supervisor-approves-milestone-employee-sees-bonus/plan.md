@@ -650,14 +650,14 @@ Every engaged employee is emailed their own bonus after approval, through a new 
 
 #### Automated
 
-- [x] 4.1 Type check passes: `npx astro sync && npx astro check`
-- [x] 4.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
-- [x] 4.3 Build succeeds: `npm run build`
-- [x] 4.4 pgTAP still passes: `npx supabase test db`
+- [x] 4.1 Type check passes: `npx astro sync && npx astro check` — 2868ed2
+- [x] 4.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui` — 2868ed2
+- [x] 4.3 Build succeeds: `npm run build` — 2868ed2
+- [x] 4.4 pgTAP still passes: `npx supabase test db` — 2868ed2
 
 #### Manual
 
-- [x] 4.5 Local approval delivers one email per engaged employee to Mailpit with only their bonus and a working link
-- [x] 4.6 With functions stopped, approval succeeds showing 0 of 1; re-send delivers once and is idempotent
-- [x] 4.7 No email for an unapproved milestone (notify shows not-approved error)
-- [x] 4.8 Edge Function logs contain milestone id and counts only
+- [x] 4.5 Local approval delivers one email per engaged employee to Mailpit with only their bonus and a working link — 2868ed2
+- [x] 4.6 With functions stopped, approval succeeds showing 0 of 1; re-send delivers once and is idempotent — 2868ed2
+- [x] 4.7 No email for an unapproved milestone (notify shows not-approved error) — 2868ed2
+- [x] 4.8 Edge Function logs contain milestone id and counts only — 2868ed2
