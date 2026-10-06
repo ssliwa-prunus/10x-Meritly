@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(70);
+select plan(71);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so supervisor_id is explicit)
@@ -159,6 +159,11 @@ select ok(
     and not has_table_privilege('authenticated', 'public.milestone_result_lines', 'DELETE')
     and has_table_privilege('authenticated', 'public.milestone_result_lines', 'SELECT'),
   'authenticated may only select milestone_result_lines (no insert, update or delete)'
+);
+select ok(
+  not has_column_privilege('authenticated', 'public.milestone_result_lines', 'notify_claimed_at', 'UPDATE')
+    and not has_column_privilege('authenticated', 'public.milestone_result_lines', 'notified_at', 'UPDATE'),
+  'the email send claim and stamp (notify_claimed_at, notified_at) are not writable by authenticated'
 );
 select ok(
   exists (

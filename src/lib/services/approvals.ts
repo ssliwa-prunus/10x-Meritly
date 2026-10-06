@@ -223,10 +223,12 @@ export async function approveMilestone(supabase: SupabaseClient, milestoneId: st
 
 /**
  * An approved milestone's frozen snapshot in the Draft payout shapes, so PayoutSection renders
- * both: the summary (null when no snapshot is visible), the lines in employee-name order and the
+ * both: the summary, the lines in employee-name order and the
  * approval time. The lines carry no share (privacy split), so it is rebuilt here as
  * weighted_contribution / Σ weighted_contribution, for display only. notified_count / line_count
  * count the lines whose bonus email the provider confirmed, for "Emails sent: N of M".
+ * `data` is null when the milestone has no visible snapshot (a Draft milestone), so the page can
+ * load it in parallel with everything else and fall back to the live Draft computation.
  */
 export async function getApprovedPayout(
   supabase: SupabaseClient,
@@ -238,7 +240,7 @@ export async function getApprovedPayout(
     approved_at: string;
     notified_count: number;
     line_count: number;
-  }>
+  } | null>
 > {
   const [header, lines] = await Promise.all([
     supabase
@@ -257,13 +259,7 @@ export async function getApprovedPayout(
 
   if (header.error) return { error: mapLoadError(header.error, "getApprovedPayoutHeader") };
   if (lines.error) return { error: mapLoadError(lines.error, "getApprovedPayoutLines") };
-  if (!header.data) {
-    // An approved milestone always has a header (approve_milestone writes both in one statement), so
-    // a missing one is a broken invariant or an RLS gap: surface it instead of rendering nothing.
-    // eslint-disable-next-line no-console -- intentional: surfaces the broken invariant in Workers observability logs
-    console.error("getApprovedPayout: approved milestone has no snapshot header", { milestoneId });
-    return { error: "Could not load bonuses. Please try again." };
-  }
+  if (!header.data) return { data: null };
 
   const totalContribution = lines.data.reduce((sum, row) => sum + Number(row.weighted_contribution), 0);
 
@@ -347,6 +343,7 @@ export async function notifyMilestoneApproved(
 
 interface MyBonusRow {
   id: string;
+  employee_id: string;
   project_name: string;
   milestone_name: string;
   start_date: string;
@@ -362,7 +359,7 @@ interface MyBonusRow {
 }
 
 const MY_BONUS_COLUMNS =
-  "id, project_name, milestone_name, start_date, end_date, approved_at, job_role_name, time_share, role_weight, rating, rating_factor, multiplier, bonus";
+  "id, employee_id, project_name, milestone_name, start_date, end_date, approved_at, job_role_name, time_share, role_weight, rating, rating_factor, multiplier, bonus";
 
 /**
  * The signed-in employee's own approved bonuses, newest approval first. current_employee_id() is
@@ -371,25 +368,28 @@ const MY_BONUS_COLUMNS =
  * the employee_id filter is defence in depth.
  */
 export async function listMyBonuses(supabase: SupabaseClient): Promise<ServiceResult<MyBonuses>> {
-  const linked = await supabase.rpc("current_employee_id");
+  // Both in parallel: RLS already limits the select to the caller's own approved lines, and the
+  // employee id is applied afterwards as the defence-in-depth filter.
+  const [linked, { data, error }] = await Promise.all([
+    supabase.rpc("current_employee_id"),
+    supabase
+      .from("milestone_result_lines")
+      .select(MY_BONUS_COLUMNS)
+      .order("approved_at", { ascending: false })
+      .order("milestone_name", { ascending: true })
+      .overrideTypes<MyBonusRow[], { merge: false }>(),
+  ]);
   if (linked.error) return { error: mapLoadError(linked.error, "listMyBonusesEmployee") };
   // The function returns a scalar uuid; the untyped client types it as any, so it is narrowed here.
   const employeeId: unknown = linked.data;
   if (typeof employeeId !== "string") return { data: { lines: [], not_linked: true } };
-
-  const { data, error } = await supabase
-    .from("milestone_result_lines")
-    .select(MY_BONUS_COLUMNS)
-    .eq("employee_id", employeeId)
-    .order("approved_at", { ascending: false })
-    .order("milestone_name", { ascending: true })
-    .overrideTypes<MyBonusRow[], { merge: false }>();
   if (error) return { error: mapLoadError(error, "listMyBonuses") };
+  const ownRows = data.filter((row) => row.employee_id === employeeId);
 
   return {
     data: {
       not_linked: false,
-      lines: data.map((row) => ({
+      lines: ownRows.map((row) => ({
         id: row.id,
         project_name: row.project_name,
         milestone_name: row.milestone_name,

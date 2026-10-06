@@ -65,30 +65,41 @@ let lineCount: number | null = null;
 if (!supabase || !profile) {
   loadError = supabase ? "Your profile could not be loaded" : "Supabase is not configured";
 } else if (projectId.success && milestoneId.success) {
-  [projectResult, milestonesResult, engagementsResult, assignableResult] = await Promise.all([
+  let approvedResult: Awaited<ReturnType<typeof getApprovedPayout>>;
+  [projectResult, milestonesResult, engagementsResult, assignableResult, approvedResult] = await Promise.all([
     getProject(supabase, projectId.data),
     listMilestones(supabase, projectId.data),
     listEngagements(supabase, milestoneId.data),
     // Admins are read-only, so they get no picker. A Supervisor picks only employees they own.
     isAdmin ? Promise.resolve({}) : listAssignableEmployees(supabase, profile.id, milestoneId.data),
+    // The frozen snapshot, if any, loads in parallel; a Draft milestone simply has none.
+    getApprovedPayout(supabase, milestoneId.data),
   ]);
   loadError =
     projectResult.error ?? milestonesResult.error ?? engagementsResult.error ?? assignableResult.error ?? null;
 
   // The payout source depends on the status: an approved milestone renders its frozen snapshot,
-  // every other one the live Draft computation.
+  // every other one the live Draft computation (one extra round trip, Draft only).
   const loadedMilestone = projectResult.data
     ? milestonesResult.data?.find((row) => row.id === milestoneId.data)
     : undefined;
   if (!loadError && loadedMilestone) {
     if (loadedMilestone.status === "approved") {
-      const approved = await getApprovedPayout(supabase, milestoneId.data);
-      payoutResult = approved.data
-        ? { data: { summary: approved.data.summary, lines: approved.data.lines } }
-        : { error: approved.error };
-      approvedAt = approved.data?.approved_at ?? null;
-      notifiedCount = approved.data?.notified_count ?? null;
-      lineCount = approved.data?.line_count ?? null;
+      const approved = approvedResult.data;
+      if (approved) {
+        payoutResult = { data: { summary: approved.summary, lines: approved.lines } };
+        approvedAt = approved.approved_at;
+        notifiedCount = approved.notified_count;
+        lineCount = approved.line_count;
+      } else {
+        if (!approvedResult.error) {
+          // An approved milestone always has a header (approve_milestone writes both in one
+          // statement), so a missing one is a broken invariant or an RLS gap: surface it.
+          // eslint-disable-next-line no-console -- intentional: surfaces the broken invariant in Workers observability logs
+          console.error("Approved milestone has no snapshot header", { milestoneId: milestoneId.data });
+        }
+        payoutResult = { error: approvedResult.error ?? "Could not load bonuses. Please try again." };
+      }
     } else {
       payoutResult = await getMilestonePayout(supabase, milestoneId.data);
     }

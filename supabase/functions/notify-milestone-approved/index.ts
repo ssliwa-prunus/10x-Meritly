@@ -3,14 +3,21 @@
 // It reads the unsent lines and writes notified_at with the secret key; it runs in Supabase Edge
 // Functions, never in the Worker. Safe to call again: only lines with notified_at null are sent.
 //
+// Send claim (impl-review F2): the unsent lines are first claimed with one atomic UPDATE ... RETURNING
+// (notify_claimed_at, 20261006120000_result_lines_notify_claim.sql), so concurrent calls never email
+// the same line twice. Confirmed lines get notified_at; failed ones release their claim at once. A
+// claim older than CLAIM_TIMEOUT_MS counts as abandoned. sent counts the lines actually stamped.
+//
 // Request:  POST { "milestone_id": "<uuid>" } with the signed-in user's JWT (verify_jwt = true).
 // Responses:
-//   200 { sent, failed }                 sent/failed message counts (both 0 when nothing is unsent)
+//   200 { sent, failed }                 sent/failed message counts (both 0 when nothing is unsent or
+//                                        another call holds the claim)
 //   400 { code: "invalid_request" }      body is not { milestone_id: uuid }
 //   403 { code: "forbidden" }            caller is not a Supervisor (Admins are read-only)
 //   404 { code: "not_found" }            milestone not visible to the caller, or not the caller's project
 //   409 { code: "not_approved" }         the milestone is not approved
-//   500 { code: "email_not_configured" } neither Resend (RESEND_API_KEY + MAIL_FROM) nor MAILPIT_URL is set
+//   500 { code: "email_not_configured" } neither Resend (RESEND_API_KEY + MAIL_FROM) nor MAILPIT_URL is set,
+//                                        or APP_URL is missing (the email link would be relative)
 //   500 { code: "notify_failed" }        a lookup or the notified_at stamp failed (logged)
 //   502 { code: "send_failed" }          there was something to send and no message was confirmed
 //
@@ -29,6 +36,7 @@ import { withSupabase } from "npm:@supabase/server@^1";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RESEND_BATCH_URL = "https://api.resend.com/emails/batch";
 const RESEND_BATCH_LIMIT = 100;
+const CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
 const LOCAL_FROM = "Meritly <no-reply@meritly.local>";
 const NO_ACCOUNT_LINE =
   "You don't have a Meritly account yet — ask your supervisor to send you an invite to see this in the app.";
@@ -109,7 +117,7 @@ function buildMessage(line: LineRow, appUrl: string): Message | null {
   const text = [
     `Hello ${employee.full_name},`,
     "",
-    `Your bonus for a completed milestone has been approved.`,
+    `Your bonus for this milestone has been approved.`,
     "",
     `Project: ${line.project_name}`,
     `Milestone: ${line.milestone_name}`,
@@ -123,7 +131,7 @@ function buildMessage(line: LineRow, appUrl: string): Message | null {
   const e = escapeHtml;
   const html = [
     `<p>Hello ${e(employee.full_name)},</p>`,
-    `<p>Your bonus for a completed milestone has been approved.</p>`,
+    `<p>Your bonus for this milestone has been approved.</p>`,
     "<ul>",
     `<li>Project: ${e(line.project_name)}</li>`,
     `<li>Milestone: ${e(line.milestone_name)}</li>`,
@@ -248,38 +256,80 @@ export default {
       console.error("notify-milestone-approved: no email transport configured", { milestoneId });
       return reply(500, { code: "email_not_configured" });
     }
+    // The /my-bonuses link must be absolute to work in a mail client: fail fast before claiming.
+    const appUrl = (Deno.env.get("APP_URL") ?? "").trim().replace(/\/+$/, "");
+    if (!appUrl) {
+      console.error("notify-milestone-approved: APP_URL is not configured", { milestoneId });
+      return reply(500, { code: "email_not_configured" });
+    }
 
-    // Unsent lines and their recipients through the admin client (notified_at is system-written).
+    // Claim the unsent lines atomically (admin client: notify_claimed_at/notified_at are system-written).
+    // A concurrent call re-checks this WHERE after our commit and claims nothing.
+    const now = new Date();
+    const staleBefore = new Date(now.getTime() - CLAIM_TIMEOUT_MS).toISOString();
+    const { data: claimedRows, error: claimError } = await ctx.supabaseAdmin
+      .from("milestone_result_lines")
+      .update({ notify_claimed_at: now.toISOString() })
+      .eq("milestone_id", milestoneId)
+      .is("notified_at", null)
+      .or(`notify_claimed_at.is.null,notify_claimed_at.lt.${staleBefore}`)
+      .select("id");
+    if (claimError) {
+      console.error("notify-milestone-approved: claiming lines failed", { milestoneId, code: claimError.code });
+      return reply(500, { code: "notify_failed" });
+    }
+    const claimedIds = (claimedRows ?? []).map((row: { id: string }) => row.id);
+    if (claimedIds.length === 0) {
+      console.log("notify-milestone-approved: nothing to send", { milestoneId });
+      return reply(200, { sent: 0, failed: 0 });
+    }
+
+    // Releases a claim so a re-send can retry at once (best effort: a stale claim expires anyway).
+    const release = async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const { error } = await ctx.supabaseAdmin
+        .from("milestone_result_lines")
+        .update({ notify_claimed_at: null })
+        .in("id", ids)
+        .is("notified_at", null);
+      if (error) {
+        console.error("notify-milestone-approved: releasing claims failed", {
+          milestoneId,
+          count: ids.length,
+          code: error.code,
+        });
+      }
+    };
+
+    // The claimed lines and their recipients.
     const { data, error: linesError } = await ctx.supabaseAdmin
       .from("milestone_result_lines")
       .select(
         "id, project_name, milestone_name, start_date, end_date, bonus, employees!inner(email, full_name, profile_id, activated_at)",
       )
-      .eq("milestone_id", milestoneId)
-      .is("notified_at", null)
+      .in("id", claimedIds)
       .order("id", { ascending: true });
     if (linesError) {
       console.error("notify-milestone-approved: line lookup failed", { milestoneId, code: linesError.code });
+      await release(claimedIds);
       return reply(500, { code: "notify_failed" });
     }
     const lines = (data ?? []) as LineRow[];
-    if (lines.length === 0) {
-      console.log("notify-milestone-approved: nothing to send", { milestoneId });
-      return reply(200, { sent: 0, failed: 0 });
-    }
 
-    const appUrl = (Deno.env.get("APP_URL") ?? "").replace(/\/+$/, "");
     const messages = lines.map((line) => buildMessage(line, appUrl)).filter((m): m is Message => m !== null);
 
     let sent = 0;
     let stampFailed = false;
+    const stamped = new Set<string>();
+    // Counts only the rows the stamp actually updated, so the totals stay truthful.
     const stamp = async (ids: string[]) => {
       if (ids.length === 0) return;
-      const { error } = await ctx.supabaseAdmin
+      const { data: updated, error } = await ctx.supabaseAdmin
         .from("milestone_result_lines")
         .update({ notified_at: new Date().toISOString() })
         .in("id", ids)
-        .is("notified_at", null);
+        .is("notified_at", null)
+        .select("id");
       if (error) {
         stampFailed = true;
         console.error("notify-milestone-approved: stamping notified_at failed", {
@@ -289,7 +339,8 @@ export default {
         });
         return;
       }
-      sent += ids.length;
+      for (const row of (updated ?? []) as { id: string }[]) stamped.add(row.id);
+      sent += (updated ?? []).length;
     };
 
     if (transport.kind === "resend") {
@@ -303,7 +354,11 @@ export default {
       }
     }
 
-    const failed = lines.length - sent;
+    // Unconfirmed lines give their claim back. A line whose send succeeded but whose stamp failed
+    // is released too; within 24h Resend's idempotency key still dedupes its retry.
+    await release(claimedIds.filter((id) => !stamped.has(id)));
+
+    const failed = claimedIds.length - sent;
     console.log("notify-milestone-approved: done", { milestoneId, sent, failed });
     if (sent === 0) return reply(stampFailed ? 500 : 502, { code: stampFailed ? "notify_failed" : "send_failed" });
     return reply(200, { sent, failed });

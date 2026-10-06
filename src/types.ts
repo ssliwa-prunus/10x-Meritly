@@ -230,6 +230,8 @@ export interface MilestoneResultLine {
   multiplier: number;
   bonus: number;
   notified_at: string | null;
+  /** Send claim held by notify-milestone-approved while it emails this line (system-written). */
+  notify_claimed_at: string | null;
 }
 
 /** One of the signed-in employee's own approved bonuses on `/my-bonuses`: a `MilestoneResultLine` minus ids and colleague-facing fields. */
