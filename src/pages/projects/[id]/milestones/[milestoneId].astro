@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { engagementsErrorMessage, listAssignableEmployees, listEngagements } from "@/lib/services/engagements";
 import { getMilestonePayout, kpiErrorMessage } from "@/lib/services/payouts";
 import { getProject, listMilestones, projectIdSchema } from "@/lib/services/projects";
-import type { WorkStatus } from "@/types";
+import type { MilestoneStatus } from "@/types";
 
 const profile = Astro.locals.profile;
 const isAdmin = profile?.role === "admin";
@@ -76,7 +76,7 @@ const assignable = assignableResult.data ?? [];
 const payoutSummary = payoutResult.data?.summary ?? null;
 const payoutLines = payoutResult.data?.lines ?? [];
 
-const isClosedStatus = (status: WorkStatus) => status === "completed" || status === "cancelled";
+const isClosedStatus = (status: MilestoneStatus) => status === "completed" || status === "cancelled";
 const isClosed =
   project !== null && milestone !== null && (isClosedStatus(milestone.status) || isClosedStatus(project.status));
 const canEdit = !isAdmin && !isClosed;
