@@ -213,12 +213,12 @@ const states = [
   {
     state: "disabled",
     where:
-      "Section “Disabled and pending”: forced-pending SubmitButton and a disabled Button. Approval: forced-pending Approve button; blocked (no button) variants.",
+      "Section “Disabled and pending”: forced-pending SubmitButton and a disabled Button. Approval: forced-pending Approve button; blocked (no button) variants; Admin with unsent emails (no re-send form).",
   },
   {
     state: "error",
     where:
-      "Project form error; milestones row error, add-form error and section error; exposure unavailable; KPI scores error; approval error.",
+      "Project form error; milestones row error, add-form error and section error; exposure unavailable; KPI scores error; approval error; partially sent approval emails (notice and re-send form).",
   },
   {
     state: "empty",
@@ -250,7 +250,7 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             <code>milestones-heading</code> (5×), <code>exposure</code> / <code>exposure-heading</code> (3×),{" "}
             <code>kpi</code> / <code>kpi-heading</code> (5×) and the KPI form's
             <code>kpi-*</code> fields (3×), <code>bonuses</code> / <code>bonuses-heading</code> (4×),{" "}
-            <code>approval</code> / <code>approval-heading</code> (6×) and <code>approval-confirm</code> (2×), the add
+            <code>approval</code> / <code>approval-heading</code> (8×) and <code>approval-confirm</code> (2×), the add
             form's <code>milestone-new-*</code> fields (2×) and the project form's <code>project-*</code> fields (3×).
             Label clicks and <code>aria-labelledby</code> resolve to the first match, so check focus order and labels on
             the real <code>/projects/[id]</code> page, where every id is unique.
@@ -456,7 +456,11 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             canApprove={true}
             blockedReason={null}
             approvedAt={null}
-            saved={false}
+            notifiedCount={null}
+            lineCount={null}
+            canNotify={true}
+            saved={null}
+            notice={null}
             error={null}
           />
           <h3 class:list={variantHeading}>Blocked — unscored</h3>
@@ -467,7 +471,11 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             canApprove={false}
             blockedReason="Enter all four KPI scores before approving."
             approvedAt={null}
-            saved={false}
+            notifiedCount={null}
+            lineCount={null}
+            canNotify={true}
+            saved={null}
+            notice={null}
             error={null}
           />
           <h3 class:list={variantHeading}>Blocked — Admin</h3>
@@ -478,7 +486,11 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             canApprove={false}
             blockedReason="Admins can view approvals but not approve milestones."
             approvedAt={null}
-            saved={false}
+            notifiedCount={null}
+            lineCount={null}
+            canNotify={true}
+            saved={null}
+            notice={null}
             error={null}
           />
           <h3 class:list={variantHeading}>Error — confirmation missing</h3>
@@ -489,10 +501,14 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             canApprove={true}
             blockedReason={null}
             approvedAt={null}
-            saved={false}
+            notifiedCount={null}
+            lineCount={null}
+            canNotify={true}
+            saved={null}
+            notice={null}
             error="Tick the confirmation to approve the milestone"
           />
-          <h3 class:list={variantHeading}>Approved — saved</h3>
+          <h3 class:list={variantHeading}>Approved — saved, all emails sent</h3>
           <ApprovalSection
             projectId={activeProject.id}
             milestoneId={kpiMilestoneId}
@@ -500,7 +516,41 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             canApprove={false}
             blockedReason={null}
             approvedAt={approvedAt}
-            saved={true}
+            notifiedCount={scoredLines.length}
+            lineCount={scoredLines.length}
+            canNotify={true}
+            saved="approved"
+            notice={null}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Approved — saved, emails partially sent (re-send form)</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="approved"
+            canApprove={false}
+            blockedReason={null}
+            approvedAt={approvedAt}
+            notifiedCount={1}
+            lineCount={scoredLines.length}
+            canNotify={true}
+            saved="approved"
+            notice="Some bonus emails could not be sent. Use “Re-send unsent emails” to try again."
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Approved — emails partially sent, Admin (no re-send)</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="approved"
+            canApprove={false}
+            blockedReason={null}
+            approvedAt={approvedAt}
+            notifiedCount={1}
+            lineCount={scoredLines.length}
+            canNotify={false}
+            saved={null}
+            notice={null}
             error={null}
           />
           <h3 class:list={variantHeading}>Approved — replayed approval error</h3>
@@ -511,7 +561,11 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             canApprove={false}
             blockedReason={null}
             approvedAt={approvedAt}
-            saved={false}
+            notifiedCount={scoredLines.length}
+            lineCount={scoredLines.length}
+            canNotify={true}
+            saved={null}
+            notice={null}
             error="This milestone is already approved"
           />
           <h3 class:list={variantHeading}>Pending — approve in flight</h3>

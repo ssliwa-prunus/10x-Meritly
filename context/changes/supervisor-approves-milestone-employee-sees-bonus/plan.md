@@ -632,32 +632,32 @@ Every engaged employee is emailed their own bonus after approval, through a new 
 
 #### Automated
 
-- [x] 3.1 Type check passes: `npx astro sync && npx astro check`
-- [x] 3.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
-- [x] 3.3 Build succeeds: `npm run build`
-- [x] 3.4 Smoke test still passes against the preview: `npm run smoke`
+- [x] 3.1 Type check passes: `npx astro sync && npx astro check` — 9e93a2f
+- [x] 3.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui` — 9e93a2f
+- [x] 3.3 Build succeeds: `npm run build` — 9e93a2f
+- [x] 3.4 Smoke test still passes against the preview: `npm run smoke` — 9e93a2f
 
 #### Manual
 
-- [x] 3.5 Employee sees Milestone 1 with bonus 2740.38 and breakdown; Topbar shows "My bonuses"
-- [x] 3.6 Supervisor gets 403 on `/my-bonuses` and no link
-- [x] 3.7 Hand-crafted queries for other milestones or `milestone_results` return nothing for the employee
-- [x] 3.8 An unapproved milestone's result does not appear for the employee
-- [x] 3.9 Signed-out `/my-bonuses` returns to `/my-bonuses` after sign-in, including after a failed attempt
-- [x] 3.10 Crafted off-site `next` values fall back to `/`
+- [x] 3.5 Employee sees Milestone 1 with bonus 2740.38 and breakdown; Topbar shows "My bonuses" — 9e93a2f
+- [x] 3.6 Supervisor gets 403 on `/my-bonuses` and no link — 9e93a2f
+- [x] 3.7 Hand-crafted queries for other milestones or `milestone_results` return nothing for the employee — 9e93a2f
+- [x] 3.8 An unapproved milestone's result does not appear for the employee — 9e93a2f
+- [x] 3.9 Signed-out `/my-bonuses` returns to `/my-bonuses` after sign-in, including after a failed attempt — 9e93a2f
+- [x] 3.10 Crafted off-site `next` values fall back to `/` — 9e93a2f
 
 ### Phase 4: Approval email
 
 #### Automated
 
-- [ ] 4.1 Type check passes: `npx astro sync && npx astro check`
-- [ ] 4.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
-- [ ] 4.3 Build succeeds: `npm run build`
-- [ ] 4.4 pgTAP still passes: `npx supabase test db`
+- [x] 4.1 Type check passes: `npx astro sync && npx astro check`
+- [x] 4.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
+- [x] 4.3 Build succeeds: `npm run build`
+- [x] 4.4 pgTAP still passes: `npx supabase test db`
 
 #### Manual
 
-- [ ] 4.5 Local approval delivers one email per engaged employee to Mailpit with only their bonus and a working link
-- [ ] 4.6 With functions stopped, approval succeeds showing 0 of 1; re-send delivers once and is idempotent
-- [ ] 4.7 No email for an unapproved milestone (notify shows not-approved error)
-- [ ] 4.8 Edge Function logs contain milestone id and counts only
+- [x] 4.5 Local approval delivers one email per engaged employee to Mailpit with only their bonus and a working link
+- [x] 4.6 With functions stopped, approval succeeds showing 0 of 1; re-send delivers once and is idempotent
+- [x] 4.7 No email for an unapproved milestone (notify shows not-approved error)
+- [x] 4.8 Edge Function logs contain milestone id and counts only

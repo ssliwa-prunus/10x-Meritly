@@ -1,15 +1,10 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
-import {
-  approveInputSchema,
-  approveMilestone,
-  approvalUrl,
-  notifyMilestoneApproved,
-  parseForm,
-} from "@/lib/services/approvals";
+import { approvalUrl, notifyMilestoneApproved } from "@/lib/services/approvals";
 import { isMilestoneInProject } from "@/lib/services/engagements";
 import { firstIssueError, projectIdSchema, projectsUrl, projectUrl } from "@/lib/services/projects";
 
+/** Re-sends the bonus emails of an approved milestone that the provider has not confirmed yet. */
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
@@ -27,13 +22,13 @@ export const POST: APIRoute = async (context) => {
     return context.redirect(projectUrl(projectId.data, "milestones", { error: firstIssueError(milestoneId.error) }));
   }
 
-  // Friendly early exit only; approve_milestone's ownership check (42501) is the real enforcement.
+  // Friendly early exit only; the Edge Function's role and ownership checks are the real enforcement.
   if (context.locals.profile?.role === "admin") {
     return context.redirect(approvalUrl(projectId.data, milestoneId.data, { error: { code: "admin_read_only" } }));
   }
 
   // The milestone must belong to the project in the URL, so a crafted project/milestone pair
-  // cannot approve under one project and redirect to another. The RPC still guards the data itself.
+  // cannot notify under one project and redirect to another.
   const inProject = await isMilestoneInProject(supabase, projectId.data, milestoneId.data);
   if (inProject.error) {
     return context.redirect(projectUrl(projectId.data, "milestones", { error: { code: "save_failed" } }));
@@ -42,23 +37,12 @@ export const POST: APIRoute = async (context) => {
     return context.redirect(projectUrl(projectId.data, "milestones", { error: { code: "not_found" } }));
   }
 
-  const parsed = await parseForm(context.request, approveInputSchema);
-  if (parsed.error) {
-    return context.redirect(approvalUrl(projectId.data, milestoneId.data, { error: parsed.error }));
-  }
-
-  const { error } = await approveMilestone(supabase, milestoneId.data);
+  // The form carries no fields, so the body is not read.
+  const { data, error } = await notifyMilestoneApproved(supabase, milestoneId.data);
   if (error) {
     return context.redirect(approvalUrl(projectId.data, milestoneId.data, { error }));
   }
 
-  // Approval has committed; the bonus emails go out afterwards and never undo it. Anything not
-  // confirmed by the provider stays unsent and shows as "Emails sent: N of M" with a re-send form.
-  const notified = await notifyMilestoneApproved(supabase, milestoneId.data);
-  const notice = notified.error
-    ? "email_failed"
-    : notified.data && notified.data.failed > 0
-      ? "email_partial"
-      : undefined;
-  return context.redirect(approvalUrl(projectId.data, milestoneId.data, { saved: "approved", notice }));
+  const notice = data && data.failed > 0 ? "email_partial" : undefined;
+  return context.redirect(approvalUrl(projectId.data, milestoneId.data, { saved: "notified", notice }));
 };

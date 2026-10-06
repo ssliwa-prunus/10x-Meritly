@@ -1,4 +1,4 @@
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import { PROJECTS_PATH } from "@/lib/services/projects";
@@ -22,6 +22,10 @@ const APPROVAL_ERROR_MESSAGES = {
   admin_read_only: "Admins can view approvals but not approve milestones",
   save_failed: "Could not approve the milestone. Please try again.",
   not_configured: "Supabase is not configured",
+  not_approved: "This milestone is not approved yet; bonus emails are sent only after approval",
+  email_not_configured: "Bonus emails are not configured. Ask an administrator to set up the email provider.",
+  send_failed: "No bonus email could be sent. Please try again later.",
+  notify_failed: "Could not send the bonus emails. Please try again.",
 } as const;
 
 export type ApprovalErrorCode = keyof typeof APPROVAL_ERROR_MESSAGES;
@@ -40,6 +44,24 @@ const isApprovalErrorCode = (value: string): value is ApprovalErrorCode =>
 export function approvalErrorMessage(code: string): string {
   if (!isApprovalErrorCode(code)) return GENERIC_ERROR_MESSAGE;
   return APPROVAL_ERROR_MESSAGES[code];
+}
+
+// Notices: approval succeeded, but not every bonus email went out. Same rule as errors: the URL
+// carries a code, the page shows fixed catalog text, and an unknown code shows nothing.
+const APPROVAL_NOTICE_MESSAGES = {
+  email_partial: "Some bonus emails could not be sent. Use “Re-send unsent emails” to try again.",
+  email_failed: "The bonus emails could not be sent. Use “Re-send unsent emails” to try again.",
+} as const;
+
+export type ApprovalNoticeCode = keyof typeof APPROVAL_NOTICE_MESSAGES;
+
+const isApprovalNoticeCode = (value: string): value is ApprovalNoticeCode =>
+  Object.hasOwn(APPROVAL_NOTICE_MESSAGES, value);
+
+/** Message for a notice code taken from the URL; null for an unknown code. */
+export function approvalNoticeMessage(code: string): string | null {
+  if (!isApprovalNoticeCode(code)) return null;
+  return APPROVAL_NOTICE_MESSAGES[code];
 }
 
 // ---------------------------------------------------------------------------
@@ -66,17 +88,26 @@ export function parseForm<T extends z.ZodType>(
 }
 
 // ---------------------------------------------------------------------------
-// Redirect target for the approve endpoint. Query params read by the milestone page:
-//   saved=approved                       success flash
+// Redirect target for the approve and notify endpoints. Query params read by the milestone page:
+//   saved=approved | saved=notified      success flash (approved, or unsent emails re-sent)
+//   notice=email_partial | email_failed  with saved: not every bonus email went out
 //   error=<code>&section=approval        catalog code; the approval card shows the error
 // ---------------------------------------------------------------------------
 
-export type ApprovalFlash = { saved: "approved"; error?: undefined } | { saved?: undefined; error: ApprovalError };
+export type ApprovalSavedCode = "approved" | "notified";
+
+export type ApprovalFlash =
+  | { saved: ApprovalSavedCode; notice?: ApprovalNoticeCode; error?: undefined }
+  | { saved?: undefined; notice?: undefined; error: ApprovalError };
 
 /** A milestone's page with an approval flash. `projectId` and `milestoneId` must already be validated UUIDs. */
 export function approvalUrl(projectId: string, milestoneId: string, flash: ApprovalFlash): string {
   const path = `${PROJECTS_PATH}/${projectId}/milestones/${milestoneId}`;
-  if (flash.saved) return `${path}?${new URLSearchParams({ saved: flash.saved }).toString()}`;
+  if (flash.saved) {
+    const params = new URLSearchParams({ saved: flash.saved });
+    if (flash.notice) params.set("notice", flash.notice);
+    return `${path}?${params.toString()}`;
+  }
   const params = new URLSearchParams({ error: flash.error.code });
   if (flash.error.field) params.set("field", flash.error.field);
   params.set("section", "approval");
@@ -153,13 +184,14 @@ interface ResultLineRow {
   rating_factor: Numeric;
   weighted_contribution: Numeric;
   bonus: Numeric;
+  notified_at: string | null;
 }
 
 const HEADER_COLUMNS =
   "milestone_id, target_pool, kpi_schedule, kpi_budget, kpi_quality, kpi_risk, multiplier, budget_share, payout_pool, payout_total, residual, engagement_count, approved_at";
 
 const LINE_COLUMNS =
-  "engagement_id, employee_id, employee_name, job_role_name, time_share, role_weight, rating, rating_factor, weighted_contribution, bonus";
+  "engagement_id, employee_id, employee_name, job_role_name, time_share, role_weight, rating, rating_factor, weighted_contribution, bonus, notified_at";
 
 const toApprovedSummary = (row: ResultHeaderRow): MilestonePayoutSummary => ({
   milestone_id: row.milestone_id,
@@ -193,12 +225,21 @@ export async function approveMilestone(supabase: SupabaseClient, milestoneId: st
  * An approved milestone's frozen snapshot in the Draft payout shapes, so PayoutSection renders
  * both: the summary (null when no snapshot is visible), the lines in employee-name order and the
  * approval time. The lines carry no share (privacy split), so it is rebuilt here as
- * weighted_contribution / Σ weighted_contribution, for display only.
+ * weighted_contribution / Σ weighted_contribution, for display only. notified_count / line_count
+ * count the lines whose bonus email the provider confirmed, for "Emails sent: N of M".
  */
 export async function getApprovedPayout(
   supabase: SupabaseClient,
   milestoneId: string,
-): Promise<ServiceResult<{ summary: MilestonePayoutSummary; lines: MilestonePayoutLine[]; approved_at: string }>> {
+): Promise<
+  ServiceResult<{
+    summary: MilestonePayoutSummary;
+    lines: MilestonePayoutLine[];
+    approved_at: string;
+    notified_count: number;
+    line_count: number;
+  }>
+> {
   const [header, lines] = await Promise.all([
     supabase
       .from("milestone_results")
@@ -243,8 +284,65 @@ export async function getApprovedPayout(
         bonus: Number(row.bonus),
       })),
       approved_at: header.data.approved_at,
+      notified_count: lines.data.filter((row) => row.notified_at !== null).length,
+      line_count: lines.data.length,
     },
   };
+}
+
+/** Response codes of the notify-milestone-approved Edge Function mapped to the catalog. */
+const NOTIFY_ERROR_CODES: Record<string, ApprovalErrorCode> = {
+  invalid_request: "invalid_id",
+  forbidden: "not_found",
+  not_found: "not_found",
+  not_approved: "not_approved",
+  email_not_configured: "email_not_configured",
+  send_failed: "send_failed",
+  notify_failed: "notify_failed",
+};
+
+/** Reads the function's `{ code }` body from an HTTP error response; null when it has none. */
+async function functionErrorCode(response: unknown): Promise<string | null> {
+  if (!(response instanceof Response)) return null;
+  try {
+    const body: unknown = await response.json();
+    if (typeof body !== "object" || body === null) return null;
+    const code = (body as Record<string, unknown>).code;
+    return typeof code === "string" ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+const toCount = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0);
+
+/**
+ * Emails each engaged employee of an approved milestone their own bonus through the
+ * notify-milestone-approved Edge Function. Only unsent lines are sent, so it doubles as the
+ * re-send. Called after approve_milestone has committed: a failure never undoes the approval.
+ */
+export async function notifyMilestoneApproved(
+  supabase: SupabaseClient,
+  milestoneId: string,
+): Promise<WriteResult<{ sent: number; failed: number }>> {
+  const result = await supabase.functions.invoke("notify-milestone-approved", {
+    body: { milestone_id: milestoneId },
+  });
+  const error: unknown = result.error;
+  if (!error) {
+    const body: unknown = result.data;
+    const counts = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
+    return { data: { sent: toCount(counts.sent), failed: toCount(counts.failed) } };
+  }
+
+  if (error instanceof FunctionsHttpError) {
+    const code = await functionErrorCode(error.context);
+    if (code !== null && Object.hasOwn(NOTIFY_ERROR_CODES, code)) return { error: { code: NOTIFY_ERROR_CODES[code] } };
+  }
+
+  // eslint-disable-next-line no-console -- intentional: surfaces function failures in Workers observability logs
+  console.error("notifyMilestoneApproved failed", { name: error instanceof Error ? error.name : typeof error });
+  return { error: { code: "notify_failed" } };
 }
 
 interface MyBonusRow {

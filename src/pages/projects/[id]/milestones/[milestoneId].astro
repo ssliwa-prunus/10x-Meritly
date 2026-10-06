@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { createClient } from "@/lib/supabase";
 import { formatPercent, formatPln } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { approvalErrorMessage, getApprovedPayout } from "@/lib/services/approvals";
+import { approvalErrorMessage, approvalNoticeMessage, getApprovedPayout } from "@/lib/services/approvals";
 import { engagementsErrorMessage, listAssignableEmployees, listEngagements } from "@/lib/services/engagements";
 import { getMilestonePayout, kpiErrorMessage } from "@/lib/services/payouts";
 import { getProject, listMilestones, projectIdSchema } from "@/lib/services/projects";
@@ -38,7 +38,9 @@ const errorMessage =
 const kpiError = errorCode && isKpiError ? kpiErrorMessage(errorCode, errorField) : null;
 const approvalError = errorCode && isApprovalError ? approvalErrorMessage(errorCode) : null;
 const kpiSaved = saved === "kpi";
-const approvalSaved = saved === "approved";
+const approvalSaved = saved === "approved" || saved === "notified" ? saved : null;
+const noticeCode = Astro.url.searchParams.get("notice");
+const approvalNotice = approvalSaved && noticeCode ? approvalNoticeMessage(noticeCode) : null;
 const SAVED_MESSAGES: Record<string, string> = {
   created: "Employee assigned.",
   updated: "Assignment saved.",
@@ -57,6 +59,8 @@ let engagementsResult: Awaited<ReturnType<typeof listEngagements>> = {};
 let assignableResult: Awaited<ReturnType<typeof listAssignableEmployees>> = {};
 let payoutResult: Awaited<ReturnType<typeof getMilestonePayout>> = {};
 let approvedAt: string | null = null;
+let notifiedCount: number | null = null;
+let lineCount: number | null = null;
 
 if (!supabase || !profile) {
   loadError = supabase ? "Your profile could not be loaded" : "Supabase is not configured";
@@ -83,6 +87,8 @@ if (!supabase || !profile) {
         ? { data: { summary: approved.data.summary, lines: approved.data.lines } }
         : { error: approved.error };
       approvedAt = approved.data?.approved_at ?? null;
+      notifiedCount = approved.data?.notified_count ?? null;
+      lineCount = approved.data?.line_count ?? null;
     } else {
       payoutResult = await getMilestonePayout(supabase, milestoneId.data);
     }
@@ -269,7 +275,11 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             canApprove={canApprove}
             blockedReason={approvalBlockedReason}
             approvedAt={approvedAt}
+            notifiedCount={notifiedCount}
+            lineCount={lineCount}
+            canNotify={!isAdmin}
             saved={approvalSaved}
+            notice={approvalNotice}
             error={approvalError}
           />
 

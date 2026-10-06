@@ -18,14 +18,38 @@ interface Props {
   blockedReason: string | null;
   /** approved_at of the snapshot; null until approved. */
   approvedAt: string | null;
-  saved: boolean;
+  /** Approved lines whose bonus email the provider confirmed, and all approved lines; null until approved. */
+  notifiedCount: number | null;
+  lineCount: number | null;
+  /** True when the viewer may re-send unsent emails (the owning Supervisor, not an Admin). */
+  canNotify: boolean;
+  /** Success flash: approved, or unsent emails re-sent. */
+  saved: "approved" | "notified" | null;
+  /** Catalog text when not every bonus email went out. */
+  notice: string | null;
   error: string | null;
 }
 
-const { projectId, milestoneId, status, canApprove, blockedReason, approvedAt, saved, error } = Astro.props;
+const {
+  projectId,
+  milestoneId,
+  status,
+  canApprove,
+  blockedReason,
+  approvedAt,
+  notifiedCount,
+  lineCount,
+  canNotify,
+  saved,
+  notice,
+  error,
+} = Astro.props;
 
 const isApproved = status === "approved";
 const action = `/api/projects/${projectId}/milestones/${milestoneId}/approve`;
+const notifyAction = `/api/projects/${projectId}/milestones/${milestoneId}/notify`;
+const hasEmailCounts = isApproved && notifiedCount !== null && lineCount !== null;
+const canResend = hasEmailCounts && canNotify && notifiedCount < lineCount;
 const focusRing = "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 ---
 
@@ -46,7 +70,12 @@ const focusRing = "focus-visible:outline-none focus-visible:ring-3 focus-visible
     <CardContent className="flex flex-col gap-4">
       {saved && (
         <Alert variant="success" role="status">
-          <AlertDescription>Milestone approved.</AlertDescription>
+          <AlertDescription>{saved === "approved" ? "Milestone approved." : "Unsent emails re-sent."}</AlertDescription>
+        </Alert>
+      )}
+      {notice && (
+        <Alert variant="destructive">
+          <AlertDescription>{notice}</AlertDescription>
         </Alert>
       )}
       {error && (
@@ -56,10 +85,27 @@ const focusRing = "focus-visible:outline-none focus-visible:ring-3 focus-visible
       )}
 
       {isApproved ? (
-        <p class="text-sm">
-          {approvedAt ? `Approved on ${formatDate(approvedAt)}.` : "Approved."} The figures are frozen and each employee
-          sees their own bonus.
-        </p>
+        <>
+          <p class="text-sm">
+            {approvedAt ? `Approved on ${formatDate(approvedAt)}.` : "Approved."} The figures are frozen and each
+            employee sees their own bonus.
+          </p>
+          {hasEmailCounts && (
+            <p class="text-sm">
+              Emails sent:{" "}
+              <span class="tabular-nums">
+                {notifiedCount} of {lineCount}
+              </span>
+            </p>
+          )}
+          {canResend && (
+            <form method="POST" action={notifyAction}>
+              <SubmitButton client:load variant="outline" pendingText="Sending…">
+                Re-send unsent emails
+              </SubmitButton>
+            </form>
+          )}
+        </>
       ) : canApprove ? (
         <form method="POST" action={action} class="flex flex-col gap-4">
           <div class="flex items-start gap-2">

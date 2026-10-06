@@ -128,15 +128,18 @@ It also seeds two employee records owned by `supervisor@meritly.local`:
 
 The seed is for local development and CI only.
 
-### Employee invites in local development
+### Employee invites and approval emails in local development
 
-Invites are sent by the `invite-employee` Supabase Edge Function, which `npm run dev` does not run. Serve it next to the dev server:
+Invites are sent by the `invite-employee` Supabase Edge Function and approval emails (each employee's bonus, sent when a milestone is approved) by `notify-milestone-approved`. `npm run dev` runs neither. Copy the functions' env file once, then serve them next to the dev server:
 
 ```bash
+cp supabase/functions/.env.example supabase/functions/.env
 npx supabase functions serve
 ```
 
-Local Supabase does not send real email. Open the test inbox at `http://127.0.0.1:54324`, open the invite and follow its link: it goes to `/auth/confirm` and then `/auth/set-password` on `http://localhost:4321`.
+Local Supabase does not send real email. Open the test inbox at `http://127.0.0.1:54324`, open the invite and follow its link: it goes to `/auth/confirm` and then `/auth/set-password` on `http://localhost:4321`. Approval emails land in the same inbox: locally `notify-milestone-approved` posts to Mailpit's send API at `MAILPIT_URL` (leave `RESEND_API_KEY` empty). If the edge runtime cannot reach `host.docker.internal`, use the inbucket container URL noted in `.env.example`.
+
+With the functions server stopped, approval still succeeds; the milestone page shows "Emails sent: 0 of N" and a **Re-send unsent emails** button that sends only the emails not yet confirmed.
 
 Run the database RLS tests (pgTAP) against the running local stack with:
 
@@ -231,10 +234,17 @@ Employee invites need Resend as Supabase Auth's SMTP provider, the invite templa
    npx supabase migration list
    ```
 
-5. **[AGENT/HUMAN]** Deploy the Edge Function:
+5. **[AGENT/HUMAN]** Deploy the Edge Functions:
 
    ```bash
    npx supabase functions deploy invite-employee
+   ```
+
+   Approval emails (S-05) are sent by the `notify-milestone-approved` Edge Function through Resend's API. It needs the verified Resend domain from step 1 and its own secrets (`MAIL_FROM` must be an address on that domain, `APP_URL` the production URL that builds the `/my-bonuses` link):
+
+   ```bash
+   npx supabase secrets set RESEND_API_KEY=<resend-api-key> MAIL_FROM="Meritly <bonuses@your-domain>" APP_URL=https://meritly.meritly.workers.dev
+   npx supabase functions deploy notify-milestone-approved
    ```
 
 6. **[AGENT/HUMAN]** Build and deploy the Worker:
@@ -251,7 +261,7 @@ Employee invites need Resend as Supabase Auth's SMTP provider, the invite templa
 
 8. **[HUMAN]** On the production URL, register an employee with an external mailbox you control, send the invite, accept it, set a password and sign in. Check that the employee lands on the dashboard and that the employee's `activated_at` is set.
 
-The Worker still needs only `SUPABASE_URL` and `SUPABASE_KEY`. The secret key stays in Supabase, where the Edge Function runs.
+The Worker still needs only `SUPABASE_URL` and `SUPABASE_KEY`. The secret key and the Resend API key stay in Supabase, where the Edge Functions run.
 
 ## Smoke test
 
