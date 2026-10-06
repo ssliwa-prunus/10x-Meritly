@@ -28,7 +28,9 @@ const ENGAGEMENTS_ERROR_MESSAGES = {
   time_share_range: "Time share must be above 0 and at most 1.00",
   rating_range: "Rating must be a whole number from 1 to 5",
   already_assigned: "This employee is already assigned to this milestone",
-  milestone_closed: "The milestone or its project is completed or cancelled; reopen it before changing its assignments",
+  milestone_closed:
+    "The milestone is approved, or it or its project is completed or cancelled. Approved milestones are frozen; reopen a completed or cancelled one before changing its assignments",
+  milestone_approved: "This milestone is approved and frozen",
   employee_not_available: "This employee cannot be assigned to this milestone. Choose one of your employees.",
   admin_read_only: "Admins can view assignments but not change them",
 } as const;
@@ -152,10 +154,11 @@ export interface WriteResult<T = undefined> {
 
 const NOT_FOUND: EngagementsError = { code: "not_found" };
 
-/** Custom SQLSTATEs raised by the engagement guard trigger. */
+/** Custom SQLSTATEs raised by the engagement and milestone guard triggers. */
 const GUARD_ERROR_CODES: Record<string, EngagementsErrorCode> = {
   MR007: "milestone_closed",
   MR011: "employee_not_available",
+  MR015: "milestone_approved",
 };
 
 function mapPostgrestError(error: PostgrestError, context: string): EngagementsError {

@@ -22,6 +22,7 @@ const KPI_ERROR_MESSAGES = {
   admin_read_only: "Admins can view KPI scores but not change them",
   milestone_cancelled: "The milestone is cancelled; its KPI scores cannot be changed",
   project_closed: "The project is completed or cancelled; reopen it before changing its milestones",
+  milestone_approved: "This milestone is approved and frozen",
 } as const;
 
 export type KpiErrorCode = keyof typeof KPI_ERROR_MESSAGES;
@@ -129,6 +130,7 @@ const NOT_FOUND: KpiError = { code: "not_found" };
 const GUARD_ERROR_CODES: Record<string, KpiErrorCode> = {
   MR003: "project_closed",
   MR013: "milestone_cancelled",
+  MR015: "milestone_approved",
 };
 
 function mapPostgrestError(error: PostgrestError, context: string): KpiError {

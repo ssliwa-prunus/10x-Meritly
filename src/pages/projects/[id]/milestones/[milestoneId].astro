@@ -2,6 +2,7 @@
 import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
 import EngagementForm from "@/components/engagements/EngagementForm.astro";
+import ApprovalSection from "@/components/milestones/ApprovalSection.astro";
 import KpiScoresSection from "@/components/milestones/KpiScoresSection.astro";
 import PayoutSection from "@/components/milestones/PayoutSection.astro";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { createClient } from "@/lib/supabase";
 import { formatPercent, formatPln } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { approvalErrorMessage, getApprovedPayout } from "@/lib/services/approvals";
 import { engagementsErrorMessage, listAssignableEmployees, listEngagements } from "@/lib/services/engagements";
 import { getMilestonePayout, kpiErrorMessage } from "@/lib/services/payouts";
 import { getProject, listMilestones, projectIdSchema } from "@/lib/services/projects";
@@ -24,13 +26,19 @@ const saved = Astro.url.searchParams.get("saved");
 const errorCode = Astro.url.searchParams.get("error");
 const errorField = Astro.url.searchParams.get("field");
 const errorEngagementId = Astro.url.searchParams.get("engagement");
-// section=kpi marks an error from the KPI form: it shows in the KPI card and never in the assignments.
-const isKpiError = Astro.url.searchParams.get("section") === "kpi";
+// section=kpi / section=approval mark an error from the KPI or approval form: it shows in that
+// card and never in the assignments.
+const errorSection = Astro.url.searchParams.get("section");
+const isKpiError = errorSection === "kpi";
+const isApprovalError = errorSection === "approval";
 
 // The URL carries only codes; the displayed text always comes from fixed catalogs.
-const errorMessage = errorCode && !isKpiError ? engagementsErrorMessage(errorCode, errorField) : null;
+const errorMessage =
+  errorCode && !isKpiError && !isApprovalError ? engagementsErrorMessage(errorCode, errorField) : null;
 const kpiError = errorCode && isKpiError ? kpiErrorMessage(errorCode, errorField) : null;
+const approvalError = errorCode && isApprovalError ? approvalErrorMessage(errorCode) : null;
 const kpiSaved = saved === "kpi";
+const approvalSaved = saved === "approved";
 const SAVED_MESSAGES: Record<string, string> = {
   created: "Employee assigned.",
   updated: "Assignment saved.",
@@ -48,20 +56,37 @@ let milestonesResult: Awaited<ReturnType<typeof listMilestones>> = {};
 let engagementsResult: Awaited<ReturnType<typeof listEngagements>> = {};
 let assignableResult: Awaited<ReturnType<typeof listAssignableEmployees>> = {};
 let payoutResult: Awaited<ReturnType<typeof getMilestonePayout>> = {};
+let approvedAt: string | null = null;
 
 if (!supabase || !profile) {
   loadError = supabase ? "Your profile could not be loaded" : "Supabase is not configured";
 } else if (projectId.success && milestoneId.success) {
-  [projectResult, milestonesResult, engagementsResult, assignableResult, payoutResult] = await Promise.all([
+  [projectResult, milestonesResult, engagementsResult, assignableResult] = await Promise.all([
     getProject(supabase, projectId.data),
     listMilestones(supabase, projectId.data),
     listEngagements(supabase, milestoneId.data),
     // Admins are read-only, so they get no picker. A Supervisor picks only employees they own.
     isAdmin ? Promise.resolve({}) : listAssignableEmployees(supabase, profile.id, milestoneId.data),
-    getMilestonePayout(supabase, milestoneId.data),
   ]);
   loadError =
     projectResult.error ?? milestonesResult.error ?? engagementsResult.error ?? assignableResult.error ?? null;
+
+  // The payout source depends on the status: an approved milestone renders its frozen snapshot,
+  // every other one the live Draft computation.
+  const loadedMilestone = projectResult.data
+    ? milestonesResult.data?.find((row) => row.id === milestoneId.data)
+    : undefined;
+  if (!loadError && loadedMilestone) {
+    if (loadedMilestone.status === "approved") {
+      const approved = await getApprovedPayout(supabase, milestoneId.data);
+      payoutResult = approved.data
+        ? { data: { summary: approved.data.summary, lines: approved.data.lines } }
+        : { error: approved.error };
+      approvedAt = approved.data?.approved_at ?? null;
+    } else {
+      payoutResult = await getMilestonePayout(supabase, milestoneId.data);
+    }
+  }
 }
 
 // A payout failure stays in its own card: the details and assignments (where the data is fixed) still render.
@@ -76,21 +101,46 @@ const assignable = assignableResult.data ?? [];
 const payoutSummary = payoutResult.data?.summary ?? null;
 const payoutLines = payoutResult.data?.lines ?? [];
 
-const isClosedStatus = (status: MilestoneStatus) => status === "completed" || status === "cancelled";
+const isClosedStatus = (status: MilestoneStatus) =>
+  status === "completed" || status === "cancelled" || status === "approved";
+const isApproved = milestone?.status === "approved";
 const isClosed =
   project !== null && milestone !== null && (isClosedStatus(milestone.status) || isClosedStatus(project.status));
 const canEdit = !isAdmin && !isClosed;
 
-// KPI scores: a completed milestone can still be scored (only its assignments freeze); a cancelled
-// milestone or a closed project cannot. Admins are read-only.
-const kpiReadOnlyReason = isAdmin
-  ? "Admins can view KPI scores but not change them."
-  : milestone?.status === "cancelled"
-    ? "This milestone is cancelled; its scores can't be changed."
-    : project && isClosedStatus(project.status)
-      ? `This project is ${project.status}. Reopen it before changing KPI scores.`
-      : null;
+// KPI scores: a completed milestone can still be scored (only its assignments freeze); an approved
+// or cancelled milestone or a closed project cannot. Admins are read-only.
+const kpiReadOnlyReason = isApproved
+  ? "Approved milestones are frozen; their KPI scores can't be changed."
+  : isAdmin
+    ? "Admins can view KPI scores but not change them."
+    : milestone?.status === "cancelled"
+      ? "This milestone is cancelled; its scores can't be changed."
+      : project && isClosedStatus(project.status)
+        ? `This project is ${project.status}. Reopen it before changing KPI scores.`
+        : null;
 const canEditKpi = project !== null && milestone !== null && kpiReadOnlyReason === null;
+
+// Approval: the owning Supervisor approves a scored milestone with at least one engagement, from any
+// open status, while the project is open. approve_milestone enforces the same rules (MR014, MR015,
+// MR003, 42501); this only explains up front why there is no Approve button.
+const approvalBlockedReason =
+  !project || !milestone || isApproved
+    ? null
+    : isAdmin
+      ? "Admins can view approvals but not approve milestones."
+      : milestone.status === "cancelled"
+        ? "This milestone is cancelled; it cannot be approved."
+        : project.status === "completed" || project.status === "cancelled"
+          ? `This project is ${project.status}. Reopen it before approving its milestones.`
+          : !payoutSummary
+            ? "The computed bonuses could not be loaded; reload the page before approving."
+            : !payoutSummary.scored
+              ? "Enter all four KPI scores before approving."
+              : payoutSummary.engagement_count === 0
+                ? "Assign at least one employee before approving."
+                : null;
+const canApprove = project !== null && milestone !== null && !isApproved && approvalBlockedReason === null;
 
 // Where an error shows: on the failing row, on the add form, or at the top of the page.
 const rowErrorId =
@@ -161,7 +211,15 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                   </div>
                   <div>
                     <dt class="text-muted-foreground">Status</dt>
-                    <dd class="mt-1 capitalize">{milestone.status}</dd>
+                    <dd class="mt-1">
+                      {isApproved ? (
+                        <Badge className="bg-success text-success-foreground">Approved</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="capitalize">
+                          {milestone.status}
+                        </Badge>
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt class="text-muted-foreground">Target pool</dt>
@@ -186,7 +244,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
               error={kpiError}
             />
           )}
-          {payoutSummary && <PayoutSection summary={payoutSummary} lines={payoutLines} />}
+          {payoutSummary && <PayoutSection summary={payoutSummary} lines={payoutLines} approvedAt={approvedAt} />}
           {payoutError && (
             <section aria-labelledby="bonuses-heading">
               <Card>
@@ -204,6 +262,17 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             </section>
           )}
 
+          <ApprovalSection
+            projectId={project.id}
+            milestoneId={milestone.id}
+            status={milestone.status}
+            canApprove={canApprove}
+            blockedReason={approvalBlockedReason}
+            approvedAt={approvedAt}
+            saved={approvalSaved}
+            error={approvalError}
+          />
+
           <section id="assignments" aria-labelledby="assignments-heading">
             <Card>
               <CardHeader>
@@ -211,8 +280,8 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                   Assignments
                 </h2>
                 <CardDescription>
-                  The open total is the employee's time share across milestones that are not completed or cancelled.
-                  Above 100% is a warning only.
+                  The open total is the employee's time share across milestones that are not completed, cancelled or
+                  approved. Above 100% is a warning only.
                 </CardDescription>
               </CardHeader>
 
@@ -222,14 +291,19 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                     Admins can view assignments but not change them.
                   </p>
                 ) : (
-                  isClosed && (
+                  isClosed &&
+                  (isApproved ? (
+                    <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
+                      Approved milestones are frozen; assignments can no longer change.
+                    </p>
+                  ) : (
                     <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
                       {isClosedStatus(milestone.status)
                         ? `This milestone is ${milestone.status}.`
                         : `This project is ${project.status}.`}{" "}
                       Reopen it (set it to planned or active) before changing its assignments.
                     </p>
-                  )
+                  ))
                 )}
 
                 {engagements.length === 0 ? (

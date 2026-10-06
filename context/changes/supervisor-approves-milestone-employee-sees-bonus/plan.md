@@ -601,32 +601,32 @@ Every engaged employee is emailed their own bonus after approval, through a new 
 
 #### Automated
 
-- [x] 1.1 Migrations and seed apply cleanly: `npx supabase db reset`
-- [x] 1.2 All pgTAP suites pass, including the new `milestone_approval.test.sql`: `npx supabase test db`
-- [x] 1.3 Break-check: disabling the employee `approved` predicate in a worktree-only edit turns the suite red; the edit is then reverted
-- [x] 1.4 Type check passes: `npx astro sync && npx astro check`
-- [x] 1.5 Lint passes: `npm run lint`
+- [x] 1.1 Migrations and seed apply cleanly: `npx supabase db reset` — b8a987e
+- [x] 1.2 All pgTAP suites pass, including the new `milestone_approval.test.sql`: `npx supabase test db` — b8a987e
+- [x] 1.3 Break-check: disabling the employee `approved` predicate in a worktree-only edit turns the suite red; the edit is then reverted — b8a987e
+- [x] 1.4 Type check passes: `npx astro sync && npx astro check` — b8a987e
+- [x] 1.5 Lint passes: `npm run lint` — b8a987e
 
 #### Manual
 
-- [x] 1.6 Seed supervisor's `approve_milestone('…0021')` produces one header and one line with bonus 2740.38 and status `approved`
+- [x] 1.6 Seed supervisor's `approve_milestone('…0021')` produces one header and one line with bonus 2740.38 and status `approved` — b8a987e
 
 ### Phase 2: Supervisor approve flow (no email yet)
 
 #### Automated
 
-- [ ] 2.1 Type check passes: `npx astro sync && npx astro check`
-- [ ] 2.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
-- [ ] 2.3 Build succeeds: `npm run build`
-- [ ] 2.4 pgTAP still passes: `npx supabase test db`
+- [x] 2.1 Type check passes: `npx astro sync && npx astro check`
+- [x] 2.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
+- [x] 2.3 Build succeeds: `npm run build`
+- [x] 2.4 pgTAP still passes: `npx supabase test db`
 
 #### Manual
 
-- [ ] 2.5 Milestone 2 (unscored) shows a blocked reason and no Approve button
-- [ ] 2.6 Approve requires the checkbox; approved Milestone 1 shows frozen figures and read-only sections
-- [ ] 2.7 Project page shows Approved with no edit row; budget panel reserves 2740.38
-- [ ] 2.8 Replayed edit/KPI forms on the approved milestone show the frozen error, not a 500
-- [ ] 2.9 Kitchen sink shows all new approval states correctly
+- [x] 2.5 Milestone 2 (unscored) shows a blocked reason and no Approve button
+- [x] 2.6 Approve requires the checkbox; approved Milestone 1 shows frozen figures and read-only sections
+- [x] 2.7 Project page shows Approved with no edit row; budget panel reserves 2740.38
+- [x] 2.8 Replayed edit/KPI forms on the approved milestone show the frozen error, not a 500
+- [x] 2.9 Kitchen sink shows all new approval states correctly
 
 ### Phase 3: Employee `/my-bonuses` page
 
