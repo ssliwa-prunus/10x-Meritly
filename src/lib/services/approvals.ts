@@ -2,7 +2,7 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import { PROJECTS_PATH } from "@/lib/services/projects";
-import type { MilestonePayoutLine, MilestonePayoutSummary } from "@/types";
+import type { MilestonePayoutLine, MilestonePayoutSummary, MyBonuses } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Approval failures travel to the milestone page as a fixed code in the redirect
@@ -243,6 +243,69 @@ export async function getApprovedPayout(
         bonus: Number(row.bonus),
       })),
       approved_at: header.data.approved_at,
+    },
+  };
+}
+
+interface MyBonusRow {
+  id: string;
+  project_name: string;
+  milestone_name: string;
+  start_date: string;
+  end_date: string;
+  approved_at: string;
+  job_role_name: string;
+  time_share: Numeric;
+  role_weight: Numeric;
+  rating: Numeric;
+  rating_factor: Numeric;
+  multiplier: Numeric;
+  bonus: Numeric;
+}
+
+const MY_BONUS_COLUMNS =
+  "id, project_name, milestone_name, start_date, end_date, approved_at, job_role_name, time_share, role_weight, rating, rating_factor, multiplier, bonus";
+
+/**
+ * The signed-in employee's own approved bonuses, newest approval first. current_employee_id() is
+ * null unless the account is linked to an activated employee record; then the list is empty and
+ * `not_linked` is set. RLS already limits an employee to their own lines of approved milestones;
+ * the employee_id filter is defence in depth.
+ */
+export async function listMyBonuses(supabase: SupabaseClient): Promise<ServiceResult<MyBonuses>> {
+  const linked = await supabase.rpc("current_employee_id");
+  if (linked.error) return { error: mapLoadError(linked.error, "listMyBonusesEmployee") };
+  // The function returns a scalar uuid; the untyped client types it as any, so it is narrowed here.
+  const employeeId: unknown = linked.data;
+  if (typeof employeeId !== "string") return { data: { lines: [], not_linked: true } };
+
+  const { data, error } = await supabase
+    .from("milestone_result_lines")
+    .select(MY_BONUS_COLUMNS)
+    .eq("employee_id", employeeId)
+    .order("approved_at", { ascending: false })
+    .order("milestone_name", { ascending: true })
+    .overrideTypes<MyBonusRow[], { merge: false }>();
+  if (error) return { error: mapLoadError(error, "listMyBonuses") };
+
+  return {
+    data: {
+      not_linked: false,
+      lines: data.map((row) => ({
+        id: row.id,
+        project_name: row.project_name,
+        milestone_name: row.milestone_name,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        approved_at: row.approved_at,
+        job_role_name: row.job_role_name,
+        time_share: Number(row.time_share),
+        role_weight: Number(row.role_weight),
+        rating: Number(row.rating),
+        rating_factor: Number(row.rating_factor),
+        multiplier: Number(row.multiplier),
+        bonus: Number(row.bonus),
+      })),
     },
   };
 }

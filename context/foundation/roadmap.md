@@ -158,7 +158,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** S-07
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Low — a read/navigation slice over data S-05 already produces. Scope is already bounded by the PRD's own Socrates resolution: an employee's own participation history only, not a company-wide project browser.
+- **Risk:** Low — a read/navigation slice over data S-05 already produces. Scope is already bounded by the PRD's own Socrates resolution: an employee's own participation history only, not a company-wide project browser. The employee side extends `/my-bonuses` (added in S-05) and reads `milestone_result_lines`, the frozen approval snapshot: employees have no policies on the live tables.
 - **Status:** proposed
 
 ### S-07: Aggregate bonus report

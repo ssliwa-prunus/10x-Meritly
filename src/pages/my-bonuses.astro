@@ -1,0 +1,130 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Topbar from "@/components/Topbar.astro";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { createClient } from "@/lib/supabase";
+import { formatDate, formatMultiplier, formatPercent, formatPln } from "@/lib/format";
+import { listMyBonuses } from "@/lib/services/approvals";
+import type { MyBonuses } from "@/types";
+
+// Middleware limits this page to the employee role. Figures come from the frozen approval
+// snapshot, already floored in SQL; this view only formats them. It shows no share, pool or
+// colleague data.
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+
+let loadError: string | null = null;
+let bonuses: MyBonuses = { lines: [], not_linked: false };
+
+if (!supabase) {
+  loadError = "Supabase is not configured";
+} else {
+  const result = await listMyBonuses(supabase);
+  if (result.error || !result.data) loadError = result.error ?? "Could not load bonuses. Please try again.";
+  else bonuses = result.data;
+}
+
+const columnCount = 5;
+---
+
+<Layout title="My bonuses">
+  <div class="bg-cosmic text-foreground min-h-screen p-4">
+    <div class="mx-auto w-full max-w-4xl">
+      <Topbar />
+      <h1 class="text-foreground mb-6 text-3xl font-bold">My bonuses</h1>
+
+      {loadError ? (
+        <Alert variant="destructive">
+          <AlertTitle>Could not load your bonuses.</AlertTitle>
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
+      ) : (
+        <section aria-labelledby="bonuses-heading">
+          <Card>
+            <CardHeader>
+              <h2 id="bonuses-heading" class="text-xl leading-none font-semibold">
+                Approved bonuses
+              </h2>
+              <CardDescription>
+                Your bonus for each approved milestone, with the figures it was computed from. Approved results are
+                final.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {bonuses.not_linked ? (
+                <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
+                  Your account isn't linked to an employee record yet; ask your supervisor to invite you.
+                </p>
+              ) : bonuses.lines.length === 0 ? (
+                <p class="text-muted-foreground text-sm">No approved bonuses yet.</p>
+              ) : (
+                <Table className="min-w-xl text-left">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead scope="col" className="text-muted-foreground">
+                        Project
+                      </TableHead>
+                      <TableHead scope="col" className="text-muted-foreground">
+                        Milestone
+                      </TableHead>
+                      <TableHead scope="col" className="text-muted-foreground">
+                        Period
+                      </TableHead>
+                      <TableHead scope="col" className="text-muted-foreground">
+                        Approved
+                      </TableHead>
+                      <TableHead scope="col" className="text-muted-foreground text-right">
+                        Bonus
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  {bonuses.lines.map((line) => (
+                    <TableBody className="border-b">
+                      <TableRow className="border-0 align-top hover:bg-transparent">
+                        <TableCell className="align-top break-words whitespace-normal">{line.project_name}</TableCell>
+                        <TableCell className="align-top break-words whitespace-normal">{line.milestone_name}</TableCell>
+                        <TableCell className="align-top">
+                          <span class="whitespace-nowrap">{line.start_date}</span> –{" "}
+                          <span class="whitespace-nowrap">{line.end_date}</span>
+                        </TableCell>
+                        <TableCell className="align-top tabular-nums">{formatDate(line.approved_at)}</TableCell>
+                        <TableCell className="text-right align-top font-semibold tabular-nums">
+                          {formatPln(line.bonus)}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="border-0 hover:bg-transparent">
+                        <TableCell colSpan={columnCount} className="pt-0 pb-3 whitespace-normal">
+                          <dl class="bg-muted grid grid-cols-2 gap-3 rounded-lg px-3 py-2 text-xs sm:grid-cols-4">
+                            <div>
+                              <dt class="text-muted-foreground">Time share</dt>
+                              <dd class="mt-1 tabular-nums">{formatPercent(line.time_share)}</dd>
+                            </div>
+                            <div>
+                              <dt class="text-muted-foreground">Role weight ({line.job_role_name})</dt>
+                              <dd class="mt-1 tabular-nums">{formatMultiplier(line.role_weight)}</dd>
+                            </div>
+                            <div>
+                              <dt class="text-muted-foreground">Rating → factor</dt>
+                              <dd class="mt-1 tabular-nums">
+                                {line.rating} → {formatMultiplier(line.rating_factor)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt class="text-muted-foreground">KPI multiplier</dt>
+                              <dd class="mt-1 tabular-nums">{formatMultiplier(line.multiplier)}</dd>
+                            </div>
+                          </dl>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  ))}
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
+    </div>
+  </div>
+</Layout>

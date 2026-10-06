@@ -231,3 +231,27 @@ export interface MilestoneResultLine {
   bonus: number;
   notified_at: string | null;
 }
+
+/** One of the signed-in employee's own approved bonuses on `/my-bonuses`: a `MilestoneResultLine` minus ids and colleague-facing fields. */
+export type MyBonusLine = Pick<
+  MilestoneResultLine,
+  | "id"
+  | "project_name"
+  | "milestone_name"
+  | "start_date"
+  | "end_date"
+  | "approved_at"
+  | "job_role_name"
+  | "time_share"
+  | "role_weight"
+  | "rating"
+  | "rating_factor"
+  | "multiplier"
+  | "bonus"
+>;
+
+/** `/my-bonuses` data. `not_linked` is true when the account has no activated employee record (the list is then empty). */
+export interface MyBonuses {
+  lines: MyBonusLine[];
+  not_linked: boolean;
+}

@@ -615,36 +615,36 @@ Every engaged employee is emailed their own bonus after approval, through a new 
 
 #### Automated
 
-- [x] 2.1 Type check passes: `npx astro sync && npx astro check`
-- [x] 2.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
-- [x] 2.3 Build succeeds: `npm run build`
-- [x] 2.4 pgTAP still passes: `npx supabase test db`
+- [x] 2.1 Type check passes: `npx astro sync && npx astro check` — 1d6320d
+- [x] 2.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui` — 1d6320d
+- [x] 2.3 Build succeeds: `npm run build` — 1d6320d
+- [x] 2.4 pgTAP still passes: `npx supabase test db` — 1d6320d
 
 #### Manual
 
-- [x] 2.5 Milestone 2 (unscored) shows a blocked reason and no Approve button
-- [x] 2.6 Approve requires the checkbox; approved Milestone 1 shows frozen figures and read-only sections
-- [x] 2.7 Project page shows Approved with no edit row; budget panel reserves 2740.38
-- [x] 2.8 Replayed edit/KPI forms on the approved milestone show the frozen error, not a 500
-- [x] 2.9 Kitchen sink shows all new approval states correctly
+- [x] 2.5 Milestone 2 (unscored) shows a blocked reason and no Approve button — 1d6320d
+- [x] 2.6 Approve requires the checkbox; approved Milestone 1 shows frozen figures and read-only sections — 1d6320d
+- [x] 2.7 Project page shows Approved with no edit row; budget panel reserves 2740.38 — 1d6320d
+- [x] 2.8 Replayed edit/KPI forms on the approved milestone show the frozen error, not a 500 — 1d6320d
+- [x] 2.9 Kitchen sink shows all new approval states correctly — 1d6320d
 
 ### Phase 3: Employee `/my-bonuses` page
 
 #### Automated
 
-- [ ] 3.1 Type check passes: `npx astro sync && npx astro check`
-- [ ] 3.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
-- [ ] 3.3 Build succeeds: `npm run build`
-- [ ] 3.4 Smoke test still passes against the preview: `npm run smoke`
+- [x] 3.1 Type check passes: `npx astro sync && npx astro check`
+- [x] 3.2 Lint and UI literal guard pass: `npm run lint && npm run lint:ui`
+- [x] 3.3 Build succeeds: `npm run build`
+- [x] 3.4 Smoke test still passes against the preview: `npm run smoke`
 
 #### Manual
 
-- [ ] 3.5 Employee sees Milestone 1 with bonus 2740.38 and breakdown; Topbar shows "My bonuses"
-- [ ] 3.6 Supervisor gets 403 on `/my-bonuses` and no link
-- [ ] 3.7 Hand-crafted queries for other milestones or `milestone_results` return nothing for the employee
-- [ ] 3.8 An unapproved milestone's result does not appear for the employee
-- [ ] 3.9 Signed-out `/my-bonuses` returns to `/my-bonuses` after sign-in, including after a failed attempt
-- [ ] 3.10 Crafted off-site `next` values fall back to `/`
+- [x] 3.5 Employee sees Milestone 1 with bonus 2740.38 and breakdown; Topbar shows "My bonuses"
+- [x] 3.6 Supervisor gets 403 on `/my-bonuses` and no link
+- [x] 3.7 Hand-crafted queries for other milestones or `milestone_results` return nothing for the employee
+- [x] 3.8 An unapproved milestone's result does not appear for the employee
+- [x] 3.9 Signed-out `/my-bonuses` returns to `/my-bonuses` after sign-in, including after a failed attempt
+- [x] 3.10 Crafted off-site `next` values fall back to `/`
 
 ### Phase 4: Approval email
 
