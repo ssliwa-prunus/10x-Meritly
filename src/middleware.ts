@@ -1,4 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
+import { safeNext } from "@/lib/safe-next";
 import { isInviteSession } from "@/lib/set-password";
 import { createClient } from "@/lib/supabase";
 import type { Profile } from "@/types";
@@ -12,12 +13,15 @@ const PROTECTED_ROUTES = [
   "/api/projects",
   "/employees",
   "/api/employees",
+  "/my-bonuses",
   "/auth/set-password",
   "/api/auth/set-password",
 ];
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
 /** Supervisor/Admin pages (projects, employees); RLS decides which rows each role sees. */
 const PROJECT_ROUTES = ["/projects", "/api/projects", "/employees", "/api/employees"];
+/** Employee-only pages: a Supervisor must not use them as an unfiltered view of the team lines RLS lets them read. */
+const EMPLOYEE_ROUTES = ["/my-bonuses"];
 /** Invite acceptance only: a session from a regular password sign-in cannot set a password here. */
 const SET_PASSWORD_ROUTES = ["/auth/set-password", "/api/auth/set-password"];
 
@@ -58,7 +62,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (matchesRoute(pathname, PROTECTED_ROUTES)) {
     if (!context.locals.user) {
-      return context.redirect("/auth/signin");
+      // Come back to the requested page after sign-in; an unsafe target is dropped, not forwarded.
+      // API routes are not pages to land on (most are POST-only), so they get no return target.
+      const target = pathname.startsWith("/api/") ? null : safeNext(pathname + context.url.search);
+      return context.redirect(target ? `/auth/signin?next=${encodeURIComponent(target)}` : "/auth/signin");
     }
   }
 
@@ -77,6 +84,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
     const role = context.locals.profile?.role;
     if (role !== "supervisor" && role !== "admin") {
+      return new Response("Forbidden", { status: 403 });
+    }
+  }
+
+  if (matchesRoute(pathname, EMPLOYEE_ROUTES)) {
+    if (context.locals.profileError) {
+      return new Response("Service temporarily unavailable", { status: 503 });
+    }
+    if (context.locals.profile?.role !== "employee") {
       return new Response("Forbidden", { status: 403 });
     }
   }

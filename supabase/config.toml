@@ -373,6 +373,10 @@ deno_version = 2
 [functions.invite-employee]
 verify_jwt = true
 
+# Emails each employee their approved bonus with the secret key; called by signed-in Supervisors only.
+[functions.notify-milestone-approved]
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327

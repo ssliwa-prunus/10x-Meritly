@@ -1,5 +1,6 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import ApprovalSection from "@/components/milestones/ApprovalSection.astro";
 import KpiScoresSection from "@/components/milestones/KpiScoresSection.astro";
 import PayoutSection from "@/components/milestones/PayoutSection.astro";
 import BudgetExposurePanel from "@/components/projects/BudgetExposurePanel.astro";
@@ -82,6 +83,13 @@ const milestonesFor = (prefix: string): Milestone[] => [
     status: "cancelled",
     target_pool: 8000,
   }),
+  milestone(`${prefix}000004-0000-4000-8000-000000000004`, {
+    name: "Hypercare",
+    start_date: "2026-12-01",
+    end_date: "2026-12-31",
+    status: "approved",
+    target_pool: 10000,
+  }),
 ];
 const editableMilestones = milestonesFor("aa");
 const adminMilestones = milestonesFor("bb");
@@ -89,19 +97,20 @@ const closedMilestones = milestonesFor("cc");
 const savedMilestones = milestonesFor("dd");
 const errorRowId = editableMilestones[1].id;
 
-// Exposure of the fixture milestones: the non-cancelled target pools 15 000 + 42 500,50 = 57 500,50.
+// Exposure of the fixture milestones: the open target pools 15 000 + 42 500,50 plus the approved
+// milestone's actual payout pool 9 134,61 (the worked example below) = 66 635,11.
 const exposureNormal: ProjectExposure = {
   project_id: activeProject.id,
   total_budget: 120000,
-  reserved_total: 57500.5,
-  remaining: 62499.5,
+  reserved_total: 66635.11,
+  remaining: 53364.89,
   over_budget: false,
 };
 const exposureOver: ProjectExposure = {
   project_id: activeProject.id,
   total_budget: 50000,
-  reserved_total: 57500.5,
-  remaining: -7500.5,
+  reserved_total: 66635.11,
+  remaining: -16635.11,
   over_budget: true,
 };
 
@@ -187,6 +196,9 @@ const scoredLines: MilestonePayoutLine[] = [
 ];
 const unscoredLines = scoredLines.map((line) => ({ ...line, bonus: null }));
 
+// Approval fixtures: the worked example approved (snapshot timestamp in UTC; shown in Warsaw time).
+const approvedAt = "2026-10-05T14:30:00Z";
+
 const states = [
   { state: "default", where: "All sections below (first variant of each)." },
   {
@@ -198,11 +210,15 @@ const states = [
     where:
       "Manual tab-through (see the note below): every link, summary, input, select, textarea and button shows the ring.",
   },
-  { state: "disabled", where: "Section “Disabled and pending”: forced-pending SubmitButton and a disabled Button." },
+  {
+    state: "disabled",
+    where:
+      "Section “Disabled and pending”: forced-pending SubmitButton and a disabled Button. Approval: forced-pending Approve button; blocked (no button) variants; Admin with unsent emails (no re-send form).",
+  },
   {
     state: "error",
     where:
-      "Project form error; milestones row error, add-form error and section error; exposure unavailable; KPI scores error.",
+      "Project form error; milestones row error, add-form error and section error; exposure unavailable; KPI scores error; approval error; partially sent approval emails (notice and re-send form).",
   },
   {
     state: "empty",
@@ -233,10 +249,11 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
             The components render several times here, so ids repeat: <code>milestones</code> /
             <code>milestones-heading</code> (5×), <code>exposure</code> / <code>exposure-heading</code> (3×),{" "}
             <code>kpi</code> / <code>kpi-heading</code> (5×) and the KPI form's
-            <code>kpi-*</code> fields (3×), <code>bonuses</code> / <code>bonuses-heading</code> (3×), the add form's{" "}
-            <code>milestone-new-*</code> fields (2×) and the project form's <code>project-*</code> fields (3×). Label
-            clicks and <code>aria-labelledby</code> resolve to the first match, so check focus order and labels on the
-            real <code>/projects/[id]</code> page, where every id is unique.
+            <code>kpi-*</code> fields (3×), <code>bonuses</code> / <code>bonuses-heading</code> (4×),{" "}
+            <code>approval</code> / <code>approval-heading</code> (8×) and <code>approval-confirm</code> (2×), the add
+            form's <code>milestone-new-*</code> fields (2×) and the project form's <code>project-*</code> fields (3×).
+            Label clicks and <code>aria-labelledby</code> resolve to the first match, so check focus order and labels on
+            the real <code>/projects/[id]</code> page, where every id is unique.
           </p>
 
           <Card>
@@ -423,6 +440,142 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
           <PayoutSection summary={scoredSummary} lines={scoredLines} />
           <h3 class:list={variantHeading}>Scored — no engagements</h3>
           <PayoutSection summary={noEngagementsSummary} lines={[]} />
+          <h3 class:list={variantHeading}>Approved — frozen snapshot</h3>
+          <PayoutSection summary={scoredSummary} lines={scoredLines} approvedAt={approvedAt} />
+        </section>
+
+        <section class="flex flex-col gap-6" aria-labelledby="ks-approval">
+          <h2 id="ks-approval" class:list={groupHeading}>
+            Approval
+          </h2>
+          <h3 class:list={variantHeading}>Approvable — confirmation checkbox</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="completed"
+            canApprove={true}
+            blockedReason={null}
+            approvedAt={null}
+            notifiedCount={null}
+            lineCount={null}
+            canNotify={true}
+            saved={null}
+            notice={null}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Blocked — unscored</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="active"
+            canApprove={false}
+            blockedReason="Enter all four KPI scores before approving."
+            approvedAt={null}
+            notifiedCount={null}
+            lineCount={null}
+            canNotify={true}
+            saved={null}
+            notice={null}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Blocked — Admin</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="completed"
+            canApprove={false}
+            blockedReason="Admins can view approvals but not approve milestones."
+            approvedAt={null}
+            notifiedCount={null}
+            lineCount={null}
+            canNotify={true}
+            saved={null}
+            notice={null}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Error — confirmation missing</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="completed"
+            canApprove={true}
+            blockedReason={null}
+            approvedAt={null}
+            notifiedCount={null}
+            lineCount={null}
+            canNotify={true}
+            saved={null}
+            notice={null}
+            error="Tick the confirmation to approve the milestone"
+          />
+          <h3 class:list={variantHeading}>Approved — saved, all emails sent</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="approved"
+            canApprove={false}
+            blockedReason={null}
+            approvedAt={approvedAt}
+            notifiedCount={scoredLines.length}
+            lineCount={scoredLines.length}
+            canNotify={true}
+            saved="approved"
+            notice={null}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Approved — saved, emails partially sent (re-send form)</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="approved"
+            canApprove={false}
+            blockedReason={null}
+            approvedAt={approvedAt}
+            notifiedCount={1}
+            lineCount={scoredLines.length}
+            canNotify={true}
+            saved="approved"
+            notice="Some bonus emails could not be sent. Use “Re-send unsent emails” to try again."
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Approved — emails partially sent, Admin (no re-send)</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="approved"
+            canApprove={false}
+            blockedReason={null}
+            approvedAt={approvedAt}
+            notifiedCount={1}
+            lineCount={scoredLines.length}
+            canNotify={false}
+            saved={null}
+            notice={null}
+            error={null}
+          />
+          <h3 class:list={variantHeading}>Approved — replayed approval error</h3>
+          <ApprovalSection
+            projectId={activeProject.id}
+            milestoneId={kpiMilestoneId}
+            status="approved"
+            canApprove={false}
+            blockedReason={null}
+            approvedAt={approvedAt}
+            notifiedCount={scoredLines.length}
+            lineCount={scoredLines.length}
+            canNotify={true}
+            saved={null}
+            notice={null}
+            error="This milestone is already approved"
+          />
+          <h3 class:list={variantHeading}>Pending — approve in flight</h3>
+          <Card>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <SubmitButton client:load pendingText="Approving…" pending>
+                Approve milestone
+              </SubmitButton>
+            </CardContent>
+          </Card>
         </section>
 
         <section class="flex flex-col gap-6" aria-labelledby="ks-project">

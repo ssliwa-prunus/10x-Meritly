@@ -2,16 +2,18 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatMultiplier, formatPercent, formatPln, formatShare } from "@/lib/format";
+import { formatDate, formatMultiplier, formatPercent, formatPln, formatShare } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { MilestonePayoutLine, MilestonePayoutSummary } from "@/types";
 
 interface Props {
   summary: MilestonePayoutSummary;
   lines: MilestonePayoutLine[];
+  /** approved_at of the frozen snapshot; set when the figures come from an approved milestone. */
+  approvedAt?: string | null;
 }
 
-const { summary, lines } = Astro.props;
+const { summary, lines, approvedAt = null } = Astro.props;
 
 // Amounts arrive already computed and floored in SQL; this view only formats them.
 const UNSCORED = "Enter KPI scores";
@@ -42,16 +44,24 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
         <h2 id="bonuses-heading" class="text-xl leading-none font-semibold">
           Computed bonuses
         </h2>
-        {summary.within_pool === true && (
-          <Badge className="bg-success text-success-foreground">Within payout pool</Badge>
+        {approvedAt !== null ? (
+          <Badge className="bg-success text-success-foreground">Approved</Badge>
+        ) : (
+          <>
+            {summary.within_pool === true && (
+              <Badge className="bg-success text-success-foreground">Within payout pool</Badge>
+            )}
+            {summary.within_pool === false && <Badge variant="destructive">Exceeds payout pool</Badge>}
+          </>
         )}
-        {summary.within_pool === false && <Badge variant="destructive">Exceeds payout pool</Badge>}
       </div>
       <CardDescription>
-        Draft figures; employees do not see them until the milestone is approved. The target pool is the approved
-        maximum: the payout pool is the target pool × KPI multiplier ÷ maximum multiplier, so only the maximum score
-        pays out the whole target pool. It is split by time share × role weight × rating factor and each bonus is
-        rounded down to the grosz.
+        {approvedAt !== null
+          ? `Approved on ${formatDate(approvedAt)} — frozen; each employee sees their own bonus.`
+          : "Draft figures; employees do not see them until the milestone is approved."}{" "}
+        The target pool is the approved maximum: the payout pool is the target pool × KPI multiplier ÷ maximum
+        multiplier, so only the maximum score pays out the whole target pool. It is split by time share × role weight ×
+        rating factor and each bonus is rounded down to the grosz.
       </CardDescription>
     </CardHeader>
 

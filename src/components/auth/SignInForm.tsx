@@ -7,26 +7,28 @@ import { ServerError } from "@/components/auth/ServerError";
 
 interface Props {
   serverError?: string | null;
+  /** Same-origin path to return to after sign-in, already validated by the page. */
+  next?: string | null;
 }
 
-export default function SignInForm({ serverError }: Props) {
+export default function SignInForm({ serverError, next }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   function validate() {
-    const next: typeof errors = {};
+    const found: typeof errors = {};
     if (!email.trim()) {
-      next.email = "Email is required";
+      found.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      next.email = "Enter a valid email address";
+      found.email = "Enter a valid email address";
     }
     if (!password) {
-      next.password = "Password is required";
+      found.password = "Password is required";
     }
-    setErrors(next);
-    return Object.keys(next).length === 0;
+    setErrors(found);
+    return Object.keys(found).length === 0;
   }
 
   function clearError(field: keyof typeof errors) {
@@ -41,6 +43,7 @@ export default function SignInForm({ serverError }: Props) {
 
   return (
     <form method="POST" action="/api/auth/signin" className="space-y-4" onSubmit={handleSubmit} noValidate>
+      {next && <input type="hidden" name="next" value={next} />}
       <FormField
         id="email"
         type="email"

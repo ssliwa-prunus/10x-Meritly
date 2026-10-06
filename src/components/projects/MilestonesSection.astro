@@ -1,6 +1,7 @@
 ---
 import MilestoneForm from "@/components/projects/MilestoneForm.astro";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatPln } from "@/lib/format";
@@ -26,6 +27,14 @@ const { project, milestones, isAdmin, canEditMilestones, saved, sectionError, ro
   Astro.props;
 
 const isClosed = project.status === "completed" || project.status === "cancelled";
+// Approved milestones are frozen: no edit row (MilestoneForm has no 'approved' option, so a submit
+// would send another status and hit MR015). A row error for one, e.g. from a replayed form, shows
+// at the top of the section instead.
+const isEditable = (milestone: Milestone) => canEditMilestones && milestone.status !== "approved";
+const orphanRowError =
+  rowError !== null && milestones.some((milestone) => milestone.id === rowErrorId && !isEditable(milestone))
+    ? rowError
+    : null;
 const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 ---
 
@@ -37,7 +46,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
       </h2>
       <CardDescription>
         Each milestone's period must lie within the project's ({project.start_date} – {project.end_date}). Cancelled
-        milestones are not reserved in the budget.
+        milestones are not reserved in the budget; approved ones reserve their actual payout pool.
       </CardDescription>
     </CardHeader>
 
@@ -47,9 +56,9 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
           <AlertDescription>Milestones saved.</AlertDescription>
         </Alert>
       )}
-      {sectionError && (
+      {(sectionError ?? orphanRowError) && (
         <Alert variant="destructive">
-          <AlertDescription>{sectionError}</AlertDescription>
+          <AlertDescription>{sectionError ?? orphanRowError}</AlertDescription>
         </Alert>
       )}
       {isAdmin ? (
@@ -92,7 +101,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
               <TableRow
                 className={cn(
                   "border-0 align-top hover:bg-transparent",
-                  milestone.status === "cancelled" && "text-muted-foreground",
+                  (milestone.status === "cancelled" || milestone.status === "approved") && "text-muted-foreground",
                 )}
               >
                 <TableCell className="align-top break-words whitespace-normal">
@@ -107,7 +116,13 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                   <span class="whitespace-nowrap">{milestone.start_date}</span> –{" "}
                   <span class="whitespace-nowrap">{milestone.end_date}</span>
                 </TableCell>
-                <TableCell className="align-top capitalize">{milestone.status}</TableCell>
+                <TableCell className="align-top capitalize">
+                  {milestone.status === "approved" ? (
+                    <Badge className="bg-success text-success-foreground">Approved</Badge>
+                  ) : (
+                    milestone.status
+                  )}
+                </TableCell>
                 <TableCell className="text-right align-top tabular-nums">{formatPln(milestone.target_pool)}</TableCell>
               </TableRow>
               {milestone.notes && (
@@ -117,7 +132,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                   </TableCell>
                 </TableRow>
               )}
-              {canEditMilestones && (
+              {isEditable(milestone) && (
                 <TableRow className="border-0 hover:bg-transparent">
                   <TableCell colSpan={4} className="pt-0 pb-3 whitespace-normal">
                     <details open={rowErrorId === milestone.id} class="bg-muted rounded-xl border p-3">

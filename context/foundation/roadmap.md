@@ -3,7 +3,7 @@ project: Meritly
 version: 1
 status: draft
 created: 2026-09-22
-updated: 2026-10-04
+updated: 2026-10-06
 prd_version: 1
 main_goal: quality
 top_blocker: time
@@ -46,7 +46,7 @@ A budget-holding supervisor today splits a milestone's bonus pool using a valida
 | S-02 | supervisor-creates-project-and-milestones             | Supervisor can create a project (with a total bonus budget) and milestones with target pools, worst-case payout checked against that budget         | F-01          | FR-004, FR-005, FR-017           | done     |
 | S-03 | supervisor-assigns-employee-engagement                | Supervisor can register employees and assign their engagement (time-share, contribution rating) to a milestone, with >100% total time-share flagged | S-02, F-01    | FR-007, FR-008, FR-011           | done     |
 | S-04 | supervisor-scores-milestone-and-sees-computed-bonuses | Supervisor can score a milestone's four KPIs and see each employee's computed bonus, never exceeding the KPI-scaled payout pool                     | S-01, S-03    | FR-006, FR-009, FR-010           | done     |
-| S-05 | supervisor-approves-milestone-employee-sees-bonus     | Supervisor can approve a milestone; the affected employee then sees their own bonus and receives an email — never another employee's                | S-04, F-01    | FR-012, FR-016, FR-018, US-01    | proposed |
+| S-05 | supervisor-approves-milestone-employee-sees-bonus     | Supervisor can approve a milestone; the affected employee then sees their own bonus and receives an email — never another employee's                | S-04, F-01    | FR-012, FR-016, FR-018, US-01    | done     |
 | S-06 | navigate-to-employee-detail-and-history               | Supervisor/Employee can drill into an employee's detail view and see their own history of past projects/milestones and bonuses                      | S-05          | FR-013, FR-014                   | proposed |
 | S-07 | aggregate-bonus-report                                | Supervisor/Admin can view or export an aggregate report of total bonus and milestone count per employee                                             | S-05          | FR-015                           | proposed |
 
@@ -147,7 +147,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** This is where F-01's RLS policy gets exercised end to end for the first time — an employee select policy must require both "this is my row" and "the parent milestone is Approved." It's also where the Vision's core pain (employees previously had no way to see their own outcome) actually gets closed, and where the "never another employee's figures, including via URL manipulation" guardrail is most directly tested.
-- **Status:** proposed
+- **Status:** done
 
 ### S-06: Navigate to employee detail and history
 
@@ -158,7 +158,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** S-07
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Low — a read/navigation slice over data S-05 already produces. Scope is already bounded by the PRD's own Socrates resolution: an employee's own participation history only, not a company-wide project browser.
+- **Risk:** Low — a read/navigation slice over data S-05 already produces. Scope is already bounded by the PRD's own Socrates resolution: an employee's own participation history only, not a company-wide project browser. The employee side extends `/my-bonuses` (added in S-05) and reads `milestone_result_lines`, the frozen approval snapshot: employees have no policies on the live tables.
 - **Status:** proposed
 
 ### S-07: Aggregate bonus report
@@ -211,3 +211,4 @@ None currently — the PRD closed every Open Question before this roadmap was ge
 - **S-02: Supervisor can create a project (name, period, status, total bonus budget, notes) and create milestones within it (name, period, target bonus pool, status, notes), with the project's worst-case milestone payout (actual payout pool for Approved milestones, target pool × current maximum multiplier for the rest) checked against its total budget.** — Archived 2026-09-27 → `context/archive/2026-09-27-supervisor-creates-project-and-milestones/`. Lesson: —.
 - **S-03: Supervisor can register an employee with a role and assign that employee to a milestone with a time-share (0-1) and contribution rating (1-5); the Supervisor can see when an employee's total time-share across active milestones exceeds 100%.** — Archived 2026-09-30 → `context/archive/2026-09-29-supervisor-assigns-employee-engagement/`. Lesson: —.
 - **S-04: Supervisor can enter a milestone's four KPI scores (Termin, Budżet, Jakość, Ryzyko) and see the computed per-employee bonus table, plus a milestone summary (target pool, KPI multiplier, payout pool, payout total, rounding residual) confirming the total never exceeds the payout pool.** — Archived 2026-10-04 → `context/archive/2026-10-04-supervisor-scores-milestone-and-sees-computed-bonuses/`. Lesson: —.
+- **S-05: Supervisor can mark a milestone's computed results Approved; before approval, results are Draft and visible only to the Supervisor — never to affected employees, and no email is sent. Once Approved, the affected employee can view their own bonus (and only their own) and receives an email notification.** — Archived 2026-10-06 → `context/archive/2026-10-05-supervisor-approves-milestone-employee-sees-bonus/`. Lesson: —.

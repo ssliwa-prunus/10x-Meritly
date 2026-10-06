@@ -1,6 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import SignInForm from "@/components/auth/SignInForm";
+import { safeNext } from "@/lib/safe-next";
 
 // The URL carries only an error code; the displayed text always comes from this fixed catalog,
 // so a crafted ?error= link cannot put arbitrary text on the page.
@@ -19,6 +20,9 @@ const error =
     : Object.hasOwn(SIGNIN_ERROR_MESSAGES, errorParam)
       ? SIGNIN_ERROR_MESSAGES[errorParam]
       : SIGNIN_ERROR_MESSAGES.signin_failed;
+
+// Where to go after sign-in; only a same-origin path is passed on to the form.
+const next = safeNext(Astro.url.searchParams.get("next"));
 ---
 
 <Layout title="Sign in">
@@ -27,7 +31,7 @@ const error =
       <h1 class="mb-6 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-center text-2xl font-bold text-transparent">
         Sign in
       </h1>
-      <SignInForm serverError={error} client:load />
+      <SignInForm serverError={error} next={next} client:load />
       <p class="mt-4 text-center text-sm text-blue-100/60">
         Don't have an account?{" "}
         <a href="/auth/signup" class="text-purple-300 hover:underline">

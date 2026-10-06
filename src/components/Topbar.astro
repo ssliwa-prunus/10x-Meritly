@@ -1,6 +1,7 @@
 ---
 const { user, profile } = Astro.locals;
 const canSeeProjects = profile?.role === "supervisor" || profile?.role === "admin";
+const canSeeMyBonuses = profile?.role === "employee";
 ---
 
 <div class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
@@ -20,6 +21,11 @@ const canSeeProjects = profile?.role === "supervisor" || profile?.role === "admi
               Employees
             </a>
           </>
+        )}
+        {canSeeMyBonuses && (
+          <a href="/my-bonuses" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+            My bonuses
+          </a>
         )}
         <form method="POST" action="/api/auth/signout">
           <button type="submit" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">

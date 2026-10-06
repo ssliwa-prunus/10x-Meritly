@@ -19,6 +19,19 @@ export function formatMultiplier(value: number): string {
   return MULTIPLIER_FORMAT.format(value);
 }
 
+// en-CA formats as YYYY-MM-DD, matching how the app shows plain dates; Warsaw time, not the Worker's UTC.
+const DATE_FORMAT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Warsaw",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** Display date (YYYY-MM-DD, Warsaw time) of an ISO timestamp such as approved_at. Presentation only. */
+export function formatDate(timestamp: string): string {
+  return DATE_FORMAT.format(new Date(timestamp));
+}
+
 const SHARE_FORMAT = new Intl.NumberFormat("pl-PL", {
   style: "percent",
   minimumFractionDigits: 1,

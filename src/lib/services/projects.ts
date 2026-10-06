@@ -30,6 +30,7 @@ const PROJECTS_ERROR_MESSAGES = {
   project_has_foreign_engagements:
     "Employees of the current owner are assigned to open milestones; remove those assignments first",
   admin_read_only: "Admins can view milestones but not change them",
+  milestone_approved: "This milestone is approved and frozen",
   not_found: "Not found",
   save_failed: "Could not save changes. Please try again.",
   not_configured: "Supabase is not configured",
@@ -222,13 +223,19 @@ export interface WriteResult<T = undefined> {
 
 const NOT_FOUND: ProjectsError = { code: "not_found" };
 
-/** Custom SQLSTATEs raised by the S-02 guard triggers; MR005/MR006 are not reachable here and fall through. */
+/**
+ * Custom SQLSTATEs raised by the S-02 and S-05 guard triggers; MR005/MR006 are not reachable here
+ * and fall through. MR014 fires when a write tries to set status 'approved' outside
+ * approve_milestone (the form's zod enum already rejects it); MR015 on any write to an approved milestone.
+ */
 const GUARD_ERROR_CODES: Record<string, ProjectsErrorCode> = {
   MR001: "owner_not_supervisor",
   MR002: "milestone_outside_project",
   MR003: "project_closed",
   MR004: "project_period_excludes_milestones",
   MR012: "project_has_foreign_engagements",
+  MR014: "invalid_status",
+  MR015: "milestone_approved",
 };
 
 function mapPostgrestError(error: PostgrestError, context: string): ProjectsError {
