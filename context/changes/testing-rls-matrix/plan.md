@@ -370,20 +370,20 @@ Fill §6.1 with the cookbook: where the files live, the `…07xx` range, the act
 
 #### Automated
 
-- [x] 3.1 The guard suite passes: `npx supabase test db`
-- [x] 3.2 Mutation check: a dummy `for all` policy or new public table fails the guard with a naming message; reverted
+- [x] 3.1 The guard suite passes: `npx supabase test db` — 78db21d
+- [x] 3.2 Mutation check: a dummy `for all` policy or new public table fails the guard with a naming message; reverted — 78db21d
 
 #### Manual
 
-- [x] 3.3 Reviewer confirms the guard's expected policy list matches the decided matrix
+- [x] 3.3 Reviewer confirms the guard's expected policy list matches the decided matrix — 78db21d
 
 ### Phase 4: Test-plan backport and cookbook
 
 #### Automated
 
-- [ ] 4.1 Markdown formatting passes: `npx prettier --check context/foundation/test-plan.md CLAUDE.md`
-- [ ] 4.2 Full suite still green: `npx supabase test db`
+- [x] 4.1 Markdown formatting passes: `npx prettier --check context/foundation/test-plan.md CLAUDE.md`
+- [x] 4.2 Full suite still green: `npx supabase test db`
 
 #### Manual
 
-- [ ] 4.3 §6.1 reads as a standalone how-to for adding a test for a new table
+- [x] 4.3 §6.1 reads as a standalone how-to for adding a test for a new table
