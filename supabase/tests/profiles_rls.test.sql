@@ -102,9 +102,9 @@ select is_empty(
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000102"}';
 
 select is(
-  (select count(*)::int from public.profiles),
-  current_setting('pgtap.total_profiles')::int,
-  'supervisor sees all profiles'
+  (select array_agg(id) from public.profiles),
+  array['00000000-0000-4000-8000-000000000102'::uuid],
+  'supervisor sees exactly their own profile'
 );
 select is(public.current_app_role(), 'supervisor'::public.app_role, 'current_app_role() is supervisor for the supervisor');
 select is(public.is_supervisor(), true, 'is_supervisor() is true for the supervisor');
@@ -116,11 +116,17 @@ select is_empty(
   $$ update public.profiles set role = 'admin' where id = '00000000-0000-4000-8000-000000000102' returning id $$,
   'supervisor updating own role affects 0 rows'
 );
+-- The Supervisor cannot see the target row, so read it as the owner. Clear the JWT too: reset role
+-- keeps the claims. Then switch back to the Supervisor.
+reset role;
+set local request.jwt.claims = '{}';
 select is(
   (select role from public.profiles where id = '00000000-0000-4000-8000-000000000104'),
   'employee'::public.app_role,
-  'target role is unchanged after the supervisor attempt'
+  'target role is unchanged after the supervisor attempt (read as owner)'
 );
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000102"}';
 
 -- ---------------------------------------------------------------------------
 -- Admin

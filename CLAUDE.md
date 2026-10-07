@@ -22,6 +22,7 @@ RLS rules for this project:
 - Employee `select` policies on results must also require the parent milestone to be `approved`.
 - Views over RLS-protected tables need `security_invoker = true`, otherwise they bypass RLS.
 - `SUPABASE_KEY` is the public key, so queries run as the signed-in user and RLS applies. The service-role key bypasses RLS: server-side only, never in user-facing route handlers.
+- A migration that adds or changes a table, view, policy, grant or `security definer` function must update `supabase/tests/rls_catalog_guard.test.sql` and `supabase/tests/rls_matrix.test.sql` (see `context/foundation/test-plan.md` §6.1).
 
 ## Key conventions
 
