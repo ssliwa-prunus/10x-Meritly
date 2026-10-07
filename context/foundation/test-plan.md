@@ -76,12 +76,12 @@ Each row is a discrete rollout phase that will open its own change folder
 via `/10x-new`. Status moves left-to-right through the values below; the
 orchestrator updates Status as artifacts appear on disk.
 
-| #   | Phase name                           | Goal (one line)                                                                                                                                   | Risks covered | Test types                         | Status        | Change folder      |
-| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------- | ------------- | ------------------ |
-| 1   | Data isolation & RLS matrix          | Prove no employee or foreign Supervisor can read or write outside their scope, Draft results included                                             | #1, #2        | pgTAP matrix + one HTTP IDOR check | change opened | testing-rls-matrix |
-| 2   | Payout correctness & approval freeze | Prove the PRD formula's ceilings, boundary cases and the approval freeze against hand-computed oracles; bootstrap Vitest if the logic lives in TS | #3, #4, #7    | unit + pgTAP                       | not started   | —                  |
-| 3   | Route gating & approval notification | Prove the role × route matrix and once-only, own-figure-only approval email                                                                       | #5, #6        | integration + smoke extension      | not started   | —                  |
-| 4   | US-01 e2e & gates wiring             | One e2e for approve → employee sees only their own result; make the new suites required CI gates; recommended local post-edit hook on migrations  | cross-cutting | e2e + gates + post-edit hook       | not started   | —                  |
+| #   | Phase name                           | Goal (one line)                                                                                                                                   | Risks covered | Test types                         | Status      | Change folder      |
+| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------- | ----------- | ------------------ |
+| 1   | Data isolation & RLS matrix          | Prove no employee or foreign Supervisor can read or write outside their scope, Draft results included                                             | #1, #2        | pgTAP matrix + one HTTP IDOR check | planned     | testing-rls-matrix |
+| 2   | Payout correctness & approval freeze | Prove the PRD formula's ceilings, boundary cases and the approval freeze against hand-computed oracles; bootstrap Vitest if the logic lives in TS | #3, #4, #7    | unit + pgTAP                       | not started | —                  |
+| 3   | Route gating & approval notification | Prove the role × route matrix and once-only, own-figure-only approval email                                                                       | #5, #6        | integration + smoke extension      | not started | —                  |
+| 4   | US-01 e2e & gates wiring             | One e2e for approve → employee sees only their own result; make the new suites required CI gates; recommended local post-edit hook on migrations  | cross-cutting | e2e + gates + post-edit hook       | not started | —                  |
 
 ## 4. Stack
 

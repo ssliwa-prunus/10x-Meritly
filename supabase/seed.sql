@@ -15,7 +15,7 @@
 --
 -- Fixed UUIDs use the seed range 00000000-0000-4000-8000-0000000000xx. The pgTAP suites
 -- (supabase/tests) use the disjoint ranges 00000000-0000-4000-8000-0000000001xx, ...02xx,
--- ...03xx, ...04xx and ...05xx.
+-- ...03xx, ...04xx, ...05xx, ...06xx (approval) and ...07xx (RLS matrix).
 
 insert into auth.users (
   instance_id,
