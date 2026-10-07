@@ -1,10 +1,10 @@
 ---
 change_id: testing-rls-matrix
 title: Test rollout phase 1 — data isolation and RLS matrix
-status: implemented
+status: archived
 created: 2026-10-07
 updated: 2026-10-07
-archived_at: null
+archived_at: 2026-10-07T17:54:06Z
 ---
 
 ## Notes
