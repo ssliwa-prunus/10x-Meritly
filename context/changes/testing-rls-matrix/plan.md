@@ -381,9 +381,9 @@ Fill §6.1 with the cookbook: where the files live, the `…07xx` range, the act
 
 #### Automated
 
-- [x] 4.1 Markdown formatting passes: `npx prettier --check context/foundation/test-plan.md CLAUDE.md`
-- [x] 4.2 Full suite still green: `npx supabase test db`
+- [x] 4.1 Markdown formatting passes: `npx prettier --check context/foundation/test-plan.md CLAUDE.md` — ac0c223
+- [x] 4.2 Full suite still green: `npx supabase test db` — ac0c223
 
 #### Manual
 
-- [x] 4.3 §6.1 reads as a standalone how-to for adding a test for a new table
+- [x] 4.3 §6.1 reads as a standalone how-to for adding a test for a new table — ac0c223
