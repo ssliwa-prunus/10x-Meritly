@@ -345,26 +345,26 @@ Fill §6.1 with the cookbook: where the files live, the `…07xx` range, the act
 
 #### Automated
 
-- [x] 1.1 Migration applies on a clean database: `npx supabase db reset`
-- [x] 1.2 All existing pgTAP suites pass, including the updated `profiles_rls`: `npx supabase test db`
-- [x] 1.3 Type check and build unaffected: `npx astro check`
+- [x] 1.1 Migration applies on a clean database: `npx supabase db reset` — 2508b90
+- [x] 1.2 All existing pgTAP suites pass, including the updated `profiles_rls`: `npx supabase test db` — 2508b90
+- [x] 1.3 Type check and build unaffected: `npx astro check` — 2508b90
 
 #### Manual
 
-- [x] 1.4 Signed in as `supervisor@meritly.local`: `/projects` and `/employees` render as before, and the header shows the Supervisor's own name
-- [x] 1.5 Signed in as `admin@meritly.local`: the owner select on `/projects` still lists both Supervisors
+- [x] 1.4 Signed in as `supervisor@meritly.local`: `/projects` and `/employees` render as before, and the header shows the Supervisor's own name — 2508b90
+- [x] 1.5 Signed in as `admin@meritly.local`: the owner select on `/projects` still lists both Supervisors — 2508b90
 
 ### Phase 2: Behavioural matrix suite
 
 #### Automated
 
-- [ ] 2.1 The matrix suite passes: `npx supabase test db`
-- [ ] 2.2 Mutation check: removing the approved condition from the employee result-lines policy fails the MA_draft assertion; reverted
-- [ ] 2.3 Mutation check: recreating `profiles_select_supervisor` fails the SB-reads-profiles assertion; reverted
+- [x] 2.1 The matrix suite passes: `npx supabase test db`
+- [x] 2.2 Mutation check: removing the approved condition from the employee result-lines policy fails the MA_draft assertion; reverted
+- [x] 2.3 Mutation check: recreating `profiles_select_supervisor` fails the SB-reads-profiles assertion; reverted
 
 #### Manual
 
-- [ ] 2.4 Reviewer confirms every decided-matrix row has an assertion and no expected value was copied from a policy body
+- [x] 2.4 Reviewer confirms every decided-matrix row has an assertion and no expected value was copied from a policy body
 
 ### Phase 3: Catalog guard
 
