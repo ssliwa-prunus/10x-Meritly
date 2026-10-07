@@ -358,24 +358,24 @@ Fill §6.1 with the cookbook: where the files live, the `…07xx` range, the act
 
 #### Automated
 
-- [x] 2.1 The matrix suite passes: `npx supabase test db`
-- [x] 2.2 Mutation check: removing the approved condition from the employee result-lines policy fails the MA_draft assertion; reverted
-- [x] 2.3 Mutation check: recreating `profiles_select_supervisor` fails the SB-reads-profiles assertion; reverted
+- [x] 2.1 The matrix suite passes: `npx supabase test db` — 5182571
+- [x] 2.2 Mutation check: removing the approved condition from the employee result-lines policy fails the MA_draft assertion; reverted — 5182571
+- [x] 2.3 Mutation check: recreating `profiles_select_supervisor` fails the SB-reads-profiles assertion; reverted — 5182571
 
 #### Manual
 
-- [x] 2.4 Reviewer confirms every decided-matrix row has an assertion and no expected value was copied from a policy body
+- [x] 2.4 Reviewer confirms every decided-matrix row has an assertion and no expected value was copied from a policy body — 5182571
 
 ### Phase 3: Catalog guard
 
 #### Automated
 
-- [ ] 3.1 The guard suite passes: `npx supabase test db`
-- [ ] 3.2 Mutation check: a dummy `for all` policy or new public table fails the guard with a naming message; reverted
+- [x] 3.1 The guard suite passes: `npx supabase test db`
+- [x] 3.2 Mutation check: a dummy `for all` policy or new public table fails the guard with a naming message; reverted
 
 #### Manual
 
-- [ ] 3.3 Reviewer confirms the guard's expected policy list matches the decided matrix
+- [x] 3.3 Reviewer confirms the guard's expected policy list matches the decided matrix
 
 ### Phase 4: Test-plan backport and cookbook
 
