@@ -440,22 +440,22 @@ Bring `test-plan.md` and the roadmap in line with what Phase 2 decided and built
 
 #### Automated
 
-- [x] 3.1 Before the migration, only the closed-project time-share assertions fail
-- [x] 3.2 After the migration, `npx supabase test db` passes with `employees_rls` and `milestone_approval` unchanged
-- [x] 3.3 `rls_catalog_guard.test.sql` passes with no edits
-- [x] 3.4 Mutation check: `>=` in the view turns the 100 % boundary assertion red
+- [x] 3.1 Before the migration, only the closed-project time-share assertions fail — 0de240b
+- [x] 3.2 After the migration, `npx supabase test db` passes with `employees_rls` and `milestone_approval` unchanged — 0de240b
+- [x] 3.3 `rls_catalog_guard.test.sql` passes with no edits — 0de240b
+- [x] 3.4 Mutation check: `>=` in the view turns the 100 % boundary assertion red — 0de240b
 
 #### Manual
 
-- [x] 3.5 Seeded over-allocated employee still shows "Over 100%" on `/employees`
+- [x] 3.5 Seeded over-allocated employee still shows "Over 100%" on `/employees` — 0de240b
 
 ### Phase 4: Test-plan backport and cookbook
 
 #### Automated
 
-- [ ] 4.1 `npx prettier --check` passes on `test-plan.md` and `roadmap.md`
-- [ ] 4.2 No "TBD — see §3 Phase 2" remains in `test-plan.md`
+- [x] 4.1 `npx prettier --check` passes on `test-plan.md` and `roadmap.md`
+- [x] 4.2 No "TBD — see §3 Phase 2" remains in `test-plan.md`
 
 #### Manual
 
-- [ ] 4.3 §6.2 can be followed to add a new formula case without reading this plan
+- [x] 4.3 §6.2 can be followed to add a new formula case without reading this plan
