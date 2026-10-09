@@ -64,7 +64,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(49);
+select plan(51);
 
 -- ---------------------------------------------------------------------------
 -- Shared fixtures (as the table owner; auth.uid() is null, so supervisor_id is explicit)
@@ -623,6 +623,27 @@ select throws_ok(
   'MR007',
   null,
   'SP changing only the rating of an engagement on Approved A gets MR007'
+);
+
+-- The refusal is specific to 'approved': a completed (not approved) milestone still computes live
+-- figures, which the milestone page relies on. The owner completes B; SP still gets the same C2
+-- figures as above (M 1.0625, pool 5312.50, total 5312.49, residual 0.01), not MR015.
+reset role;
+set local request.jwt.claims = '{}';
+update public.milestones set status = 'completed' where id = '00000000-0000-4000-8000-000000000828';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000801"}';
+
+-- lives_ok first, so a guard widened beyond 'approved' fails by name before results_eq aborts.
+select lives_ok(
+  $$ select * from public.milestone_payout_summary('00000000-0000-4000-8000-000000000828') $$,
+  'completed (not approved) B: milestone_payout_summary does not raise MR015'
+);
+select results_eq(
+  $$ select scored, multiplier, payout_pool, payout_total, residual, within_pool, engagement_count
+     from public.milestone_payout_summary('00000000-0000-4000-8000-000000000828') $$,
+  $$ values (true, 1.0625::numeric, 5312.50::numeric, 5312.49::numeric, 0.01::numeric, true, 2) $$,
+  'completed (not approved) B still computes live C2 figures: pool 5312.50, total 5312.49, no MR015'
 );
 
 -- ---------------------------------------------------------------------------
