@@ -453,9 +453,9 @@ Bring `test-plan.md` and the roadmap in line with what Phase 2 decided and built
 
 #### Automated
 
-- [x] 4.1 `npx prettier --check` passes on `test-plan.md` and `roadmap.md`
-- [x] 4.2 No "TBD — see §3 Phase 2" remains in `test-plan.md`
+- [x] 4.1 `npx prettier --check` passes on `test-plan.md` and `roadmap.md` — caf7ef0
+- [x] 4.2 No "TBD — see §3 Phase 2" remains in `test-plan.md` — caf7ef0
 
 #### Manual
 
-- [x] 4.3 §6.2 can be followed to add a new formula case without reading this plan
+- [x] 4.3 §6.2 can be followed to add a new formula case without reading this plan — caf7ef0

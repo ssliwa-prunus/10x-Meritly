@@ -1,7 +1,7 @@
 ---
 change_id: testing-payout-correctness
 title: Test rollout phase 2 — payout correctness and approval freeze
-status: implementing
+status: implemented
 created: 2026-10-09
 updated: 2026-10-09
 archived_at: null
