@@ -17,7 +17,9 @@
 -- "0 rows" cannot hide a write to a different row.
 --
 -- When a migration adds a table, policy, grant or definer function, update this file and
--- supabase/tests/rls_catalog_guard.test.sql.
+-- supabase/tests/rls_catalog_guard.test.sql. A migration that changes only a view or invoker
+-- function body (same name, columns, security_invoker, grants and definer status) adds cells here
+-- for the changed behaviour, once per actor, and leaves the catalog guard unchanged.
 --
 -- Run with: npx supabase test db
 
@@ -25,7 +27,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(238);
+select plan(250);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so owners are explicit)
@@ -324,6 +326,14 @@ select is_empty(
   $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000722') $$,
   'U calling milestone_payout_lines(MA_draft) gets none'
 );
+select is_empty(
+  $$ select milestone_id from public.milestone_payout_summary('00000000-0000-4000-8000-000000000721') $$,
+  'U calling milestone_payout_summary(MA_appr) gets none'
+);
+select is_empty(
+  $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000721') $$,
+  'U calling milestone_payout_lines(MA_appr) gets none'
+);
 select ok(
   (select public.kpi_multiplier(m.kpi_schedule, m.kpi_budget, m.kpi_quality, m.kpi_risk)
    from public.milestones m where m.id = '00000000-0000-4000-8000-000000000722') is null,
@@ -525,6 +535,14 @@ select is_empty(
   $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000722') $$,
   'E1 calling milestone_payout_lines(MA_draft) gets none'
 );
+select is_empty(
+  $$ select milestone_id from public.milestone_payout_summary('00000000-0000-4000-8000-000000000721') $$,
+  'E1 calling milestone_payout_summary(MA_appr) gets none'
+);
+select is_empty(
+  $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000721') $$,
+  'E1 calling milestone_payout_lines(MA_appr) gets none'
+);
 select ok(
   (select public.kpi_multiplier(m.kpi_schedule, m.kpi_budget, m.kpi_quality, m.kpi_risk)
    from public.milestones m where m.id = '00000000-0000-4000-8000-000000000722') is null,
@@ -604,6 +622,14 @@ select is_empty(
 select is_empty(
   $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000722') $$,
   'E2 calling milestone_payout_lines(MA_draft) gets none'
+);
+select is_empty(
+  $$ select milestone_id from public.milestone_payout_summary('00000000-0000-4000-8000-000000000721') $$,
+  'E2 calling milestone_payout_summary(MA_appr) gets none'
+);
+select is_empty(
+  $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000721') $$,
+  'E2 calling milestone_payout_lines(MA_appr) gets none'
 );
 select ok(
   (select public.kpi_multiplier(m.kpi_schedule, m.kpi_budget, m.kpi_quality, m.kpi_risk)
@@ -826,6 +852,14 @@ select is_empty(
   $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000722') $$,
   'SB calling milestone_payout_lines(MA_draft) gets none'
 );
+select is_empty(
+  $$ select milestone_id from public.milestone_payout_summary('00000000-0000-4000-8000-000000000721') $$,
+  'SB calling milestone_payout_summary(MA_appr) gets none'
+);
+select is_empty(
+  $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000721') $$,
+  'SB calling milestone_payout_lines(MA_appr) gets none'
+);
 select ok(
   (select public.kpi_multiplier(m.kpi_schedule, m.kpi_budget, m.kpi_quality, m.kpi_risk)
    from public.milestones m where m.id = '00000000-0000-4000-8000-000000000722') is null,
@@ -1044,6 +1078,18 @@ select isnt_empty(
   $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000722') $$,
   'SA calling milestone_payout_lines(MA_draft) gets rows'
 );
+select throws_ok(
+  $$ select * from public.milestone_payout_summary('00000000-0000-4000-8000-000000000721') $$,
+  'MR015',
+  null,
+  'SA calling milestone_payout_summary(MA_appr) gets MR015 (read the snapshot instead)'
+);
+select throws_ok(
+  $$ select * from public.milestone_payout_lines('00000000-0000-4000-8000-000000000721') $$,
+  'MR015',
+  null,
+  'SA calling milestone_payout_lines(MA_appr) gets MR015 (read the snapshot instead)'
+);
 select ok(
   (select public.kpi_multiplier(m.kpi_schedule, m.kpi_budget, m.kpi_quality, m.kpi_risk)
    from public.milestones m where m.id = '00000000-0000-4000-8000-000000000722') is not null,
@@ -1232,6 +1278,18 @@ select isnt_empty(
 select isnt_empty(
   $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000722') $$,
   'AD calling milestone_payout_lines(MA_draft) gets rows'
+);
+select throws_ok(
+  $$ select * from public.milestone_payout_summary('00000000-0000-4000-8000-000000000721') $$,
+  'MR015',
+  null,
+  'AD calling milestone_payout_summary(MA_appr) gets MR015 (read the snapshot instead)'
+);
+select throws_ok(
+  $$ select * from public.milestone_payout_lines('00000000-0000-4000-8000-000000000721') $$,
+  'MR015',
+  null,
+  'AD calling milestone_payout_lines(MA_appr) gets MR015 (read the snapshot instead)'
 );
 select ok(
   (select public.kpi_multiplier(m.kpi_schedule, m.kpi_budget, m.kpi_quality, m.kpi_risk)

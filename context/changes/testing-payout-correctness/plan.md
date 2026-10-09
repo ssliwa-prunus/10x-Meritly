@@ -415,26 +415,26 @@ Bring `test-plan.md` and the roadmap in line with what Phase 2 decided and built
 
 #### Automated
 
-- [x] 1.1 `npx supabase db reset --local && npx supabase test db` passes, including `payout_correctness.test.sql`
-- [x] 1.2 `plan(N)` in the new suite equals the number of assertions it runs
-- [x] 1.3 Mutation check: rounding instead of flooring in `capped_payout_pool` turns the #3 oracles red
+- [x] 1.1 `npx supabase db reset --local && npx supabase test db` passes, including `payout_correctness.test.sql` — c62ac1e
+- [x] 1.2 `plan(N)` in the new suite equals the number of assertions it runs — c62ac1e
+- [x] 1.3 Mutation check: rounding instead of flooring in `capped_payout_pool` turns the #3 oracles red — c62ac1e
 
 #### Manual
 
-- [x] 1.4 Each oracle row has a derivation comment a reviewer can follow by hand
+- [x] 1.4 Each oracle row has a derivation comment a reviewer can follow by hand — c62ac1e
 
 ### Phase 2: Approval freeze at the database level (risk #4)
 
 #### Automated
 
-- [ ] 2.1 Before the migration, only the new MR015 assertions fail
-- [ ] 2.2 After the migration, `npx supabase test db` passes with `milestone_approval.test.sql` unchanged
-- [ ] 2.3 `rls_catalog_guard.test.sql` passes with no edits
-- [ ] 2.4 Mutation check: dropping the status guard turns the MR015 cells red
+- [x] 2.1 Before the migration, only the new MR015 assertions fail
+- [x] 2.2 After the migration, `npx supabase test db` passes with `milestone_approval.test.sql` unchanged
+- [x] 2.3 `rls_catalog_guard.test.sql` passes with no edits
+- [x] 2.4 Mutation check: dropping the status guard turns the MR015 cells red
 
 #### Manual
 
-- [ ] 2.5 Draft milestone shows computed bonuses; after UI approval the snapshot shows with no error
+- [x] 2.5 Draft milestone shows computed bonuses; after UI approval the snapshot shows with no error
 
 ### Phase 3: Flag boundaries (risk #7)
 

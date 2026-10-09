@@ -4,7 +4,8 @@
 -- (public.approve_milestone()), on the boundary cases milestone_payouts.test.sql and
 -- milestone_approval.test.sql do not cover. One section per risk of test-plan.md §2:
 --   #3  payout ceilings and boundary cases (Σ bonus <= payout pool <= target pool, exact flooring)
---   #4  approval freeze                      (appended by a later phase)
+--   #4  approval freeze                      (Draft follows a config edit, Approved keeps its
+--                                             snapshot, live RPCs refuse Approved with MR015)
 --   #7  supervisor flags                     (appended by a later phase)
 --
 -- Isolation model: same as profiles_rls.test.sql. Runs against the live local database without
@@ -30,12 +31,17 @@
 -- Fixture map (UUIDs 00000000-0000-4000-8000-0000000008xx; hex ids such as ...08a0-...08ff are
 -- still inside the range and are left for later sections if the decimal ids run out):
 --   users        ...0801 Supervisor SP   ...0802 Admin AP   ...0803 second Supervisor SQ
---                ...0804-...0809 free for later sections (e.g. a linked employee account)
---   projects     ...0810-...0819   #3: ...0811 SP's (active)
+--                #4: ...0804 employee account of F1 (linked, activated)
+--                ...0805-...0809 free for later sections
+--   projects     ...0810-...0819   #3: ...0811 SP's (active)   #4: ...0812 SP's (active)
 --   milestones   ...0820-...0829   #3: ...0821-...0826 (one per case, all in ...0811)
+--                                  #4: ...0827 A (approved)   ...0828 B (Draft)   (both in ...0812)
 --   employees    ...0830-...0839   #3: ...0831-...0837 S1-S7 (Standard 1.00)
 --                                      ...0838 Hi (Max 3.00)   ...0839 Lo (Min 0.01)   (all SP's)
---   engagements  ...0840-...0849   free for later sections
+--                ...08a0-...08af   #4: ...08a1 F1 (Standard, linked to ...0804, activated)
+--                                      ...08a2 F2 (Standard)   (both SP's)
+--   engagements  ...0840-...0849   #4: ...0840-...0843 (listed in the #4 header);
+--                                      ...0844-...0849 free for later sections
 --   job roles    ...0850-...0859   #3: ...0851 Standard 1.00   ...0852 Max 3.00   ...0853 Min 0.01
 --   engagements  ...0860-...0899   #3: ...0860-...0881 (listed per milestone below);
 --                                      ...0882-...0899 free for later sections
@@ -46,7 +52,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(19);
+select plan(36);
 
 -- ---------------------------------------------------------------------------
 -- Shared fixtures (as the table owner; auth.uid() is null, so supervisor_id is explicit)
@@ -417,7 +423,246 @@ reset role;
 set local request.jwt.claims = '{}';
 
 -- ===========================================================================
--- End of #3. Later sections (#4, #7) go here, each setting bonus_settings as the owner at its top.
+-- #4 Approval freeze
+--
+-- Config C1' (set here as the owner): KPI weights 0.40/0.30/0.20/0.10, multiplier_min 0.50,
+-- multiplier_max 2.00, rating factors r1 0.01, r2 0.50, r3 1.00, r4 1.50, r5 3.00.
+-- Config C2 (the owner's edit after A is approved): KPI weights 0.25 each, min 0.50, max 2.00,
+-- rating factors r1 0.01, r2 0.50, r3 1.00, r4 3.00, r5 3.00 (r4 raised; still non-decreasing).
+--
+-- Milestones (both in ...0812, active, scored 100/50/0/0 at insert, target 10000.00) and identical
+-- engagements (the "Non-default config" inputs of #3: factors 1.00 and 1.50 under C1'):
+--   ...0827 A   ...0840 F1 0.50 r3   ...0841 F2 0.50 r4   -> approved by SP under C1'
+--   ...0828 B   ...0842 F1 0.50 r3   ...0843 F2 0.50 r4   -> stays Draft
+--
+-- Under C1' (same derivation as #3 "Non-default config"):
+--   M = 0.50 + (0.40x100 + 0.30x50 + 0.20x0 + 0.10x0) x 0.01 x 1.50 = 0.50 + 0.55 x 1.50 = 1.325
+--   pool = floor(10000.00 x 1.325 / 2.00) = 6625.00 (662 500 gr)
+--   F1: e_scaled = 50 x 100 x 100 = 500 000;  F2: e_scaled = 50 x 100 x 150 = 750 000;  Σ = 1 250 000
+--   F1 bonus = 662 500 x 500 000 / 1 250 000 = 265 000 gr = 2650.00
+--   F2 bonus = 662 500 x 750 000 / 1 250 000 = 397 500 gr = 3975.00   (exact; total 6625.00, residual 0.00)
+-- Under C2:
+--   M = 0.50 + (0.25x100 + 0.25x50 + 0.25x0 + 0.25x0) x 0.01 x 1.50 = 0.50 + 0.375 x 1.50 = 1.0625
+--   pool = floor(10000.00 x 1.0625 / 2.00) = floor(5312.50) = 5312.50 (531 250 gr)
+--   F1: e_scaled = 50 x 100 x 100 = 500 000;  F2: e_scaled = 50 x 100 x 300 = 1 500 000;  Σ = 2 000 000
+--   F1 bonus = floor(531 250 x 500 000 / 2 000 000)   = floor(132 812.5) = 132 812 gr = 1328.12
+--   F2 bonus = floor(531 250 x 1 500 000 / 2 000 000) = floor(398 437.5) = 398 437 gr = 3984.37
+--   total 531 249 gr = 5312.49, residual 1 gr = 0.01
+-- ===========================================================================
+update public.bonus_settings
+set
+  kpi_weight_schedule = 0.40,
+  kpi_weight_budget = 0.30,
+  kpi_weight_quality = 0.20,
+  kpi_weight_risk = 0.10,
+  multiplier_min = 0.50,
+  multiplier_max = 2.00,
+  rating_factor_1 = 0.01,
+  rating_factor_2 = 0.50,
+  rating_factor_3 = 1.00,
+  rating_factor_4 = 1.50,
+  rating_factor_5 = 3.00
+where id;
+
+insert into auth.users (instance_id, id, aud, role, email, raw_user_meta_data, created_at, updated_at)
+values
+  ('00000000-0000-0000-0000-000000000000', '00000000-0000-4000-8000-000000000804', 'authenticated', 'authenticated', 'payout-correctness-f1@pgtap.test', '{}', now(), now());
+
+insert into public.projects (id, name, start_date, end_date, status, total_budget, supervisor_id)
+values
+  ('00000000-0000-4000-8000-000000000812', 'pgTAP PC Project Freeze', '2026-01-01', '2026-12-31', 'active', 100000.00, '00000000-0000-4000-8000-000000000801');
+
+insert into public.milestones (
+  id, project_id, name, start_date, end_date, status, target_pool,
+  kpi_schedule, kpi_budget, kpi_quality, kpi_risk
+)
+values
+  ('00000000-0000-4000-8000-000000000827', '00000000-0000-4000-8000-000000000812', 'pgTAP PC Freeze A', '2026-01-01', '2026-03-31', 'active', 10000.00, 100, 50, 0, 0),
+  ('00000000-0000-4000-8000-000000000828', '00000000-0000-4000-8000-000000000812', 'pgTAP PC Freeze B', '2026-04-01', '2026-06-30', 'active', 10000.00, 100, 50, 0, 0);
+
+-- F1: linked to ...0804 and activated (invite accepted), like milestone_approval's E1. F2: not linked.
+insert into public.employees (id, supervisor_id, full_name, email, job_role_id, profile_id, invited_at, activated_at)
+values
+  ('00000000-0000-4000-8000-0000000008a1', '00000000-0000-4000-8000-000000000801', 'pgTAP PC F1', 'payout-correctness-f1@pgtap.test', '00000000-0000-4000-8000-000000000851', '00000000-0000-4000-8000-000000000804', now(), now());
+
+insert into public.employees (id, supervisor_id, full_name, email, job_role_id)
+values
+  ('00000000-0000-4000-8000-0000000008a2', '00000000-0000-4000-8000-000000000801', 'pgTAP PC F2', 'pc-f2@pgtap.test', '00000000-0000-4000-8000-000000000851');
+
+insert into public.milestone_engagements (id, milestone_id, employee_id, time_share, rating)
+values
+  ('00000000-0000-4000-8000-000000000840', '00000000-0000-4000-8000-000000000827', '00000000-0000-4000-8000-0000000008a1', 0.50, 3),
+  ('00000000-0000-4000-8000-000000000841', '00000000-0000-4000-8000-000000000827', '00000000-0000-4000-8000-0000000008a2', 0.50, 4),
+  ('00000000-0000-4000-8000-000000000842', '00000000-0000-4000-8000-000000000828', '00000000-0000-4000-8000-0000000008a1', 0.50, 3),
+  ('00000000-0000-4000-8000-000000000843', '00000000-0000-4000-8000-000000000828', '00000000-0000-4000-8000-0000000008a2', 0.50, 4);
+
+-- ---------------------------------------------------------------------------
+-- #4 Before the config edit (C1'), as SP: approve A; A's snapshot and B's live figures agree.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000801"}';
+
+select lives_ok(
+  $$ select public.approve_milestone('00000000-0000-4000-8000-000000000827') $$,
+  'SP approves freeze milestone A under C1'''
+);
+-- C1' figures (header comment): M 1.325, multiplier_max 2.00, pool 6625.00, total 6625.00, residual 0.00.
+select results_eq(
+  $$ select target_pool, multiplier, multiplier_max, payout_pool, payout_total, residual, engagement_count
+     from public.milestone_results where milestone_id = '00000000-0000-4000-8000-000000000827' $$,
+  $$ values (10000.00::numeric, 1.325::numeric, 2.00::numeric, 6625.00::numeric, 6625.00::numeric, 0.00::numeric, 2) $$,
+  'A snapshot header before the edit: M 1.325, pool 6625.00, total 6625.00, residual 0.00'
+);
+-- C1' lines (header comment): F1 1.00 -> 2650.00, F2 1.50 -> 3975.00.
+select results_eq(
+  $$ select employee_name, rating_factor, bonus
+     from public.milestone_result_lines
+     where milestone_id = '00000000-0000-4000-8000-000000000827'
+     order by employee_name $$,
+  $$ values ('pgTAP PC F1', 1.00::numeric, 2650.00::numeric), ('pgTAP PC F2', 1.50::numeric, 3975.00::numeric) $$,
+  'A snapshot lines before the edit: F1 2650.00, F2 3975.00'
+);
+-- B is Draft with the same inputs, so its live figures are the same C1' figures.
+select results_eq(
+  $$ select scored, target_pool, multiplier, payout_pool, payout_total, residual, within_pool, engagement_count
+     from public.milestone_payout_summary('00000000-0000-4000-8000-000000000828') $$,
+  $$ values (true, 10000.00::numeric, 1.325::numeric, 6625.00::numeric, 6625.00::numeric, 0.00::numeric, true, 2) $$,
+  'B (Draft) live summary before the edit equals A''s snapshot: pool 6625.00, total 6625.00'
+);
+select results_eq(
+  $$ select employee_name, rating_factor, bonus
+     from public.milestone_payout_lines('00000000-0000-4000-8000-000000000828') $$,
+  $$ values ('pgTAP PC F1', 1.00::numeric, 2650.00::numeric), ('pgTAP PC F2', 1.50::numeric, 3975.00::numeric) $$,
+  'B (Draft) live lines before the edit: F1 2650.00, F2 3975.00'
+);
+
+-- ---------------------------------------------------------------------------
+-- #4 Config edit as the owner: C1' -> C2 (KPI weights 0.25 each; rating 4 factor 1.50 -> 3.00).
+-- ---------------------------------------------------------------------------
+reset role;
+set local request.jwt.claims = '{}';
+
+update public.bonus_settings
+set
+  kpi_weight_schedule = 0.25,
+  kpi_weight_budget = 0.25,
+  kpi_weight_quality = 0.25,
+  kpi_weight_risk = 0.25,
+  multiplier_min = 0.50,
+  multiplier_max = 2.00,
+  rating_factor_1 = 0.01,
+  rating_factor_2 = 0.50,
+  rating_factor_3 = 1.00,
+  rating_factor_4 = 3.00,
+  rating_factor_5 = 3.00
+where id;
+
+-- ---------------------------------------------------------------------------
+-- #4 After the edit, as SP
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000801"}';
+
+-- B (Draft) reflects C2 (header comment): M 1.0625, pool 5312.50, total 5312.49, residual 0.01.
+select results_eq(
+  $$ select scored, target_pool, multiplier, payout_pool, payout_total, residual, within_pool, engagement_count
+     from public.milestone_payout_summary('00000000-0000-4000-8000-000000000828') $$,
+  $$ values (true, 10000.00::numeric, 1.0625::numeric, 5312.50::numeric, 5312.49::numeric, 0.01::numeric, true, 2) $$,
+  'B (Draft) after the edit reflects C2: M 1.0625, pool 5312.50, total 5312.49, residual 0.01'
+);
+-- C2 lines (header comment): F1 1.00 -> 1328.12, F2 3.00 -> 3984.37.
+select results_eq(
+  $$ select employee_name, rating_factor, bonus
+     from public.milestone_payout_lines('00000000-0000-4000-8000-000000000828') $$,
+  $$ values ('pgTAP PC F1', 1.00::numeric, 1328.12::numeric), ('pgTAP PC F2', 3.00::numeric, 3984.37::numeric) $$,
+  'B (Draft) lines after the edit reflect C2: F1 1328.12, F2 3984.37'
+);
+-- A (Approved) is unchanged: the same C1' literals as before the edit.
+select results_eq(
+  $$ select target_pool, multiplier, multiplier_max, payout_pool, payout_total, residual, engagement_count
+     from public.milestone_results where milestone_id = '00000000-0000-4000-8000-000000000827' $$,
+  $$ values (10000.00::numeric, 1.325::numeric, 2.00::numeric, 6625.00::numeric, 6625.00::numeric, 0.00::numeric, 2) $$,
+  'A snapshot header after the edit is unchanged: M 1.325, pool 6625.00, total 6625.00, residual 0.00'
+);
+select results_eq(
+  $$ select employee_name, rating_factor, bonus
+     from public.milestone_result_lines
+     where milestone_id = '00000000-0000-4000-8000-000000000827'
+     order by employee_name $$,
+  $$ values ('pgTAP PC F1', 1.00::numeric, 2650.00::numeric), ('pgTAP PC F2', 1.50::numeric, 3975.00::numeric) $$,
+  'A snapshot lines after the edit are unchanged for SP: F1 2650.00, F2 3975.00'
+);
+-- The live RPCs refuse to recompute A from the edited config.
+select throws_ok(
+  $$ select * from public.milestone_payout_lines('00000000-0000-4000-8000-000000000827') $$,
+  'MR015',
+  null,
+  'SP calling milestone_payout_lines on Approved A gets MR015'
+);
+select throws_ok(
+  $$ select * from public.milestone_payout_summary('00000000-0000-4000-8000-000000000827') $$,
+  'MR015',
+  null,
+  'SP calling milestone_payout_summary on Approved A gets MR015'
+);
+-- A rating-only change on A's engagement is a write on a frozen milestone.
+select throws_ok(
+  $$ update public.milestone_engagements set rating = 5 where id = '00000000-0000-4000-8000-000000000841' $$,
+  'MR007',
+  null,
+  'SP changing only the rating of an engagement on Approved A gets MR007'
+);
+
+-- ---------------------------------------------------------------------------
+-- #4 After the edit, as F1 (linked and activated employee on A): own snapshot line unchanged
+-- ---------------------------------------------------------------------------
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000804"}';
+
+select results_eq(
+  $$ select employee_name, rating_factor, bonus
+     from public.milestone_result_lines
+     where milestone_id = '00000000-0000-4000-8000-000000000827' $$,
+  $$ values ('pgTAP PC F1', 1.00::numeric, 2650.00::numeric) $$,
+  'F1 reads exactly their own A line after the edit, unchanged: 2650.00'
+);
+
+-- ---------------------------------------------------------------------------
+-- #4 After the edit, as AP (Admin): the live RPCs refuse A too
+-- ---------------------------------------------------------------------------
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000802"}';
+
+select throws_ok(
+  $$ select * from public.milestone_payout_lines('00000000-0000-4000-8000-000000000827') $$,
+  'MR015',
+  null,
+  'AP calling milestone_payout_lines on Approved A gets MR015'
+);
+select throws_ok(
+  $$ select * from public.milestone_payout_summary('00000000-0000-4000-8000-000000000827') $$,
+  'MR015',
+  null,
+  'AP calling milestone_payout_summary on Approved A gets MR015'
+);
+
+-- ---------------------------------------------------------------------------
+-- #4 After the edit, as SQ (foreign Supervisor): A is invisible, so no rows and no MR015 (no leak)
+-- ---------------------------------------------------------------------------
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000803"}';
+
+select is_empty(
+  $$ select engagement_id from public.milestone_payout_lines('00000000-0000-4000-8000-000000000827') $$,
+  'SQ calling milestone_payout_lines on A gets none (no existence leak)'
+);
+select is_empty(
+  $$ select milestone_id from public.milestone_payout_summary('00000000-0000-4000-8000-000000000827') $$,
+  'SQ calling milestone_payout_summary on A gets none (no existence leak)'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+
+-- ===========================================================================
+-- End of #4. Later sections (#7) go here, each setting bonus_settings as the owner at its top.
 -- ===========================================================================
 
 select * from finish();
