@@ -88,8 +88,8 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
         Employees
       </h1>
       <p class="mb-6 text-sm text-blue-100/60">
-        The open total is the employee's time share across milestones that are not completed or cancelled. Above 100% is
-        a warning only.
+        The open total is the employee's time share across milestones that are not completed, cancelled or approved, in
+        projects that are still open. Above 100% is a warning only.
       </p>
 
       {savedMessage && (

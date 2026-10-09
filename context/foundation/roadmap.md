@@ -109,7 +109,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** S-01
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** PRD's own Socrates round already flagged period-validation (end date not before start date) as an explicit acceptance criterion. The FR-017 budget check reads the multiplier maximum from S-01's settings and, once S-05 lands, Approved milestones' actual payout pools — until then every milestone is reserved at target × maximum. Low residual risk otherwise.
+- **Risk:** PRD's own Socrates round already flagged period-validation (end date not before start date) as an explicit acceptance criterion. The FR-017 budget check reads the multiplier maximum from S-01's settings and, once S-05 lands, Approved milestones' actual payout pools — until then every milestone is reserved at target × maximum. Low residual risk otherwise. (Corrected by S-04 on 2026-10-04: non-Approved milestones reserve their target pool.)
 - **Status:** done
 
 ### S-03: Supervisor assigns employee engagement

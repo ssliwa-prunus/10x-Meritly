@@ -18,11 +18,11 @@ YAML frontmatter at the top of the file:
 ---
 bootstrapped_at: <ISO 8601 timestamp, e.g. 2026-05-04T14:23:11Z>
 starter_id: <starter_id from hand-off>
-starter_name: <human-readable name from the registry card>
+starter_name: <human-readable name from the registry card, or custom_starter.name>
 project_name: <project_name from hand-off>
 language_family: <hints.language_family from hand-off>
 package_manager: <resolved package manager — hand-off value or card fallback>
-cwd_strategy: <subdir-then-move | native-cwd | git-clone>
+cwd_strategy: <subdir-then-move | native-cwd | git-clone | manual>
 bootstrapper_confidence: <verified | first-class | best-effort>
 phase_3_status: <ok | failed>
 audit_command: <the resolved command from audit_commands, or "null" for skip>
@@ -58,7 +58,7 @@ Records of what Step 2 actually did:
 
 ```
 **Resolved invocation**: `<the cmd_template after substitution>`
-**Strategy**: <subdir-then-move | native-cwd | git-clone>
+**Strategy**: <subdir-then-move | native-cwd | git-clone | manual>
 **Exit code**: <0 | non-zero>
 **Files moved**: <count>
 **Conflicts (.scaffold siblings)**: <comma list, or "none">
@@ -86,10 +86,12 @@ For HARD-STOP (`phase_3_status: failed`):
 **Stderr (last 20 lines)**:
 
 ```
+
 <captured stderr>
 ```
 
 **.bootstrap-scaffold left in place at**: `.bootstrap-scaffold/`
+
 ```
 
 ### `## Post-scaffold audit`
@@ -99,6 +101,7 @@ Findings from Step 3. Three sub-shapes depending on outcome.
 **Audit ran successfully**:
 
 ```
+
 **Tool**: <audit_command>
 **Summary**: <C> CRITICAL, <H> HIGH, <M> MODERATE, <L> LOW
 **Direct vs transitive**: <Cd>/<Hd>/<Md>/<Ld> direct of total <C>/<H>/<M>/<L> (where the tool supports the distinction; "not distinguished by this tool" otherwise)
@@ -136,8 +139,11 @@ Findings from Step 3. Three sub-shapes depending on outcome.
 **Partial output (if any)**:
 
 ```
+
 <captured stdout/stderr>
+
 ```
+
 ```
 
 For the HARD-STOP case (`phase_3_status: failed`), this whole section is replaced by:

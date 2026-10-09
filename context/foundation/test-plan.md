@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-10-07
+> Last updated: 2026-10-09
 
 ## 1. Strategy
 
@@ -76,19 +76,19 @@ Each row is a discrete rollout phase that will open its own change folder
 via `/10x-new`. Status moves left-to-right through the values below; the
 orchestrator updates Status as artifacts appear on disk.
 
-| #   | Phase name                           | Goal (one line)                                                                                                                                   | Risks covered | Test types                                                           | Status      | Change folder      |
-| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------------- | ----------- | ------------------ |
-| 1   | Data isolation & RLS matrix          | Prove no employee or foreign Supervisor can read or write outside their scope, Draft results included                                             | #1, #2        | pgTAP matrix + catalog guard                                         | planned     | testing-rls-matrix |
-| 2   | Payout correctness & approval freeze | Prove the PRD formula's ceilings, boundary cases and the approval freeze against hand-computed oracles; bootstrap Vitest if the logic lives in TS | #3, #4, #7    | unit + pgTAP                                                         | not started | —                  |
-| 3   | Route gating & approval notification | Prove the role × route matrix and once-only, own-figure-only approval email                                                                       | #5, #6        | integration + smoke extension + HTTP IDOR check (moved from Phase 1) | not started | —                  |
-| 4   | US-01 e2e & gates wiring             | One e2e for approve → employee sees only their own result; make the new suites required CI gates; recommended local post-edit hook on migrations  | cross-cutting | e2e + gates + post-edit hook                                         | not started | —                  |
+| #   | Phase name                           | Goal (one line)                                                                                                                                  | Risks covered | Test types                                                                              | Status      | Change folder              |
+| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | --------------------------------------------------------------------------------------- | ----------- | -------------------------- |
+| 1   | Data isolation & RLS matrix          | Prove no employee or foreign Supervisor can read or write outside their scope, Draft results included                                            | #1, #2        | pgTAP matrix + catalog guard                                                            | complete    | testing-rls-matrix         |
+| 2   | Payout correctness & approval freeze | Prove the PRD formula's ceilings, boundary cases, the approval freeze and the flag boundaries against hand-computed oracles                      | #3, #4, #7    | pgTAP                                                                                   | complete    | testing-payout-correctness |
+| 3   | Route gating & approval notification | Prove the role × route matrix and once-only, own-figure-only approval email                                                                      | #5, #6        | Vitest bootstrap + integration + smoke extension + HTTP IDOR check (moved from Phase 1) | not started | —                          |
+| 4   | US-01 e2e & gates wiring             | One e2e for approve → employee sees only their own result; make the new suites required CI gates; recommended local post-edit hook on migrations | cross-cutting | e2e + gates + post-edit hook                                                            | not started | —                          |
 
 ## 4. Stack
 
 | Layer                   | Tool                                                                               | Version                | Notes                                                             |
 | ----------------------- | ---------------------------------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------- |
-| database / RLS          | pgTAP via `supabase test db`                                                       | Supabase CLI ^2.23     | Exists — 6 test files, runs in CI `smoke` job                     |
-| unit + integration (TS) | Vitest via Astro `getViteConfig()`                                                 | none yet — see Phase 2 | Astro's documented path (Context7, checked: 2026-10-07)           |
+| database / RLS          | pgTAP via `supabase test db`                                                       | Supabase CLI ^2.23     | Exists — 9 test files, runs in CI `smoke` job                     |
+| unit + integration (TS) | Vitest via Astro `getViteConfig()`                                                 | none yet — see Phase 3 | Astro's documented path (Context7, checked: 2026-10-07)           |
 | auth smoke              | `scripts/smoke.mjs` (`npm run smoke`)                                              | n/a                    | Exists; extended in Phase 3                                       |
 | email                   | Mailpit (local Supabase inbox)                                                     | bundled                | Integration target for Phase 3                                    |
 | e2e                     | Playwright                                                                         | none yet — see Phase 4 | One critical flow only (US-01)                                    |
@@ -106,14 +106,14 @@ the database layer; no TS test runner and zero TS tests.
 
 ## 5. Quality Gates
 
-| Gate                                     | Where                         | Required?                                                                        | Catches                                                                                                |
-| ---------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| lint + `lint:ui` + `astro check` + build | local (pre-commit) + CI       | required (wired)                                                                 | syntactic / type / token drift                                                                         |
-| pgTAP (`supabase test db`)               | CI `smoke` job                | required (wired); includes `rls_matrix` and `rls_catalog_guard` since §3 Phase 1 | RLS and payout regressions in the database; unclassified tables, policies, grants or definer functions |
-| Vitest unit + integration                | local + CI                    | required after §3 Phase 2                                                        | formula, freeze, gating logic regressions                                                              |
-| auth smoke                               | CI against production preview | required (wired); extended after §3 Phase 3                                      | broken sign-in / role routing                                                                          |
-| e2e on US-01                             | CI on PR                      | required after §3 Phase 4                                                        | broken approve → employee-view path                                                                    |
-| post-edit hook (migrations → pgTAP)      | local (agent loop)            | recommended after §3 Phase 4                                                     | RLS regressions at edit time                                                                           |
+| Gate                                     | Where                         | Required?                                                                                                                   | Catches                                                                                                |
+| ---------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| lint + `lint:ui` + `astro check` + build | local (pre-commit) + CI       | required (wired)                                                                                                            | syntactic / type / token drift                                                                         |
+| pgTAP (`supabase test db`)               | CI `smoke` job                | required (wired); includes `rls_matrix` and `rls_catalog_guard` since §3 Phase 1, and `payout_correctness` since §3 Phase 2 | RLS and payout regressions in the database; unclassified tables, policies, grants or definer functions |
+| Vitest unit + integration                | local + CI                    | required after §3 Phase 3                                                                                                   | gating logic and TS input-parsing regressions                                                          |
+| auth smoke                               | CI against production preview | required (wired); extended after §3 Phase 3                                                                                 | broken sign-in / role routing                                                                          |
+| e2e on US-01                             | CI on PR                      | required after §3 Phase 4                                                                                                   | broken approve → employee-view path                                                                    |
+| post-edit hook (migrations → pgTAP)      | local (agent loop)            | recommended after §3 Phase 4                                                                                                | RLS regressions at edit time                                                                           |
 
 ## 6. Cookbook Patterns
 
@@ -126,7 +126,7 @@ the relevant rollout phase ships; before that, the sub-section reads
 RLS is the security boundary: a signed-in user can call PostgREST directly, so isolation is tested in the database, not through pages.
 
 - **Where:** `supabase/tests/rls_matrix.test.sql` (behaviour per actor) and `supabase/tests/rls_catalog_guard.test.sql` (catalog: table set, exact policy inventory, no `for all` policies, grant hygiene, definer-function allowlist by signature, pinned `search_path`). Per-feature suites (`*_rls.test.sql`, `milestone_*.test.sql`) keep their own feature checks.
-- **Rule:** a migration that adds or changes a table, view, policy, grant or `security definer` function updates **both** files. The guard fails by name until it is classified; the matrix then gets a row for every actor on the new surface.
+- **Rule:** a migration that adds or changes a table, view, policy, grant or `security definer` function updates **both** files. The guard fails by name until it is classified; the matrix then gets a row for every actor on the new surface. A migration that changes only the body of a view or `security invoker` function, keeping its name, columns, `security_invoker`, grants and definer status, adds `rls_matrix` cells for the changed behaviour and leaves the catalog guard unchanged (the catalog shape did not change).
 - **Actor cast** (fixtures in the `…07xx` UUID range, `@pgtap.test` emails): Supervisors SA (owner) and SB (foreign), two linked **and activated** employees E1/E2, an employee-role user with no employee record (U), an Admin (AD), anon. Never use U as the only employee attacker — it sees nothing for the wrong reason.
 - **Expected values** come from the decided matrix (PRD visibility rule + recorded decisions), never from reading the policy under test.
 - **Denial shapes:** RLS-denied insert → `throws_ok(…, '42501')`; RLS-denied update/delete → `is_empty($$ … returning id $$)` followed by an owner-side "row unchanged" check; a missing table/column privilege → `42501`; guard triggers may answer with a business code first (e.g. `MR007` on a frozen milestone). Assert allow cells too, so a deny-everything database cannot pass.
@@ -136,7 +136,16 @@ RLS is the security boundary: a signed-in user can call PostgREST directly, so i
 
 ### 6.2 Adding a payout / formula test
 
-- TBD — see §3 Phase 2 (hand-computed oracle from the PRD formula, boundary cases, approval-freeze pattern).
+All payout, freeze and flag arithmetic lives in SQL (`kpi_multiplier`, `capped_payout_pool`, `milestone_payout_lines`, `milestone_payout_summary`, the views `project_budget_exposure` and `employee_time_share_totals`), so these tests are pgTAP, run as the signed-in role like §6.1.
+
+- **Where:** `supabase/tests/payout_correctness.test.sql`, one section per risk (`#3` ceilings, `#4` freeze, `#7` flags). Fixtures in the `…08xx` UUID range; the suite header keeps the fixture map, including which ids are still free. Add a case to the matching section rather than a new file.
+- **Oracle:** derive every expected literal by hand from PRD Business Logic in integer grosze — M = min + (Σ wₖ·Sₖ)·0.01·(max − min); pool = floor₀.₀₁(target·M/max); bonusᵢ = floor₀.₀₁(pool·eᵢ/Σe), eᵢ = time_share·role_weight·rating_factor — and write the derivation in a comment above the assertion. Never compute it by calling the function under test, and never with floating point (it disagrees by a grosz).
+- **Config:** `bonus_settings` is a global singleton. Set it explicitly as the owner at the top of each section (and before any config edit), so no literal depends on the seeded defaults.
+- **Shape:** exact literals per case (summary and lines), plus the generic property assertion over the section's Draft milestones: Σ line bonus = `payout_total` ≤ `payout_pool` ≤ `target_pool`, with a row count so it cannot pass vacuously.
+- **Freeze pattern:** approve → edit the config as the owner → the Approved snapshot (`milestone_results` / `milestone_result_lines`) still equals the pre-edit literals, read as the Supervisor and as a linked, activated employee; a Draft milestone with the same inputs shows the new literals; `milestone_payout_lines` / `milestone_payout_summary` on the Approved id raise `MR015` for the owner and Admin and return no rows for anyone who cannot see it.
+- **Flag pattern:** both flags are strict `>`. Assert at equality (not flagged) and one grosz / 0.01 over (flagged); pin closed milestones and closed projects explicitly. Status changes between assertions run as the owner (`reset role`, claims cleared), and engagement writes happen before a milestone closes (MR007).
+- **Prove it can fail:** break the rule in a scratch migration (e.g. `round` instead of `div` in `capped_payout_pool`, drop the MR015 guard, `>=` in a flag view), `npx supabase db reset --local`, confirm the named assertion goes red, delete the scratch file and reset again.
+- **Run:** `npx supabase db reset --local && npx supabase test db`; CI runs it in the `smoke` job.
 
 ### 6.3 Adding a test for a new page or API route
 
@@ -155,6 +164,7 @@ RLS is the security boundary: a signed-in user can call PostgREST directly, so i
 (Appended by each phase's final sub-phase.)
 
 - **Phase 1 — Data isolation & RLS matrix** (`testing-rls-matrix`, 2026-10-07). The matrix found two real holes, fixed in `20261007120000_rls_tighten_profiles_and_grants.sql`: Supervisors could read every profile (F1), and `authenticated` still held TRUNCATE/REFERENCES/TRIGGER on three tables (F2). Accepted and documented: the unscoped `is_approved_milestone` boolean (F4). Pinned as intended: after a project reassignment, the new owner sees the approved history and the previous owner loses it (F3). The HTTP IDOR check moved to Phase 3: `/my-bonuses` takes no ID, and foreign IDs return HTTP 200 with a "not found" body. Mutation checks confirmed that both suites fail for the right reason.
+- **Phase 2 — Payout correctness & approval freeze** (`testing-payout-correctness`, 2026-10-09). The new suite closed two gaps. Live payout functions recomputed Approved milestones from the current config, so the freeze held only by page convention; they now raise `MR015` for a visible Approved milestone (`20261009120000_payout_rpcs_refuse_approved.sql`), while an invisible one still returns no rows. The time-share flag counted engagements in cancelled or completed projects; the view now excludes them (`20261009130000_time_share_excludes_closed_projects.sql`). Pinned as intended: budget exposure ignores project status, so a closed project still shows its exposure. Vitest moved to Phase 3: none of the payout, freeze or flag logic is TS, and Phase 3's route gating is the first TS logic worth a runner. Mutation checks (floor → round, dropped MR015 guard, `>` → `>=`) each turned the named assertions red. Known divergence, left for a later change: the owner-change guards MR008/MR012 still treat a milestone as open by its own status only, so an engagement on an active milestone in a closed project still blocks an owner change while no longer counting toward the time-share total (the guards are the stricter side).
 
 ## 7. What We Deliberately Don't Test
 

@@ -26,7 +26,9 @@ Used to look up the chosen card in `/skills/10x-tech-stack-selector/references/s
 - `toolchain.package_manager` — fallback for `{pm}` substitution when the hand-off omits `package_manager`.
 - `deployment_defaults` — surfaced for context; not consumed for action in v1.
 
-If the `starter_id` is absent from the registry, run the registry-drift refusal from `refusal-protocol.md`. In chain-mode this is unreachable (tech-stack-selector refuses to write a hand-off it cannot resolve); the check is defensive against hand-edited hand-offs.
+If `starter_id` is `custom`, there is no card: read `custom_starter.name` and `custom_starter.docs_url` from the hand-off instead, take `language_family` from `hints`, and resolve the scaffold command per `scaffold-merge.md` § Custom starter. `bootstrapper_confidence` is `best-effort` and `deployment_defaults` do not exist.
+
+If the `starter_id` is absent from the registry (and is not `custom`), run the registry-drift refusal from `refusal-protocol.md`. In chain-mode this is unreachable (tech-stack-selector refuses to write a hand-off it cannot resolve); the check is defensive against hand-edited hand-offs.
 
 ### `package_manager` — `{pm}` substitution
 

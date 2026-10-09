@@ -4,7 +4,7 @@ The phase where bootstrapper actually runs the starter's CLI. Three `cwd_strateg
 
 ## Inputs (resolved at Step 0 / Step 1)
 
-- The chosen card's `cmd_template` (carries `{name}` and possibly `{pm}` placeholders).
+- The chosen card's `cmd_template` (carries `{name}` and possibly `{pm}` placeholders). For `starter_id: custom`, the command resolved per § Custom starter below.
 - `project_name` from the hand-off frontmatter.
 - `package_manager` from the hand-off frontmatter, falling back to the card's `toolchain.package_manager` if omitted.
 - `cwd_strategy` from `bootstrapper-config.yaml` for this `starter_id`, defaulting to `subdir-then-move` if the id is not listed.
@@ -61,15 +61,15 @@ Sequence:
 
 Applied during the move-up step for `subdir-then-move` and `git-clone`. Compares each path under `.bootstrap-scaffold/` against the same relative path under cwd.
 
-| Path pattern in scaffold                                                       | Path exists in cwd? | Resolution                                                                          |
-| ------------------------------------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------------- |
-| `context/**` (any path under `context/`)                                       | yes or no           | scaffold copy is dropped; cwd `context/` is the source of truth and never overwritten |
-| `.gitignore`                                                                   | yes                 | append-merged: cwd lines kept in order, then scaffold lines de-duped against the cwd set, appended at the end with a `# from <starter_id>` separator comment |
-| `.gitignore`                                                                   | no                  | move silently                                                                       |
-| `package.json`, `README.md`, `CLAUDE.md`, `AGENTS.md`, root-level `*.md`       | yes                 | existing wins; scaffold copy lands as `<filename>.scaffold` sibling                  |
-| `package.json`, `README.md`, `CLAUDE.md`, `AGENTS.md`, root-level `*.md`       | no                  | move silently                                                                       |
-| anything else                                                                  | yes                 | existing wins; scaffold copy lands as `<filename>.scaffold` sibling                  |
-| anything else                                                                  | no                  | move silently                                                                       |
+| Path pattern in scaffold                                                 | Path exists in cwd? | Resolution                                                                                                                                                   |
+| ------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `context/**` (any path under `context/`)                                 | yes or no           | scaffold copy is dropped; cwd `context/` is the source of truth and never overwritten                                                                        |
+| `.gitignore`                                                             | yes                 | append-merged: cwd lines kept in order, then scaffold lines de-duped against the cwd set, appended at the end with a `# from <starter_id>` separator comment |
+| `.gitignore`                                                             | no                  | move silently                                                                                                                                                |
+| `package.json`, `README.md`, `CLAUDE.md`, `AGENTS.md`, root-level `*.md` | yes                 | existing wins; scaffold copy lands as `<filename>.scaffold` sibling                                                                                          |
+| `package.json`, `README.md`, `CLAUDE.md`, `AGENTS.md`, root-level `*.md` | no                  | move silently                                                                                                                                                |
+| anything else                                                            | yes                 | existing wins; scaffold copy lands as `<filename>.scaffold` sibling                                                                                          |
+| anything else                                                            | no                  | move silently                                                                                                                                                |
 
 Notes on the matrix:
 
@@ -85,6 +85,29 @@ Any `starter_id` not listed in `bootstrapper-config.yaml`'s `starters:` map defa
 A starter that is genuinely cwd-aware (its CLI was designed to write into `.`) but is not yet listed in `bootstrapper-config.yaml` will scaffold sub-optimally under `subdir-then-move` — the CLI may write into `.bootstrap-scaffold/`, the move-up still works correctly, but the user pays an extra copy/delete round-trip. Worked example: `fastapi` (hypothetical card not in v1 config) — `cmd_template` `pip install fastapi[standard] && fastapi run app/main.py` is run in `.bootstrap-scaffold/`; it works, but a future bootstrapper-config entry pinning `fastapi: cwd_strategy: native-cwd` would avoid the temp-dir round-trip.
 
 Future starters get explicit overrides in v2 by adding entries to `bootstrapper-config.yaml`. The validator at `scripts/validate-starter-registry-sync.mjs` ensures every `starter_id` listed there exists in the tech-stack-selector registry.
+
+## Custom starter
+
+Applies when the hand-off has `starter_id: custom`. There is no registry card, so the scaffold command is resolved at run time.
+
+1. **Find the official generator.** Using `custom_starter.name` and `custom_starter.docs_url`, identify the framework's official way to create a new project — its own CLI, an official initializer endpoint, or the ecosystem's standard generator for that framework. Check the docs at `docs_url` rather than relying on memory alone; flags change between versions. Prefer a non-interactive invocation.
+2. **Build the command as a template.** Use `{name}` for the target directory and the hand-off's `package_manager` where the generator takes a build-tool choice. Strategy is always `subdir-then-move`, so `{name}` becomes `.bootstrap-scaffold`. If the generator needs a prerequisite (installing its CLI), include it as a separate, visible step.
+3. **Show and confirm.** Print the exact command(s) and the docs page they came from, then ask:
+
+   AskUserQuestion:
+   - question: "This is the scaffold command I found for `<custom_starter.name>`. Run it?"
+     header: "Scaffold"
+     options:
+     - label: "Run it (Recommended)"
+       description: "Scaffold into a temp directory and move the files up with the usual conflict policy."
+     - label: "Use a different command"
+       description: "Paste the command you want; I'll run it the same way."
+     - label: "I'll scaffold it myself"
+       description: "Skip the scaffold step. I'll wait while you generate the project into this directory, then run the audit and write the log."
+       multiSelect: false
+
+4. **No generator found, or "I'll scaffold it myself".** Print the docs link and a one-line instruction ("Generate the project into this directory, keeping `context/` intact, then tell me when it's done"). Wait for the user. Record `cwd_strategy: manual` in the verification log and skip the conflict matrix — the user's own files are the scaffold. Continue to Step 3.
+5. **Run.** On approval, the command goes through the normal `subdir-then-move` path below. A non-zero exit takes the normal CLI failure path.
 
 ## CLI failure handling
 

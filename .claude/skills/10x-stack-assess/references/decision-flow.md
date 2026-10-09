@@ -2,7 +2,7 @@
 
 Specifies how the LLM reasons over `references/starter-registry.yaml` cards in BOTH paths (standard short-circuit and custom full-reasoning). Loaded by `SKILL.md` Step 3.
 
-The flow has six steps (Step 0 plus A–E). Standard path runs Step 0 → Step E only; custom path runs Step 0 → A → B → C → D → E.
+The flow has six steps (Step 0 plus A–E). Standard path runs Step 0 → Step E only; custom path runs Step 0 → A → B → C → D → E. An off-registry framework named by the user runs Step 0 → § Off-registry framework → E.
 
 The output is one lead recommendation + 1–2 alternatives + a one-paragraph rationale + any Socratic moments surfaced in conversation. The decision is `LLM-over-cards` — no scoring matrix, no decision tree, no numeric weights. The cards encode the structure; the LLM does the reasoning.
 
@@ -16,6 +16,28 @@ Look up `recommended_defaults[product_type][language_family]` in `references/sta
 
 - If a `starter_id` resolves AND the user picked "Take recommended" at Q0 → **jump straight to Step E** (the lead is already chosen; no filtering, no scoring).
 - If the cell shows `<none>` OR the user picked "Design my own" at Q0 → **proceed to Step A**.
+- If the user named a specific framework (at Q0, at Q3a, or anywhere in the interview) → look it up by name and alias across `starters:`. If a card matches, that card becomes the lead: run Step A–B on it alone (to surface gate or avoid-list conflicts) and skip Q6. If no card matches → **go to § Off-registry framework**.
+
+---
+
+## Off-registry framework
+
+The user named a framework the registry does not carry. This is a legitimate pick, not an error. The registry exists to give good defaults to users without a preference — it does not override a user who has one.
+
+1. **Confirm the pick in one line.** "`<framework>` isn't one of the starters I have a vetted card for, so I'll assess it directly and the hand-off will mark it as best-effort for scaffolding." Do not describe the registry file, the bootstrapper's internals, or any rule the user would be "breaking".
+2. **Assess the four quality gates from your own knowledge** of the framework (`typed`, `convention_based`, `popular_in_training`, `well_documented`), applying the per-language-family caveat in `agent-friendly-criteria.md`. Say it is an assessment, not a vetted card. If you are unsure about a gate, say so rather than guessing.
+3. **If a gate fails**, run Socratic moment #2 below with the off-registry framework as `<starter>`. The alternative must come from the **same `language_family`** — never suggest switching language to reach a vetted card.
+4. **Feature fit.** For each `has_*` flag set at Q1, say in one line how the framework covers it (built-in module, common extension, or manual setup). This is informational.
+5. **Resolve the hand-off fields** the card would normally supply:
+   - `custom_starter.name` — the framework's canonical name.
+   - `custom_starter.docs_url` — the official documentation URL (prefer the project's own site; a GitHub repo URL is acceptable).
+   - `package_manager` — the framework's standard build tool (e.g., the one its official generator defaults to). Ask the user only if the ecosystem has a genuine split and they have not already said.
+   - `bootstrapper_confidence: best-effort` — always.
+6. **Deployment options for Q4.** There is no `deployment_defaults` array, so offer 2–3 targets that are common for the framework, plus `self-host`. The "I don't know yet" option lands on the first one you offered.
+7. **Skip Q6** (the user already picked the framework). Q8 self-check still runs before write.
+8. **Alternatives.** Mention at most one same-family registry card as "worth a glance" in the output shape. Do not repeat it as a push once the user has confirmed.
+
+Then proceed to Step E.
 
 ---
 
@@ -77,7 +99,7 @@ If a Socratic moment fires during this step (the user named a failing starter at
 
 For the lead recommendation (both paths — standard and custom), state the `bootstrapper_confidence` value in conversation **always**. Never silently elide.
 
-Wording per value:
+Wording per value (for an off-registry framework, use the `best-effort` wording and add: "Bootstrapper will look up the framework's official generator and show you the exact command before running it."):
 
 - **`verified`**: "Bootstrapper has been run end-to-end on this stack — scaffolding will be smooth."
 - **`first-class`**: "Bootstrapper has this stack registered with a valid CLI but hasn't been battle-tested. Expect mostly-smooth scaffolding with occasional manual steps."
@@ -126,6 +148,8 @@ your PRD's functional requirements). You can:
 Then ask the user: "Add `<feature>` manually" or "Switch to `<starter_with_feature>`".
 
 ### 4. Lead has `bootstrapper_confidence: best-effort` AND user is solo
+
+Skip this moment for an off-registry framework the user named themselves — Step E already states the best-effort heads-up, and asking again whether to switch reads as pressure. It still fires when the skill itself led with a `best-effort` registry card.
 
 Solo + best-effort is a concerning combination — the user will be the only one to debug scaffolding friction. Surface:
 

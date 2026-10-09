@@ -382,3 +382,8 @@ pnpm-debug.log*
 
 # Supabase Studio scratch queries (local only)
 supabase/snippets/
+
+# Vitest / Stryker
+coverage/
+reports/
+.stryker-tmp/

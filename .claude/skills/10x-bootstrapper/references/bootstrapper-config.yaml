@@ -9,7 +9,8 @@
 #   starters         — keyed-by-starter_id map carrying bootstrapper-side overrides for the
 #                      starters that need them. cwd_strategy is the only per-starter override
 #                      v1 carries. Cards not listed here default to `subdir-then-move` (see
-#                      `scaffold-merge.md`).
+#                      `scaffold-merge.md`). `custom` is reserved for off-registry frameworks and
+#                      is never listed here; it always uses subdir-then-move (or manual).
 #   audit_commands   — language_family -> shell command lookup for the post-scaffold audit
 #                      slot. `null` means "no built-in audit tool for this ecosystem"; Step 3
 #                      skips the audit and notes the skip in verification.md.
