@@ -427,27 +427,27 @@ Bring `test-plan.md` and the roadmap in line with what Phase 2 decided and built
 
 #### Automated
 
-- [x] 2.1 Before the migration, only the new MR015 assertions fail
-- [x] 2.2 After the migration, `npx supabase test db` passes with `milestone_approval.test.sql` unchanged
-- [x] 2.3 `rls_catalog_guard.test.sql` passes with no edits
-- [x] 2.4 Mutation check: dropping the status guard turns the MR015 cells red
+- [x] 2.1 Before the migration, only the new MR015 assertions fail — 8c550a0
+- [x] 2.2 After the migration, `npx supabase test db` passes with `milestone_approval.test.sql` unchanged — 8c550a0
+- [x] 2.3 `rls_catalog_guard.test.sql` passes with no edits — 8c550a0
+- [x] 2.4 Mutation check: dropping the status guard turns the MR015 cells red — 8c550a0
 
 #### Manual
 
-- [x] 2.5 Draft milestone shows computed bonuses; after UI approval the snapshot shows with no error
+- [x] 2.5 Draft milestone shows computed bonuses; after UI approval the snapshot shows with no error — 8c550a0
 
 ### Phase 3: Flag boundaries (risk #7)
 
 #### Automated
 
-- [ ] 3.1 Before the migration, only the closed-project time-share assertions fail
-- [ ] 3.2 After the migration, `npx supabase test db` passes with `employees_rls` and `milestone_approval` unchanged
-- [ ] 3.3 `rls_catalog_guard.test.sql` passes with no edits
-- [ ] 3.4 Mutation check: `>=` in the view turns the 100 % boundary assertion red
+- [x] 3.1 Before the migration, only the closed-project time-share assertions fail
+- [x] 3.2 After the migration, `npx supabase test db` passes with `employees_rls` and `milestone_approval` unchanged
+- [x] 3.3 `rls_catalog_guard.test.sql` passes with no edits
+- [x] 3.4 Mutation check: `>=` in the view turns the 100 % boundary assertion red
 
 #### Manual
 
-- [ ] 3.5 Seeded over-allocated employee still shows "Over 100%" on `/employees`
+- [x] 3.5 Seeded over-allocated employee still shows "Over 100%" on `/employees`
 
 ### Phase 4: Test-plan backport and cookbook
 

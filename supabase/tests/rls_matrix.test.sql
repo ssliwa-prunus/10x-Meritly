@@ -27,7 +27,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(250);
+select plan(252);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so owners are explicit)
@@ -36,14 +36,16 @@ select plan(250);
 --                employees row)
 --   job role:    ...0708 pgTAP Matrix Role (AD inserts ...0709)
 --   projects:    ...0711 PA (SA)   ...0712 PB (SB)   ...0713 PR (SA; reassigned to SB at the end)
+--                ...0714 PC (SA; cancelled after its engagement exists)
 --   milestones:  ...0721 MA_appr (PA, approved)   ...0722 MA_draft (PA, active, scored, injected
 --                Draft snapshot)   ...0723 MB (PB, active)   ...0724 MR_appr (PR, approved)
---                (SA inserts ...0725)
+--                ...0726 MC (PC, active; its project is cancelled)   (SA inserts ...0725)
 --   employees:   ...0731 E1 (SA, linked to ...0701, activated)   ...0732 E2 (SA, linked to ...0702,
 --                activated)   ...0733 E3 (SA, not linked)   ...0734 EB (SB, not linked)
 --                (SA and AD each insert one more, by email; the insert grant has no id column)
 --   engagements: ...0741 E1@MA_appr   ...0742 E2@MA_appr   ...0743 E1@MA_draft   ...0744 E2@MA_draft
---                ...0745 EB@MB   ...0746 E1@MR_appr   (SA inserts and deletes E3@MA_draft)
+--                ...0745 EB@MB   ...0746 E1@MR_appr   ...0747 E1@MC 0.40 (closed project, so outside
+--                E1's open time share)   (SA inserts and deletes E3@MA_draft)
 --   result line: ...0751 injected E1 line of MA_draft (Draft, never visible to E1)
 -- ---------------------------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, raw_user_meta_data, created_at, updated_at)
@@ -81,14 +83,16 @@ insert into public.projects (id, name, start_date, end_date, status, total_budge
 values
   ('00000000-0000-4000-8000-000000000711', 'pgTAP Matrix PA', '2026-01-01', '2026-12-31', 'active', 100000.00, '00000000-0000-4000-8000-000000000703'),
   ('00000000-0000-4000-8000-000000000712', 'pgTAP Matrix PB', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000704'),
-  ('00000000-0000-4000-8000-000000000713', 'pgTAP Matrix PR', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000703');
+  ('00000000-0000-4000-8000-000000000713', 'pgTAP Matrix PR', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000703'),
+  ('00000000-0000-4000-8000-000000000714', 'pgTAP Matrix PC', '2026-01-01', '2026-12-31', 'active', 10000.00, '00000000-0000-4000-8000-000000000703');
 
 insert into public.milestones (id, project_id, name, start_date, end_date, status, target_pool)
 values
   ('00000000-0000-4000-8000-000000000721', '00000000-0000-4000-8000-000000000711', 'pgTAP Matrix MA appr', '2026-01-01', '2026-03-31', 'active', 10000.00),
   ('00000000-0000-4000-8000-000000000722', '00000000-0000-4000-8000-000000000711', 'pgTAP Matrix MA draft', '2026-04-01', '2026-06-30', 'active', 1000.00),
   ('00000000-0000-4000-8000-000000000723', '00000000-0000-4000-8000-000000000712', 'pgTAP Matrix MB', '2026-01-01', '2026-03-31', 'active', 1000.00),
-  ('00000000-0000-4000-8000-000000000724', '00000000-0000-4000-8000-000000000713', 'pgTAP Matrix MR appr', '2026-01-01', '2026-03-31', 'active', 1000.00);
+  ('00000000-0000-4000-8000-000000000724', '00000000-0000-4000-8000-000000000713', 'pgTAP Matrix MR appr', '2026-01-01', '2026-03-31', 'active', 1000.00),
+  ('00000000-0000-4000-8000-000000000726', '00000000-0000-4000-8000-000000000714', 'pgTAP Matrix MC', '2026-01-01', '2026-03-31', 'active', 1000.00);
 
 -- E1 and E2: linked to their accounts and activated (invite accepted), like milestone_approval's E1.
 insert into public.employees (id, supervisor_id, full_name, email, job_role_id, profile_id, invited_at, activated_at)
@@ -108,7 +112,11 @@ values
   ('00000000-0000-4000-8000-000000000743', '00000000-0000-4000-8000-000000000722', '00000000-0000-4000-8000-000000000731', 0.30, 3),
   ('00000000-0000-4000-8000-000000000744', '00000000-0000-4000-8000-000000000722', '00000000-0000-4000-8000-000000000732', 0.20, 3),
   ('00000000-0000-4000-8000-000000000745', '00000000-0000-4000-8000-000000000723', '00000000-0000-4000-8000-000000000734', 0.50, 3),
-  ('00000000-0000-4000-8000-000000000746', '00000000-0000-4000-8000-000000000724', '00000000-0000-4000-8000-000000000731', 0.10, 3);
+  ('00000000-0000-4000-8000-000000000746', '00000000-0000-4000-8000-000000000724', '00000000-0000-4000-8000-000000000731', 0.10, 3),
+  ('00000000-0000-4000-8000-000000000747', '00000000-0000-4000-8000-000000000726', '00000000-0000-4000-8000-000000000731', 0.40, 3);
+
+-- Close PC last, after its engagement exists (MR007 blocks engagement writes in a closed project).
+update public.projects set status = 'cancelled' where id = '00000000-0000-4000-8000-000000000714';
 
 update public.milestones
 set kpi_schedule = 80, kpi_budget = 90, kpi_quality = 85, kpi_risk = 60
@@ -1070,6 +1078,14 @@ select is(
   2,
   'SA selecting employee_time_share_totals sees own employees E1 and E2'
 );
+-- E1's open time share: MA_draft 0.30 only. MA_appr (0.50) and MR_appr (0.10) are approved, and
+-- MC (0.40) is active but in the cancelled project PC: 0.30; 0.30 > 1 is false.
+select results_eq(
+  $$ select open_total, over_allocated from public.employee_time_share_totals
+     where employee_id = '00000000-0000-4000-8000-000000000731' $$,
+  $$ values (0.30::numeric, false) $$,
+  'SA selecting employee_time_share_totals for E1 excludes the engagement in cancelled PC: 0.30'
+);
 select isnt_empty(
   $$ select milestone_id from public.milestone_payout_summary('00000000-0000-4000-8000-000000000722') $$,
   'SA calling milestone_payout_summary(MA_draft) gets rows'
@@ -1270,6 +1286,14 @@ select is(
    where employee_id in ('00000000-0000-4000-8000-000000000731', '00000000-0000-4000-8000-000000000732')),
   2,
   'AD selecting employee_time_share_totals sees A''s employees E1 and E2'
+);
+-- E1's open time share: MA_draft 0.30 only. MA_appr (0.50) and MR_appr (0.10) are approved, and
+-- MC (0.40) is active but in the cancelled project PC: 0.30; 0.30 > 1 is false.
+select results_eq(
+  $$ select open_total, over_allocated from public.employee_time_share_totals
+     where employee_id = '00000000-0000-4000-8000-000000000731' $$,
+  $$ values (0.30::numeric, false) $$,
+  'AD selecting employee_time_share_totals for E1 excludes the engagement in cancelled PC: 0.30'
 );
 select isnt_empty(
   $$ select milestone_id from public.milestone_payout_summary('00000000-0000-4000-8000-000000000722') $$,

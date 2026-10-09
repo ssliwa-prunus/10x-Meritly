@@ -6,7 +6,9 @@
 --   #3  payout ceilings and boundary cases (Σ bonus <= payout pool <= target pool, exact flooring)
 --   #4  approval freeze                      (Draft follows a config edit, Approved keeps its
 --                                             snapshot, live RPCs refuse Approved with MR015)
---   #7  supervisor flags                     (appended by a later phase)
+--   #7  supervisor flags                     (budget exposure and time share at their strict->
+--                                             boundaries; closed milestones and closed projects
+--                                             leave the time-share total)
 --
 -- Isolation model: same as profiles_rls.test.sql. Runs against the live local database without
 -- a reset, creates its own fixtures in the reserved UUID range 00000000-0000-4000-8000-0000000008xx
@@ -34,17 +36,27 @@
 --                #4: ...0804 employee account of F1 (linked, activated)
 --                ...0805-...0809 free for later sections
 --   projects     ...0810-...0819   #3: ...0811 SP's (active)   #4: ...0812 SP's (active)
+--                                  #7: ...0813 P_b   ...0814 P_c   ...0815 P_t   ...0816 P_tc
+--                                      ...0817 P_tk (all SP's)   ...0818 P_q (SQ's)
+--                                      ...0819 free for later sections
 --   milestones   ...0820-...0829   #3: ...0821-...0826 (one per case, all in ...0811)
 --                                  #4: ...0827 A (approved)   ...0828 B (Draft)   (both in ...0812)
+--                ...08b0-...08bf   #7: ...08b1-...08b5 budget milestones (listed in the #7 header)
+--                ...08c0-...08cf   #7: ...08c1-...08c6 time-share milestones (listed in the #7 header)
 --   employees    ...0830-...0839   #3: ...0831-...0837 S1-S7 (Standard 1.00)
 --                                      ...0838 Hi (Max 3.00)   ...0839 Lo (Min 0.01)   (all SP's)
 --                ...08a0-...08af   #4: ...08a1 F1 (Standard, linked to ...0804, activated)
 --                                      ...08a2 F2 (Standard)   (both SP's)
+--                ...08d0-...08df   #7: ...08d1-...08d4 T1-T4   ...08d5 B1 (all Standard; T4 starts as
+--                                      SQ's and moves to SP, the rest are SP's)
 --   engagements  ...0840-...0849   #4: ...0840-...0843 (listed in the #4 header);
---                                      ...0844-...0849 free for later sections
+--                                  #7: ...0844-...0849 (listed in the #7 header)
 --   job roles    ...0850-...0859   #3: ...0851 Standard 1.00   ...0852 Max 3.00   ...0853 Min 0.01
 --   engagements  ...0860-...0899   #3: ...0860-...0881 (listed per milestone below);
---                                      ...0882-...0899 free for later sections
+--                                  #7: ...0882-...0886 (listed in the #7 header);
+--                                      ...0887-...0899 free for later sections
+--   free         users ...0805-...0809; hex ids ...08a3-...08af, ...08b6-...08bf, ...08c7-...08cf,
+--                ...08d6-...08ff
 --
 -- Run with: npx supabase test db
 
@@ -52,7 +64,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(36);
+select plan(49);
 
 -- ---------------------------------------------------------------------------
 -- Shared fixtures (as the table owner; auth.uid() is null, so supervisor_id is explicit)
@@ -662,7 +674,262 @@ reset role;
 set local request.jwt.claims = '{}';
 
 -- ===========================================================================
--- End of #4. Later sections (#7) go here, each setting bonus_settings as the owner at its top.
+-- #7 Supervisor flags at their strict-> boundaries
+--
+-- Config C1 again (set here as the owner; #4 left C2 active): KPI weights 0.25 each,
+-- multiplier_min 0.50, multiplier_max 2.00, rating factors r1 0.01, r2 0.50, r3 1.00, r4 1.50,
+-- r5 3.00. So the #3 "Single employee" oracle applies to M1 below: M 1.25, pool 6250.00.
+--
+-- Budget exposure (project_budget_exposure): reserved_total = Σ over non-cancelled milestones of
+-- (approved ? stored payout_pool : target_pool); remaining = total_budget - reserved_total;
+-- over_budget = reserved_total > total_budget. Project status is ignored.
+--   ...0813 P_b  total_budget 15000.00
+--     ...08b1 M1  active, target 10000.00, scores 50/50/50/50, ...0844 B1 0.50 r3 -> approved below
+--     ...08b2 M2  active (Draft), target 8750.00
+--   ...0814 P_c  total_budget 5000.00 (set to 'completed' below)
+--     ...08b3 completed 3000.00   ...08b4 cancelled 9000.00   ...08b5 planned 2000.01
+--
+-- Time share (employee_time_share_totals): open_total = Σ time_share over engagements whose
+-- milestone is not completed/cancelled/approved and (after 20261009130000) whose project is not
+-- completed/cancelled; over_allocated = open_total > 1. Employees T1-T4 are fresh (Standard 1.00,
+-- all SP's in the end), so their totals depend only on these engagements.
+--   ...0815 P_t  (SP, active)     ...08c1 active   ...08c2 planned   ...08c3 active -> cancelled below
+--   ...0816 P_tc (SP, active -> cancelled below)   ...08c4 active
+--   ...0817 P_tk (SP, active -> completed below)   ...08c5 active
+--   ...0818 P_q  (SQ, active)     ...08c6 active
+--   engagements (all rating 3):
+--     T1 ...08d1: ...0845 @08c1 0.50   ...0846 @08c2 0.50
+--     T2 ...08d2: ...0847 @08c2 0.60   ...0848 @08c1 0.41   ...0849 @08c3 0.30 (added, then cancelled)
+--     T3 ...08d3: ...0882 @08c1 0.60   ...0883 @08c4 0.50   ...0884 @08c5 0.50
+--     T4 ...08d4: ...0886 @08c6 0.60 (SQ's milestone)   ...0885 @08c1 0.60 (SP's milestone)
+--   T4 is built like employees_rls.test.sql builds EX: created as SQ's, engaged on SQ's ...08c6,
+--   ...08c6 closed while T4 moves to SP (MR008 only counts open milestones), ...08c6 reopened, then
+--   engaged on SP's ...08c1 (MR011: employee and project now share the owner SP).
+-- ===========================================================================
+update public.bonus_settings
+set
+  kpi_weight_schedule = 0.25,
+  kpi_weight_budget = 0.25,
+  kpi_weight_quality = 0.25,
+  kpi_weight_risk = 0.25,
+  multiplier_min = 0.50,
+  multiplier_max = 2.00,
+  rating_factor_1 = 0.01,
+  rating_factor_2 = 0.50,
+  rating_factor_3 = 1.00,
+  rating_factor_4 = 1.50,
+  rating_factor_5 = 3.00
+where id;
+
+insert into public.projects (id, name, start_date, end_date, status, total_budget, supervisor_id)
+values
+  ('00000000-0000-4000-8000-000000000813', 'pgTAP PC Project Budget Approval', '2026-01-01', '2026-12-31', 'active', 15000.00, '00000000-0000-4000-8000-000000000801'),
+  ('00000000-0000-4000-8000-000000000814', 'pgTAP PC Project Budget Mixed', '2026-01-01', '2026-12-31', 'active', 5000.00, '00000000-0000-4000-8000-000000000801'),
+  ('00000000-0000-4000-8000-000000000815', 'pgTAP PC Project Time Open', '2026-01-01', '2026-12-31', 'active', 100000.00, '00000000-0000-4000-8000-000000000801'),
+  ('00000000-0000-4000-8000-000000000816', 'pgTAP PC Project Time Cancelled', '2026-01-01', '2026-12-31', 'active', 100000.00, '00000000-0000-4000-8000-000000000801'),
+  ('00000000-0000-4000-8000-000000000817', 'pgTAP PC Project Time Completed', '2026-01-01', '2026-12-31', 'active', 100000.00, '00000000-0000-4000-8000-000000000801'),
+  ('00000000-0000-4000-8000-000000000818', 'pgTAP PC Project Time SQ', '2026-01-01', '2026-12-31', 'active', 100000.00, '00000000-0000-4000-8000-000000000803');
+
+insert into public.milestones (
+  id, project_id, name, start_date, end_date, status, target_pool,
+  kpi_schedule, kpi_budget, kpi_quality, kpi_risk
+)
+values
+  ('00000000-0000-4000-8000-0000000008b1', '00000000-0000-4000-8000-000000000813', 'pgTAP PC Budget M1', '2026-01-01', '2026-03-31', 'active', 10000.00, 50, 50, 50, 50),
+  ('00000000-0000-4000-8000-0000000008b2', '00000000-0000-4000-8000-000000000813', 'pgTAP PC Budget M2', '2026-04-01', '2026-06-30', 'active', 8750.00, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008b3', '00000000-0000-4000-8000-000000000814', 'pgTAP PC Budget completed', '2026-01-01', '2026-03-31', 'completed', 3000.00, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008b4', '00000000-0000-4000-8000-000000000814', 'pgTAP PC Budget cancelled', '2026-04-01', '2026-06-30', 'cancelled', 9000.00, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008b5', '00000000-0000-4000-8000-000000000814', 'pgTAP PC Budget planned', '2026-07-01', '2026-09-30', 'planned', 2000.01, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008c1', '00000000-0000-4000-8000-000000000815', 'pgTAP PC Time active', '2026-01-01', '2026-03-31', 'active', 1000.00, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008c2', '00000000-0000-4000-8000-000000000815', 'pgTAP PC Time planned', '2026-04-01', '2026-06-30', 'planned', 1000.00, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008c3', '00000000-0000-4000-8000-000000000815', 'pgTAP PC Time to cancel', '2026-07-01', '2026-09-30', 'active', 1000.00, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008c4', '00000000-0000-4000-8000-000000000816', 'pgTAP PC Time in cancelled project', '2026-01-01', '2026-03-31', 'active', 1000.00, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008c5', '00000000-0000-4000-8000-000000000817', 'pgTAP PC Time in completed project', '2026-01-01', '2026-03-31', 'active', 1000.00, null, null, null, null),
+  ('00000000-0000-4000-8000-0000000008c6', '00000000-0000-4000-8000-000000000818', 'pgTAP PC Time SQ', '2026-01-01', '2026-03-31', 'active', 1000.00, null, null, null, null);
+
+insert into public.employees (id, supervisor_id, full_name, email, job_role_id)
+values
+  ('00000000-0000-4000-8000-0000000008d1', '00000000-0000-4000-8000-000000000801', 'pgTAP PC T1', 'pc-t1@pgtap.test', '00000000-0000-4000-8000-000000000851'),
+  ('00000000-0000-4000-8000-0000000008d2', '00000000-0000-4000-8000-000000000801', 'pgTAP PC T2', 'pc-t2@pgtap.test', '00000000-0000-4000-8000-000000000851'),
+  ('00000000-0000-4000-8000-0000000008d3', '00000000-0000-4000-8000-000000000801', 'pgTAP PC T3', 'pc-t3@pgtap.test', '00000000-0000-4000-8000-000000000851'),
+  ('00000000-0000-4000-8000-0000000008d4', '00000000-0000-4000-8000-000000000803', 'pgTAP PC T4', 'pc-t4@pgtap.test', '00000000-0000-4000-8000-000000000851'),
+  ('00000000-0000-4000-8000-0000000008d5', '00000000-0000-4000-8000-000000000801', 'pgTAP PC B1', 'pc-b1@pgtap.test', '00000000-0000-4000-8000-000000000851');
+
+insert into public.milestone_engagements (id, milestone_id, employee_id, time_share, rating)
+values
+  -- M1: the "Single employee" inputs (one Standard engagement, 0.50, rating 3)
+  ('00000000-0000-4000-8000-000000000844', '00000000-0000-4000-8000-0000000008b1', '00000000-0000-4000-8000-0000000008d5', 0.50, 3),
+  -- T1
+  ('00000000-0000-4000-8000-000000000845', '00000000-0000-4000-8000-0000000008c1', '00000000-0000-4000-8000-0000000008d1', 0.50, 3),
+  ('00000000-0000-4000-8000-000000000846', '00000000-0000-4000-8000-0000000008c2', '00000000-0000-4000-8000-0000000008d1', 0.50, 3),
+  -- T2 (the ...08c3 engagement ...0849 is added later)
+  ('00000000-0000-4000-8000-000000000847', '00000000-0000-4000-8000-0000000008c2', '00000000-0000-4000-8000-0000000008d2', 0.60, 3),
+  ('00000000-0000-4000-8000-000000000848', '00000000-0000-4000-8000-0000000008c1', '00000000-0000-4000-8000-0000000008d2', 0.41, 3),
+  -- T3
+  ('00000000-0000-4000-8000-000000000882', '00000000-0000-4000-8000-0000000008c1', '00000000-0000-4000-8000-0000000008d3', 0.60, 3),
+  ('00000000-0000-4000-8000-000000000883', '00000000-0000-4000-8000-0000000008c4', '00000000-0000-4000-8000-0000000008d3', 0.50, 3),
+  ('00000000-0000-4000-8000-000000000884', '00000000-0000-4000-8000-0000000008c5', '00000000-0000-4000-8000-0000000008d3', 0.50, 3),
+  -- T4 while still SQ's: on SQ's milestone
+  ('00000000-0000-4000-8000-000000000886', '00000000-0000-4000-8000-0000000008c6', '00000000-0000-4000-8000-0000000008d4', 0.60, 3);
+
+-- T4 moves from SQ to SP: SQ's milestone is closed during the move, then reopened.
+update public.milestones set status = 'completed' where id = '00000000-0000-4000-8000-0000000008c6';
+update public.employees set supervisor_id = '00000000-0000-4000-8000-000000000801'
+where id = '00000000-0000-4000-8000-0000000008d4';
+update public.milestones set status = 'active' where id = '00000000-0000-4000-8000-0000000008c6';
+
+insert into public.milestone_engagements (id, milestone_id, employee_id, time_share, rating)
+values ('00000000-0000-4000-8000-000000000885', '00000000-0000-4000-8000-0000000008c1', '00000000-0000-4000-8000-0000000008d4', 0.60, 3);
+
+-- ---------------------------------------------------------------------------
+-- #7 Budget exposure, as SP
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000801"}';
+
+-- P_b before approval: M1 and M2 both reserve their target.
+--   reserved = 10000.00 + 8750.00 = 18750.00; remaining = 15000.00 - 18750.00 = -3750.00;
+--   18750.00 > 15000.00 -> over_budget true
+select results_eq(
+  $$ select total_budget, reserved_total, remaining, over_budget
+     from public.project_budget_exposure where project_id = '00000000-0000-4000-8000-000000000813' $$,
+  $$ values (15000.00::numeric, 18750.00::numeric, -3750.00::numeric, true) $$,
+  'P_b before approval: reserved 18750.00 > budget 15000.00, over_budget true'
+);
+select lives_ok(
+  $$ select public.approve_milestone('00000000-0000-4000-8000-0000000008b1') $$,
+  'SP approves P_b''s M1 under C1'
+);
+-- P_b after approving M1: M1 reserves its stored payout pool, M2 still its target.
+--   M1 pool (#3 "Single employee" under C1) = floor(10000.00 x 1.25 / 2.00) = 6250.00
+--   reserved = 6250.00 + 8750.00 = 15000.00; remaining = 15000.00 - 15000.00 = 0.00;
+--   15000.00 > 15000.00 is false -> over_budget false (equality is not over)
+select results_eq(
+  $$ select total_budget, reserved_total, remaining, over_budget
+     from public.project_budget_exposure where project_id = '00000000-0000-4000-8000-000000000813' $$,
+  $$ values (15000.00::numeric, 15000.00::numeric, 0.00::numeric, false) $$,
+  'P_b after approving M1: reserved 15000.00 = budget, remaining 0.00, over_budget false'
+);
+-- P_c: completed reserves its target, cancelled reserves nothing, planned reserves its target.
+--   reserved = 3000.00 + 2000.01 = 5000.01; remaining = 5000.00 - 5000.01 = -0.01;
+--   5000.01 > 5000.00 -> over_budget true (one grosz over)
+select results_eq(
+  $$ select total_budget, reserved_total, remaining, over_budget
+     from public.project_budget_exposure where project_id = '00000000-0000-4000-8000-000000000814' $$,
+  $$ values (5000.00::numeric, 5000.01::numeric, -0.01::numeric, true) $$,
+  'P_c: completed 3000.00 + planned 2000.01 reserved, cancelled ignored; one grosz over is flagged'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+update public.projects set status = 'completed' where id = '00000000-0000-4000-8000-000000000814';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000801"}';
+
+-- P_c after the project is completed: project status is ignored, so the same figures
+--   (reserved 3000.00 + 2000.01 = 5000.01, remaining -0.01, over_budget true).
+select results_eq(
+  $$ select total_budget, reserved_total, remaining, over_budget
+     from public.project_budget_exposure where project_id = '00000000-0000-4000-8000-000000000814' $$,
+  $$ values (5000.00::numeric, 5000.01::numeric, -0.01::numeric, true) $$,
+  'P_c after the project is completed still shows its exposure: reserved 5000.01, over_budget true'
+);
+
+-- ---------------------------------------------------------------------------
+-- #7 Time share, as SP
+-- ---------------------------------------------------------------------------
+-- T1: 0.50 (...08c1 active) + 0.50 (...08c2 planned) = 1.00; 1.00 > 1 is false.
+select results_eq(
+  $$ select open_total, over_allocated
+     from public.employee_time_share_totals where employee_id = '00000000-0000-4000-8000-0000000008d1' $$,
+  $$ values (1.00::numeric, false) $$,
+  'T1 at exactly 100% (0.50 + 0.50) is not flagged'
+);
+-- T2: 0.60 (...08c2 planned) + 0.41 (...08c1 active) = 1.01; 1.01 > 1 is true.
+select results_eq(
+  $$ select open_total, over_allocated
+     from public.employee_time_share_totals where employee_id = '00000000-0000-4000-8000-0000000008d2' $$,
+  $$ values (1.01::numeric, true) $$,
+  'T2 just over 100% (0.60 planned + 0.41 active = 1.01) is flagged'
+);
+
+-- T2 gets 0.30 on ...08c3 while it is open, then ...08c3 is cancelled.
+reset role;
+set local request.jwt.claims = '{}';
+insert into public.milestone_engagements (id, milestone_id, employee_id, time_share, rating)
+values ('00000000-0000-4000-8000-000000000849', '00000000-0000-4000-8000-0000000008c3', '00000000-0000-4000-8000-0000000008d2', 0.30, 3);
+update public.milestones set status = 'cancelled' where id = '00000000-0000-4000-8000-0000000008c3';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000801"}';
+
+-- T2: the cancelled ...08c3 (0.30) is excluded, so still 0.60 + 0.41 = 1.01, flagged.
+select results_eq(
+  $$ select open_total, over_allocated
+     from public.employee_time_share_totals where employee_id = '00000000-0000-4000-8000-0000000008d2' $$,
+  $$ values (1.01::numeric, true) $$,
+  'T2 with an extra 0.30 on a cancelled milestone stays at 1.01 (closed milestone excluded)'
+);
+
+-- T3 while all three projects are open: 0.60 + 0.50 + 0.50 = 1.60; flagged.
+select results_eq(
+  $$ select open_total, over_allocated
+     from public.employee_time_share_totals where employee_id = '00000000-0000-4000-8000-0000000008d3' $$,
+  $$ values (1.60::numeric, true) $$,
+  'T3 with all projects open: 0.60 + 0.50 + 0.50 = 1.60, flagged'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+update public.projects set status = 'cancelled' where id = '00000000-0000-4000-8000-000000000816';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000801"}';
+
+-- T3 after P_tc is cancelled: its active ...08c4 (0.50) no longer counts: 0.60 + 0.50 = 1.10; flagged.
+select results_eq(
+  $$ select open_total, over_allocated
+     from public.employee_time_share_totals where employee_id = '00000000-0000-4000-8000-0000000008d3' $$,
+  $$ values (1.10::numeric, true) $$,
+  'T3 after one project is cancelled: its active milestone is excluded, 0.60 + 0.50 = 1.10'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+update public.projects set status = 'completed' where id = '00000000-0000-4000-8000-000000000817';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000801"}';
+
+-- T3 after P_tk is completed too: its active ...08c5 (0.50) no longer counts: 0.60; 0.60 > 1 is false.
+select results_eq(
+  $$ select open_total, over_allocated
+     from public.employee_time_share_totals where employee_id = '00000000-0000-4000-8000-0000000008d3' $$,
+  $$ values (0.60::numeric, false) $$,
+  'T3 after the other project is completed too: only the open project counts, 0.60, not flagged'
+);
+
+-- T4 as SP: only SP's ...08c1 (0.60) is visible; SQ's ...08c6 is not. 0.60 > 1 is false.
+-- Accepted tradeoff (research): the flag is per Supervisor, so 0.60 + 0.60 across two flags for neither.
+select results_eq(
+  $$ select open_total, over_allocated
+     from public.employee_time_share_totals where employee_id = '00000000-0000-4000-8000-0000000008d4' $$,
+  $$ values (0.60::numeric, false) $$,
+  'T4 as SP: only SP''s 0.60 counts, not flagged (cross-Supervisor non-flag, accepted)'
+);
+
+-- T4 as AP (Admin sees every engagement): 0.60 (...08c1) + 0.60 (...08c6) = 1.20; flagged.
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000802"}';
+
+select results_eq(
+  $$ select open_total, over_allocated
+     from public.employee_time_share_totals where employee_id = '00000000-0000-4000-8000-0000000008d4' $$,
+  $$ values (1.20::numeric, true) $$,
+  'T4 as AP: 0.60 + 0.60 across both Supervisors = 1.20, flagged'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+
+-- ===========================================================================
+-- End of #7.
 -- ===========================================================================
 
 select * from finish();
