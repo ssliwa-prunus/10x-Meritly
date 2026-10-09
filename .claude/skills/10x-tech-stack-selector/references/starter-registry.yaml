@@ -635,7 +635,38 @@ starters:
     cmd_template: "curl -s https://start.spring.io/starter.tgz -d dependencies=web,devtools -d type=maven-project -d javaVersion=21 -d groupId=com.example -d artifactId={name} | tar -xzf -"
     deployment_defaults: [fly, render, aws-ecs, self-host]
     bootstrapper_confidence: verified
-    alternatives_to_consider: []
+    alternatives_to_consider: [quarkus]
+
+  quarkus:
+    name: "Quarkus"
+    language_family: java
+    description: >
+      Cloud-native Java framework backed by Red Hat. Build-time DI and config, fast startup and low
+      memory (JVM or GraalVM native), live-reload dev mode, and an extension catalog for REST, data,
+      scheduling, messaging, and LLM integrations.
+    fit:
+      - "Java developer who wants a lighter, container-first alternative to Spring Boot"
+      - "API or microservice where startup time and memory footprint matter"
+    gotchas:
+      - "smaller community than Spring Boot; fewer third-party answers for edge cases"
+      - "build-time processing means some reflection-heavy libraries need an extension or native config"
+      - "generated pom.xml uses artifactId `app`; rename it to the project name after scaffolding"
+    agent_friendly:
+      typed: true
+      convention_based: true
+      popular_in_training: true
+      well_documented: true
+    stars: 15919
+    last_updated: 2026-10-03
+    docs_url: "https://quarkus.io/guides/"
+    for: [api, backend, enterprise, microservice]
+    tags: [java, cloud-native, microservice]
+    toolchain:
+      package_manager: maven
+    cmd_template: 'curl -sSfL -o quarkus.zip "https://code.quarkus.io/d?g=com.example&a=app&b=MAVEN&j=21&e=rest-jackson" && unzip -q quarkus.zip && rm quarkus.zip && mv app {name}'
+    deployment_defaults: [fly, render, google-cloud-run, self-host]
+    bootstrapper_confidence: first-class
+    alternatives_to_consider: [spring]
 
   # === PHP family ===
 

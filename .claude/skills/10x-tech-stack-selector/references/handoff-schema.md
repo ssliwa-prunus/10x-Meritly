@@ -4,7 +4,7 @@
 
 Two contracts live in this doc:
 
-1. **Frontmatter** — 4 required top-level keys (`starter_id`, `package_manager`, `project_name`, `hints`) plus a fixed `hints` subfield set.
+1. **Frontmatter** — 4 required top-level keys (`starter_id`, `package_manager`, `project_name`, `hints`) plus a fixed `hints` subfield set, plus a `custom_starter` block that is present only when `starter_id` is `custom`.
 2. **Body** — exactly one `## Why this stack` heading with one paragraph (≤ 200 words). Nothing else.
 
 The schema is **language-agnostic**. `package_manager` is an open string drawn from whatever the chosen starter's `toolchain.package_manager` field prescribes. `hints.deployment_target` is starter-prescribed (whatever appears in the card's `deployment_defaults` array).
@@ -15,10 +15,13 @@ Rich rationale stays in conversation. The body paragraph is a one-paragraph summ
 
 ```yaml
 ---
-starter_id: <string>            # required; key from references/starter-registry.yaml
-package_manager: <string>       # optional; open string per chosen card; may be omitted entirely
-project_name: <string>          # required; kebab-case
-hints:                          # required object; subfields below
+starter_id: <string> # required; key from references/starter-registry.yaml, or `custom`
+custom_starter: # required when starter_id is `custom`; absent otherwise
+  name: <string>
+  docs_url: <string>
+package_manager: <string> # optional; open string per chosen card; may be omitted entirely
+project_name: <string> # required; kebab-case
+hints: # required object; subfields below
   language_family: <enum>
   team_size: <enum>
   deployment_target: <string>
@@ -44,6 +47,19 @@ The key from `references/starter-registry.yaml` `starters:` map. The validator (
 
 Examples: `10x-astro-starter`, `next`, `t3`, `fastapi`, `django`, `rails`, `spring`, `laravel`, `go`, `rust`, `expo`, `flutter`, `dotnet`.
 
+`custom` is a reserved value (no registry card may use it). It means the user picked a framework the registry does not carry; the `custom_starter` block names it. See `decision-flow.md` § Off-registry framework.
+
+### `custom_starter` (object, required when `starter_id: custom`)
+
+Replaces the registry card for an off-registry framework. Two subfields:
+
+- `name` — the framework's canonical name (e.g., `Micronaut`).
+- `docs_url` — the official documentation URL. Bootstrapper uses it to find the framework's official project generator and for the recency check.
+
+No `cmd_template` is recorded: tech-stack-selector cannot verify one, so bootstrapper resolves the scaffold command at run time and shows it to the user before running it. When `starter_id` is `custom`, `hints.bootstrapper_confidence` is always `best-effort`.
+
+Omit the block entirely for registry starters.
+
 ### `package_manager` (string, optional — may be omitted)
 
 Open string. Whatever the chosen starter's `toolchain.package_manager` prescribes. Common values include:
@@ -60,7 +76,7 @@ Open string. Whatever the chosen starter's `toolchain.package_manager` prescribe
 
 The field MAY be omitted from frontmatter for ecosystems where there's no external choice — Go is the canonical example. When omitted, bootstrapper uses the chosen card's default tooling without prompting.
 
-Do NOT add ecosystem-incompatible values here. The value must match the chosen starter's `toolchain.package_manager`. If the starter card prescribes `npm` and the user wanted `pnpm`, the override happens in conversation rationale (not in this field) — the file always reflects the card's prescribed value, since bootstrapper uses this field to invoke the right CLI.
+Do NOT add ecosystem-incompatible values here. The value must match the chosen starter's `toolchain.package_manager` (for `starter_id: custom`, the framework's standard build tool). If the starter card prescribes `npm` and the user wanted `pnpm`, the override happens in conversation rationale (not in this field) — the file always reflects the card's prescribed value, since bootstrapper uses this field to invoke the right CLI.
 
 ### `project_name` (string, required)
 
@@ -88,7 +104,7 @@ Standard path skips Q2; in that case, default to `solo` (the recommended-default
 
 ### `deployment_target`
 
-Open string drawn from the chosen starter's `deployment_defaults` array. Bootstrapper consumes this to decide deployment-specific scaffolding (e.g., adding `wrangler.toml` for Cloudflare, a `Dockerfile` for self-host, `fly.toml` for Fly).
+Open string drawn from the chosen starter's `deployment_defaults` array (for `starter_id: custom`, from the targets offered at Q4). Bootstrapper consumes this to decide deployment-specific scaffolding (e.g., adding `wrangler.toml` for Cloudflare, a `Dockerfile` for self-host, `fly.toml` for Fly).
 
 If the user picked "I don't know yet" at Q4, this lands as the card's first `deployment_default` value (NOT the literal string `unspecified`). Bootstrapper does not need to handle a missing or unspecified value.
 
@@ -110,7 +126,7 @@ Drawn from Q5b. Default `auto-deploy-on-merge`.
 
 Enum: `verified | first-class | best-effort`
 
-Copied verbatim from the chosen card's `bootstrapper_confidence` field. Bootstrapper consumes this to decide how aggressive to be with automatic scaffolding vs. how many manual steps to surface.
+Copied verbatim from the chosen card's `bootstrapper_confidence` field; always `best-effort` for `starter_id: custom`. Bootstrapper consumes this to decide how aggressive to be with automatic scaffolding vs. how many manual steps to surface.
 
 Semantics:
 
@@ -190,7 +206,6 @@ hints:
   has_ai: true
   has_background_jobs: false
 ---
-
 ## Why this stack
 
 A solo learner shipping a recipe-matching MVP in 1 week with auth and an LLM
@@ -231,7 +246,6 @@ hints:
   has_ai: false
   has_background_jobs: true
 ---
-
 ## Why this stack
 
 Small Python team building an ingest API with background jobs. Custom path
@@ -241,6 +255,49 @@ caveat applies — popular within Python training data). Fly is the deployment
 default in the FastAPI card; manual promotion picked because the team gates
 ingest changes through staging. Self-check came back clean across all five
 points, so no Socratic nudge fired.
+```
+
+# Example (off-registry framework)
+
+```yaml
+---
+starter_id: custom
+custom_starter:
+  name: Micronaut
+  docs_url: https://docs.micronaut.io/latest/guide/
+package_manager: gradle
+project_name: notes-assistant
+hints:
+  language_family: java
+  team_size: solo
+  deployment_target: fly
+  ci_provider: github-actions
+  ci_default_flow: auto-deploy-on-merge
+  bootstrapper_confidence: best-effort
+  path_taken: custom
+  quality_override: false
+  self_check_answers:
+    typed: true
+    from_official_starter: true
+    conventions: true
+    docs_current: true
+    can_judge_agent: true
+  has_auth: false
+  has_payments: false
+  has_realtime: false
+  has_ai: true
+  has_background_jobs: true
+---
+
+## Why this stack
+
+Solo Java developer building a small API with an LLM chat and a scheduled
+morning report, who asked for Micronaut by name. Micronaut has no vetted card,
+so it was assessed directly: typed, convention-based, well documented, and
+represented in Java training data, so all four gates pass. Scheduling is
+built in and LLM calls go through the declarative HTTP client. Scaffolding is
+best-effort: bootstrapper will use the official Micronaut generator from the
+docs and confirm the command first.
 ```
 
 # Example (Go, omitted package_manager)
@@ -265,7 +322,6 @@ hints:
   has_ai: false
   has_background_jobs: false
 ---
-
 ## Why this stack
 
 Solo developer building a small edge router in Go. Standard path — `go` is the

@@ -22,9 +22,9 @@ allowed-tools:
 
 This skill is the chain-tail of the bootstrap sequence (`/10x-shape → /10x-prd → /10x-tech-stack-selector → 10x-bootstrapper`). Its single job: turn a written tech-stack hand-off into a scaffolded project in the current working directory, with verification findings logged for the user to review.
 
-The skill is a **registry consumer**, not a registry owner. The starter registry lives in `/10x-tech-stack-selector` (`/skills/10x-tech-stack-selector/references/starter-registry.yaml`); bootstrapper looks up the chosen card by `starter_id`, substitutes its `cmd_template`, and dispatches to the right cwd strategy. A CI validator (`scripts/validate-starter-registry-sync.mjs`) prevents bootstrapper from referencing a `starter_id` absent from that registry.
+The skill is a **registry consumer**, not a registry owner. The starter registry lives in `/10x-tech-stack-selector` (`/skills/10x-tech-stack-selector/references/starter-registry.yaml`); bootstrapper looks up the chosen card by `starter_id`, substitutes its `cmd_template`, and dispatches to the right cwd strategy. The one exception is `starter_id: custom` — a framework the user picked that the registry does not carry. There is no card; bootstrapper resolves the framework's official generator command from `custom_starter.docs_url`, shows it to the user, and runs it only after explicit approval (see `references/scaffold-merge.md` § Custom starter). A CI validator (`scripts/validate-starter-registry-sync.mjs`) prevents bootstrapper from referencing a `starter_id` absent from that registry.
 
-v1 is **chain-mode only**. Without `context/foundation/tech-stack.md`, the skill refuses and redirects to `/10x-tech-stack-selector`. There is no inline mini-handoff, no standalone-mode, no AI-as-bridge fallback for unknown stacks. v1 also does **not** generate `AGENTS.md` / `CLAUDE.md` — that responsibility belongs to a future M1L4 skill.
+v1 is **chain-mode only**. Without `context/foundation/tech-stack.md`, the skill refuses and redirects to `/10x-tech-stack-selector`. There is no inline mini-handoff and no standalone-mode. A stack outside the registry reaches bootstrapper only through the hand-off, as `starter_id: custom`. v1 also does **not** generate `AGENTS.md` / `CLAUDE.md` — that responsibility belongs to a future M1L4 skill.
 
 ## When to trigger
 
@@ -37,13 +37,13 @@ The precondition is a single file on disk: `context/foundation/tech-stack.md`. T
 Skip when:
 
 - The user is mid-implementation on an existing codebase asking to add a single library or replace a single dependency — that is `/10x-frame` territory, not bootstrap.
-- The user names a stack outside the tech-stack-selector registry — redirect to `/10x-tech-stack-selector` (it owns the registry; if a starter is missing, that is where it lands).
+- The user names a stack inline without a matching hand-off — redirect to `/10x-tech-stack-selector`. It records any framework, including ones without a registry card (as `starter_id: custom`).
 - `context/foundation/tech-stack.md` is absent — the precondition check at Step 0 handles this with an explicit redirect.
 
 ## Required inputs
 
 1. `context/foundation/tech-stack.md` — the hand-off written by `/10x-tech-stack-selector`. Contract: see `references/handoff-consumer.md` (which pins to `/10x-tech-stack-selector/references/handoff-schema.md` as the authoritative schema).
-2. The chosen card from `/skills/10x-tech-stack-selector/references/starter-registry.yaml`. Resolved by `starter_id` lookup. Carries `cmd_template`, `language_family`, `bootstrapper_confidence`, `toolchain.package_manager`, `deployment_defaults`.
+2. The chosen card from `/skills/10x-tech-stack-selector/references/starter-registry.yaml`. Resolved by `starter_id` lookup. Carries `cmd_template`, `language_family`, `bootstrapper_confidence`, `toolchain.package_manager`, `deployment_defaults`. For `starter_id: custom` there is no card; the hand-off's `custom_starter` block (`name`, `docs_url`) stands in for it.
 3. `references/bootstrapper-config.yaml` — bootstrapper-side per-starter `cwd_strategy` overrides + `language_family → audit_command` lookup. Bundled with the skill.
 4. `references/handoff-consumer.md` — bundled. Loaded at Step 0.
 5. `references/refusal-protocol.md` — bundled. Loaded when any refusal condition trips.
@@ -90,13 +90,13 @@ Bootstrapper requires a tech-stack hand-off at `<handoff-path>`. Run `/10x-tech-
 
 Then STOP. The conversation context is **not** a fallback — even if a stack pick was discussed earlier in chat, the skill demands the file on disk. See `references/refusal-protocol.md` for the full set of refusal conditions and clipboard strings.
 
-**If present**, read it FULLY (no `limit`/`offset`) and proceed. Parse the frontmatter per `references/handoff-consumer.md` and resolve the chosen card by `starter_id` lookup against `/skills/10x-tech-stack-selector/references/starter-registry.yaml`. If the lookup fails, run the registry-drift refusal from `references/refusal-protocol.md` and STOP.
+**If present**, read it FULLY (no `limit`/`offset`) and proceed. Parse the frontmatter per `references/handoff-consumer.md` and resolve the chosen card by `starter_id` lookup against `/skills/10x-tech-stack-selector/references/starter-registry.yaml`. If the lookup fails, run the registry-drift refusal from `references/refusal-protocol.md` and STOP. If `starter_id` is `custom`, skip the lookup and use `custom_starter` instead (the refusal still applies if that block is missing its `name`).
 
 Echo the consumed fields back to the user as a confirm-or-correct summary:
 
 ```
 Hand-off received:
-  Starter:        <starter_id> — <name>
+  Starter:        <starter_id> — <name>   (for custom: "custom — <custom_starter.name>")
   Project name:   <project_name>
   Package manager:<package_manager | "(card default)" if omitted>
   Language:       <hints.language_family>
@@ -109,6 +109,7 @@ Hand-off received:
 Ask one confirmation:
 
 AskUserQuestion:
+
 - question: "Proceed with this hand-off, or correct something first?"
   header: "Hand-off"
   options:
@@ -118,7 +119,7 @@ AskUserQuestion:
     description: "I'll ask which field to override for this run; the file on disk is unchanged."
   - label: "Stop — fix the hand-off first"
     description: "Exit. Re-run /10x-tech-stack-selector to update tech-stack.md, then re-invoke."
-  multiSelect: false
+    multiSelect: false
 
 If "Correct a value": ask which field, capture an override, proceed with the override applied for this session only. Then run the populated-cwd guard from `references/refusal-protocol.md` (warn-and-confirm if cwd already carries a scaffold-shaped fingerprint such as `package.json`, `Cargo.toml`, `Gemfile`, `pyproject.toml`, etc.).
 
@@ -132,6 +133,8 @@ Sequence:
 2. If a package name was derived, run `npm view <package> version` and `npm view <package> time.modified`.
 3. From the chosen card, parse `docs_url`. If it points at `github.com/<owner>/<repo>`, run `gh api repos/<owner>/<repo> --jq '.pushed_at'`.
 4. Compute severity per the thresholds in `pre-scaffold-verification.md` (fresh / aged / stale).
+   For `starter_id: custom`: skip the npm step and run the GitHub check against `custom_starter.docs_url` only if it is a GitHub URL; otherwise log "no recency signal available".
+
 5. Print one summary line in conversation. Prepend a one-line "Heads-up" warning if any signal is stale. Never block — proceed to Step 2 regardless.
 6. Stage the resolved package name (if any), GitHub repo URL (if any), both timestamps, and both severities into the in-memory verification record. Step 4 writes that record to disk.
 
@@ -145,7 +148,7 @@ Read `references/scaffold-merge.md` now. It carries the full mechanic for the th
 
 Sequence:
 
-1. Resolve the `cmd_template` from the chosen card. Substitute `{name}` and `{pm}` per the strategy in scope (see `scaffold-merge.md` § Substitution rules). The `{pm}` fallback is the card's `toolchain.package_manager` if the hand-off omits the field.
+1. Resolve the `cmd_template` from the chosen card. For `starter_id: custom`, resolve it instead per `scaffold-merge.md` § Custom starter — this includes showing the exact command and getting explicit approval before anything runs. Substitute `{name}` and `{pm}` per the strategy in scope (see `scaffold-merge.md` § Substitution rules). The `{pm}` fallback is the card's `toolchain.package_manager` if the hand-off omits the field.
 2. Dispatch on `cwd_strategy` (resolved at Step 1 from `bootstrapper-config.yaml`, defaulting to `subdir-then-move`):
    - **`subdir-then-move`** — run the resolved command with `{name}=.bootstrap-scaffold`. On exit code 0, apply the conflict matrix moving files up into cwd, then delete `.bootstrap-scaffold/`.
    - **`native-cwd`** — run the resolved command with `{name}=.` directly in cwd. No merge step. Pre-flight: list the files the CLI is about to touch, surface them in conversation before exec.
@@ -229,7 +232,7 @@ What the skill does NOT produce in v1:
 
 1. **Hand-off is a precondition, not a fallback.** No inline mini-handoff, no reading conversation history for substitute fields. The file on disk is the contract.
 
-2. **Bootstrapper consumes the registry; it does not own it.** The canonical starter registry lives in `/10x-tech-stack-selector`. Drift between bootstrapper-referenced `starter_id`s and the registry is a CI failure (`scripts/validate-starter-registry-sync.mjs`).
+2. **Bootstrapper consumes the registry; it does not own it.** The canonical starter registry lives in `/10x-tech-stack-selector`. Drift between bootstrapper-referenced `starter_id`s and the registry is a CI failure (`scripts/validate-starter-registry-sync.mjs`). `custom` is reserved and never appears in the registry.
 
 3. **`context/` is always preserved.** The conflict policy is strict: anything under `context/` in cwd is never overwritten by the scaffold. See `references/scaffold-merge.md` for the full conflict matrix (Phase 3).
 
@@ -238,3 +241,5 @@ What the skill does NOT produce in v1:
 5. **v1 does not generate `AGENTS.md` / `CLAUDE.md`.** That work moves to a future M1L4 skill ("Memory Architecture"). v1 surfaces hint values like `bootstrapper_confidence: best-effort` and `quality_override: true` in the conversation summary but takes no compensating action.
 
 6. **Skill-internal labels stay internal.** When speaking to the user, never reference Step numbers (`Step 0`, `Step 2`), strategy names verbatim (`subdir-then-move`, `native-cwd`, `git-clone`) without context, or internal field paths (`hints.deployment_target`). Translate to plain language: "the scaffold step", "your deployment target", "how the CLI scaffolds in your current directory", "by cloning a starter repo".
+
+7. **A custom starter's command is never run unseen.** For `starter_id: custom`, the scaffold command comes from the framework's documentation, not from a vetted card — always print it and wait for explicit approval. If no official generator can be identified, fall back to the manual scaffold path instead of improvising one.
