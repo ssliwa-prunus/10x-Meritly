@@ -281,22 +281,22 @@ Rollback means reverting the commit: `ci.yml` regains its `pull_request` trigger
 
 #### Automated
 
-- [x] 1.1 `ci.yml`'s `ci` job contains an `npm test` step
-- [x] 1.2 Both workflow files pass `npx --yes actionlint` (or, if unavailable on Windows, `gh workflow view` after push lists them without a parse error)
-- [x] 1.3 Local gates the `checks` job runs all pass: `npx astro sync && npm run lint && npm run lint:ui && npx astro check && npm test && npm run build`
-- [ ] 1.4 On the PR that introduces the change, the "PR" workflow reports `checks` and `smoke` green
-- [ ] 1.5 That PR does not trigger the "CI" workflow (`gh run list --workflow CI` shows no `pull_request` run for it)
+- [x] 1.1 `ci.yml`'s `ci` job contains an `npm test` step — f9caa4f
+- [x] 1.2 Both workflow files pass `npx --yes actionlint` (or, if unavailable on Windows, `gh workflow view` after push lists them without a parse error) — f9caa4f
+- [x] 1.3 Local gates the `checks` job runs all pass: `npx astro sync && npm run lint && npm run lint:ui && npx astro check && npm test && npm run build` — f9caa4f
+- [x] 1.4 On the PR that introduces the change, the "PR" workflow reports `checks` and `smoke` green — f9caa4f
+- [x] 1.5 That PR does not trigger the "CI" workflow (`gh run list --workflow CI` shows no `pull_request` run for it) — f9caa4f
 
 #### Manual
 
-- [ ] 1.6 The `smoke` job log shows the Supabase CLI version 2.117.0 (lockfile), not a `setup-cli` download
-- [ ] 1.7 Pushing a second commit to the PR cancels the in-flight run (concurrency)
+- [x] 1.6 The `smoke` job log shows the Supabase CLI version 2.117.0 (lockfile), not a `setup-cli` download — f9caa4f
+- [x] 1.7 Pushing a second commit to the PR cancels the in-flight run (concurrency) — f9caa4f
 
 ### Phase 2: `integration` job (Mailpit email suite)
 
 #### Automated
 
-- [ ] 2.1 `npx --yes actionlint` (or `gh workflow view`) still parses `pr.yml`
+- [x] 2.1 `npx --yes actionlint` (or `gh workflow view`) still parses `pr.yml`
 - [ ] 2.2 On the PR, the "PR" workflow reports `integration` green, and its log shows all 7 cases of `notify-milestone-approved.integration.test.ts` passing
 - [ ] 2.3 `checks` and `smoke` stay green
 
