@@ -10,8 +10,9 @@
 //
 // Request:  POST { "milestone_id": "<uuid>" } with the signed-in user's JWT (verify_jwt = true).
 // Responses:
-//   200 { sent, failed }                 sent/failed message counts (both 0 when nothing is unsent or
-//                                        another call holds the claim)
+//   200 { sent, failed, pending }        sent/failed message counts; pending is 0 unless nothing could
+//                                        be claimed while unsent lines remain (another call, or one that
+//                                        crashed less than CLAIM_TIMEOUT_MS ago, still holds them)
 //   400 { code: "invalid_request" }      body is not { milestone_id: uuid }
 //   403 { code: "forbidden" }            caller is not a Supervisor (Admins are read-only)
 //   404 { code: "not_found" }            milestone not visible to the caller, or not the caller's project
@@ -280,8 +281,22 @@ export default {
     }
     const claimedIds = (claimedRows ?? []).map((row: { id: string }) => row.id);
     if (claimedIds.length === 0) {
-      console.log("notify-milestone-approved: nothing to send", { milestoneId });
-      return reply(200, { sent: 0, failed: 0 });
+      // Nothing claimed: either every line is already sent, or unsent lines are held by another
+      // (or a crashed) call. Count the unsent ones so the caller never mistakes the latter for success.
+      const { count: pending, error: pendingError } = await ctx.supabaseAdmin
+        .from("milestone_result_lines")
+        .select("id", { count: "exact", head: true })
+        .eq("milestone_id", milestoneId)
+        .is("notified_at", null);
+      if (pendingError) {
+        console.error("notify-milestone-approved: counting unsent lines failed", {
+          milestoneId,
+          code: pendingError.code,
+        });
+        return reply(500, { code: "notify_failed" });
+      }
+      console.log("notify-milestone-approved: nothing to send", { milestoneId, pending: pending ?? 0 });
+      return reply(200, { sent: 0, failed: 0, pending: pending ?? 0 });
     }
 
     // Releases a claim so a re-send can retry at once (best effort: a stale claim expires anyway).
@@ -361,6 +376,6 @@ export default {
     const failed = claimedIds.length - sent;
     console.log("notify-milestone-approved: done", { milestoneId, sent, failed });
     if (sent === 0) return reply(stampFailed ? 500 : 502, { code: stampFailed ? "notify_failed" : "send_failed" });
-    return reply(200, { sent, failed });
+    return reply(200, { sent, failed, pending: 0 });
   }),
 };

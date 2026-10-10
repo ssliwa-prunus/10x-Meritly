@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
-import { approvalUrl, notifyMilestoneApproved } from "@/lib/services/approvals";
+import { approvalUrl, emailNotice, notifyMilestoneApproved } from "@/lib/services/approvals";
 import { isMilestoneInProject } from "@/lib/services/engagements";
 import { firstIssueError, projectIdSchema, projectsUrl, projectUrl } from "@/lib/services/projects";
 
@@ -38,11 +38,11 @@ export const POST: APIRoute = async (context) => {
   }
 
   // The form carries no fields, so the body is not read.
-  const { data, error } = await notifyMilestoneApproved(supabase, milestoneId.data);
-  if (error) {
-    return context.redirect(approvalUrl(projectId.data, milestoneId.data, { error }));
+  const notified = await notifyMilestoneApproved(supabase, milestoneId.data);
+  if (notified.error) {
+    return context.redirect(approvalUrl(projectId.data, milestoneId.data, { error: notified.error }));
   }
 
-  const notice = data && data.failed > 0 ? "email_partial" : undefined;
+  const notice = emailNotice(notified);
   return context.redirect(approvalUrl(projectId.data, milestoneId.data, { saved: "notified", notice }));
 };

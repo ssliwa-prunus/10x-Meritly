@@ -3,15 +3,18 @@
 -- Creates one ready-to-use account per access role, plus a second supervisor to reassign
 -- projects to, one sample project with two milestones owned by supervisor@meritly.local, and two
 -- employee records owned by that supervisor (one activated and over-allocated at 110%, one not
--- yet invited). Milestone 1 is KPI-scored (computed bonuses show), Milestone 2 is not. Recreated
+-- yet invited). Milestone 1 is KPI-scored (computed bonuses show), Milestone 2 is not. A second
+-- linked employee and an "Approved Demo Project" with one Approved and one Draft milestone give the
+-- smoke test (scripts/smoke.mjs) a real attacker and victim for its HTTP IDOR checks. Recreated
 -- on every `npx supabase db reset`.
 --
 --   admin@meritly.local        role: admin
---   supervisor@meritly.local   role: supervisor  (owns "Local Demo Project")
+--   supervisor@meritly.local   role: supervisor  (owns "Local Demo Project", "Approved Demo Project")
 --   supervisor2@meritly.local  role: supervisor
 --   employee@meritly.local     role: employee
+--   employee2@meritly.local    role: employee
 --
--- Shared local password for all four: Meritly-Local-Passw0rd!
+-- Shared local password for all five: Meritly-Local-Passw0rd!
 --
 -- Fixed UUIDs use the seed range 00000000-0000-4000-8000-0000000000xx. The pgTAP suites
 -- (supabase/tests) use the disjoint ranges 00000000-0000-4000-8000-0000000001xx, ...02xx,
@@ -56,7 +59,8 @@ from (
     ('00000000-0000-4000-8000-000000000001'::uuid, 'admin@meritly.local', 'Local Admin'),
     ('00000000-0000-4000-8000-000000000002'::uuid, 'supervisor@meritly.local', 'Local Supervisor'),
     ('00000000-0000-4000-8000-000000000003'::uuid, 'employee@meritly.local', 'Local Employee'),
-    ('00000000-0000-4000-8000-000000000004'::uuid, 'supervisor2@meritly.local', 'Local Supervisor 2')
+    ('00000000-0000-4000-8000-000000000004'::uuid, 'supervisor2@meritly.local', 'Local Supervisor 2'),
+    ('00000000-0000-4000-8000-000000000005'::uuid, 'employee2@meritly.local', 'Local Employee 2')
 ) as u (id, email, display_name);
 
 -- Password sign-in requires a matching email identity per user.
@@ -85,7 +89,8 @@ where u.id in (
   '00000000-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   '00000000-0000-4000-8000-000000000003',
-  '00000000-0000-4000-8000-000000000004'
+  '00000000-0000-4000-8000-000000000004',
+  '00000000-0000-4000-8000-000000000005'
 );
 
 -- The signup trigger created every profile as 'employee'; promote admin and supervisors.
@@ -151,3 +156,69 @@ values
 update public.milestones
 set kpi_schedule = 80, kpi_budget = 90, kpi_quality = 85, kpi_risk = 60
 where id = '00000000-0000-4000-8000-000000000021';
+
+-- ---------------------------------------------------------------------------
+-- Approved Demo Project: the HTTP IDOR fixture for scripts/smoke.mjs.
+--
+-- Expected bonuses, derived by hand from the PRD formula (not from the code):
+--   M           = clamp(min + (Σ KPI weight_k × score_k) × 0.01 × (max − min), min, max)
+--   payout_pool = floor(target_pool × M / multiplier_max)
+--   bonus_i     = floor(payout_pool × e_i / Σ e),  e_i = time share × role weight × rating factor
+-- All four KPI scores are 100 and the KPI weights sum to 1 (bonus_settings_kpi_weights_sum), so
+-- Σ weight_k × score_k = 100 and M = min + (max − min) = max, whatever the configured bounds.
+-- The payout pool is then the whole 1000.00 target pool. Both employees have the same job role and
+-- rating, so role weight × rating factor cancels out and the pool splits by time share alone:
+--   Local Employee   (…0031) 0.60 / 1.00 × 1000.00 = 600.00 PLN
+--   Local Employee 2 (…0033) 0.40 / 1.00 × 1000.00 = 400.00 PLN
+-- "Draft Milestone" (…0024) is scored but never approved, so it has no result lines and no
+-- employee may see it on /my-bonuses.
+-- ---------------------------------------------------------------------------
+
+-- ...0033 is linked to the employee2@meritly.local account as if the invite had been accepted.
+insert into public.employees (id, supervisor_id, full_name, email, job_role_id, profile_id, invited_at, activated_at)
+values (
+  '00000000-0000-4000-8000-000000000033',
+  '00000000-0000-4000-8000-000000000002',
+  'Local Employee 2',
+  'employee2@meritly.local',
+  (select jr.id from public.job_roles jr where jr.name = 'Senior'),
+  '00000000-0000-4000-8000-000000000005',
+  now(),
+  now()
+);
+
+insert into public.projects (id, name, start_date, end_date, status, total_budget, supervisor_id)
+values (
+  '00000000-0000-4000-8000-000000000012',
+  'Approved Demo Project',
+  '2026-01-01',
+  '2026-12-31',
+  'active',
+  5000.00,
+  '00000000-0000-4000-8000-000000000002'
+);
+
+insert into public.milestones (id, project_id, name, start_date, end_date, status, target_pool)
+values
+  ('00000000-0000-4000-8000-000000000023', '00000000-0000-4000-8000-000000000012', 'Approved Milestone', '2026-01-01', '2026-03-31', 'active', 1000.00),
+  ('00000000-0000-4000-8000-000000000024', '00000000-0000-4000-8000-000000000012', 'Draft Milestone', '2026-04-01', '2026-06-30', 'active', 1000.00);
+
+insert into public.milestone_engagements (id, milestone_id, employee_id, time_share, rating)
+values
+  ('00000000-0000-4000-8000-000000000043', '00000000-0000-4000-8000-000000000023', '00000000-0000-4000-8000-000000000031', 0.60, 3),
+  ('00000000-0000-4000-8000-000000000044', '00000000-0000-4000-8000-000000000023', '00000000-0000-4000-8000-000000000033', 0.40, 3),
+  ('00000000-0000-4000-8000-000000000045', '00000000-0000-4000-8000-000000000024', '00000000-0000-4000-8000-000000000033', 0.30, 3);
+
+update public.milestones
+set kpi_schedule = 100, kpi_budget = 100, kpi_quality = 100, kpi_risk = 100
+where id in ('00000000-0000-4000-8000-000000000023', '00000000-0000-4000-8000-000000000024');
+
+-- Approve ...0023 the way the app does: approve_milestone checks ownership through auth.uid(), so
+-- it runs as supervisor@meritly.local's JWT. It must come after the KPI scores and engagements,
+-- which it snapshots. Session-level settings (not `set local`), because the seed may not run
+-- inside an explicit transaction; both are reset right after.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated"}', false);
+set role authenticated;
+select public.approve_milestone('00000000-0000-4000-8000-000000000023');
+reset role;
+select set_config('request.jwt.claims', '', false);

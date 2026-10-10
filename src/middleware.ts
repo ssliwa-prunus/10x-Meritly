@@ -1,32 +1,10 @@
 import { defineMiddleware } from "astro:middleware";
-import { safeNext } from "@/lib/safe-next";
+import { decideAccess, matchesRoute, SET_PASSWORD_ROUTES } from "@/lib/route-access";
 import { isInviteSession } from "@/lib/set-password";
 import { createClient } from "@/lib/supabase";
 import type { Profile } from "@/types";
 
-// /auth/confirm stays public: it is how an invited user gets signed in.
-const PROTECTED_ROUTES = [
-  "/dashboard",
-  "/admin",
-  "/api/admin",
-  "/projects",
-  "/api/projects",
-  "/employees",
-  "/api/employees",
-  "/my-bonuses",
-  "/auth/set-password",
-  "/api/auth/set-password",
-];
-const ADMIN_ROUTES = ["/admin", "/api/admin"];
-/** Supervisor/Admin pages (projects, employees); RLS decides which rows each role sees. */
-const PROJECT_ROUTES = ["/projects", "/api/projects", "/employees", "/api/employees"];
-/** Employee-only pages: a Supervisor must not use them as an unfiltered view of the team lines RLS lets them read. */
-const EMPLOYEE_ROUTES = ["/my-bonuses"];
-/** Invite acceptance only: a session from a regular password sign-in cannot set a password here. */
-const SET_PASSWORD_ROUTES = ["/auth/set-password", "/api/auth/set-password"];
-
-const matchesRoute = (pathname: string, routes: string[]) => routes.some((route) => pathname.startsWith(route));
-
+// Route lists and the access decision live in @/lib/route-access (pure, unit-tested).
 export const onRequest = defineMiddleware(async (context, next) => {
   const supabase = createClient(context.request.headers, context.cookies);
 
@@ -58,45 +36,25 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  const { pathname } = context.url;
+  const { pathname, search } = context.url;
+  const decision = decideAccess(pathname, search, {
+    signedIn: context.locals.user !== null,
+    role: context.locals.profile?.role ?? null,
+    profileError: context.locals.profileError,
+  });
 
-  if (matchesRoute(pathname, PROTECTED_ROUTES)) {
-    if (!context.locals.user) {
-      // Come back to the requested page after sign-in; an unsafe target is dropped, not forwarded.
-      // API routes are not pages to land on (most are POST-only), so they get no return target.
-      const target = pathname.startsWith("/api/") ? null : safeNext(pathname + context.url.search);
-      return context.redirect(target ? `/auth/signin?next=${encodeURIComponent(target)}` : "/auth/signin");
-    }
-  }
-
-  if (matchesRoute(pathname, ADMIN_ROUTES)) {
-    if (context.locals.profileError) {
-      return new Response("Service temporarily unavailable", { status: 503 });
-    }
-    if (context.locals.profile?.role !== "admin") {
+  switch (decision.kind) {
+    case "redirect":
+      return context.redirect(decision.location);
+    case "forbidden":
       return new Response("Forbidden", { status: 403 });
-    }
-  }
-
-  if (matchesRoute(pathname, PROJECT_ROUTES)) {
-    if (context.locals.profileError) {
+    case "unavailable":
       return new Response("Service temporarily unavailable", { status: 503 });
-    }
-    const role = context.locals.profile?.role;
-    if (role !== "supervisor" && role !== "admin") {
-      return new Response("Forbidden", { status: 403 });
-    }
+    case "allow":
+      break;
   }
 
-  if (matchesRoute(pathname, EMPLOYEE_ROUTES)) {
-    if (context.locals.profileError) {
-      return new Response("Service temporarily unavailable", { status: 503 });
-    }
-    if (context.locals.profile?.role !== "employee") {
-      return new Response("Forbidden", { status: 403 });
-    }
-  }
-
+  // Invite acceptance only: a session from a regular password sign-in cannot set a password here.
   if (matchesRoute(pathname, SET_PASSWORD_ROUTES)) {
     if (!supabase || !(await isInviteSession(supabase))) {
       return context.redirect("/dashboard");

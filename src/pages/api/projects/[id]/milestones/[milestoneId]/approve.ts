@@ -4,6 +4,7 @@ import {
   approveInputSchema,
   approveMilestone,
   approvalUrl,
+  emailNotice,
   notifyMilestoneApproved,
   parseForm,
 } from "@/lib/services/approvals";
@@ -54,11 +55,6 @@ export const POST: APIRoute = async (context) => {
 
   // Approval has committed; the bonus emails go out afterwards and never undo it. Anything not
   // confirmed by the provider stays unsent and shows as "Emails sent: N of M" with a re-send form.
-  const notified = await notifyMilestoneApproved(supabase, milestoneId.data);
-  const notice = notified.error
-    ? "email_failed"
-    : notified.data && notified.data.failed > 0
-      ? "email_partial"
-      : undefined;
+  const notice = emailNotice(await notifyMilestoneApproved(supabase, milestoneId.data));
   return context.redirect(approvalUrl(projectId.data, milestoneId.data, { saved: "approved", notice }));
 };

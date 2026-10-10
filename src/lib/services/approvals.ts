@@ -51,6 +51,8 @@ export function approvalErrorMessage(code: string): string {
 const APPROVAL_NOTICE_MESSAGES = {
   email_partial: "Some bonus emails could not be sent. Use “Re-send unsent emails” to try again.",
   email_failed: "The bonus emails could not be sent. Use “Re-send unsent emails” to try again.",
+  email_pending:
+    "Bonus emails are still being sent by another request. Check “Emails sent” in a few minutes; if it does not change, use “Re-send unsent emails”.",
 } as const;
 
 export type ApprovalNoticeCode = keyof typeof APPROVAL_NOTICE_MESSAGES;
@@ -90,7 +92,9 @@ export function parseForm<T extends z.ZodType>(
 // ---------------------------------------------------------------------------
 // Redirect target for the approve and notify endpoints. Query params read by the milestone page:
 //   saved=approved | saved=notified      success flash (approved, or unsent emails re-sent)
-//   notice=email_partial | email_failed  with saved: not every bonus email went out
+//   notice=email_partial | email_failed | email_pending
+//                                        with saved: not every bonus email went out (or is still held
+//                                        by another request)
 //   error=<code>&section=approval        catalog code; the approval card shows the error
 // ---------------------------------------------------------------------------
 
@@ -313,6 +317,28 @@ async function functionErrorCode(response: unknown): Promise<string | null> {
 const toCount = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0);
 
 /**
+ * Counts reported by notify-milestone-approved. `pending` counts unsent lines that another (or a
+ * crashed) call still holds, so nothing was sent now but the emails are not all out either.
+ */
+export interface NotifyCounts {
+  sent: number;
+  failed: number;
+  pending: number;
+}
+
+/**
+ * The notice shown after approve or re-send, the single rule for both routes: a failed call, then
+ * unconfirmed emails, then emails held by another request; otherwise no notice.
+ */
+export function emailNotice(result: WriteResult<NotifyCounts>): ApprovalNoticeCode | undefined {
+  if (result.error) return "email_failed";
+  if (!result.data) return undefined;
+  if (result.data.failed > 0) return "email_partial";
+  if (result.data.pending > 0) return "email_pending";
+  return undefined;
+}
+
+/**
  * Emails each engaged employee of an approved milestone their own bonus through the
  * notify-milestone-approved Edge Function. Only unsent lines are sent, so it doubles as the
  * re-send. Called after approve_milestone has committed: a failure never undoes the approval.
@@ -320,7 +346,7 @@ const toCount = (value: unknown): number => (typeof value === "number" && Number
 export async function notifyMilestoneApproved(
   supabase: SupabaseClient,
   milestoneId: string,
-): Promise<WriteResult<{ sent: number; failed: number }>> {
+): Promise<WriteResult<NotifyCounts>> {
   const result = await supabase.functions.invoke("notify-milestone-approved", {
     body: { milestone_id: milestoneId },
   });
@@ -328,7 +354,9 @@ export async function notifyMilestoneApproved(
   if (!error) {
     const body: unknown = result.data;
     const counts = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
-    return { data: { sent: toCount(counts.sent), failed: toCount(counts.failed) } };
+    return {
+      data: { sent: toCount(counts.sent), failed: toCount(counts.failed), pending: toCount(counts.pending) },
+    };
   }
 
   if (error instanceof FunctionsHttpError) {
