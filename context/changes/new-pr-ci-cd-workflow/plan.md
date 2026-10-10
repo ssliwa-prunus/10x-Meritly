@@ -296,25 +296,25 @@ Rollback means reverting the commit: `ci.yml` regains its `pull_request` trigger
 
 #### Automated
 
-- [x] 2.1 `npx --yes actionlint` (or `gh workflow view`) still parses `pr.yml`
-- [ ] 2.2 On the PR, the "PR" workflow reports `integration` green, and its log shows all 7 cases of `notify-milestone-approved.integration.test.ts` passing
-- [ ] 2.3 `checks` and `smoke` stay green
+- [x] 2.1 `npx --yes actionlint` (or `gh workflow view`) still parses `pr.yml` — 18f96c0
+- [x] 2.2 On the PR, the "PR" workflow reports `integration` green, and its log shows all 7 cases of `notify-milestone-approved.integration.test.ts` passing — 18f96c0
+- [x] 2.3 `checks` and `smoke` stay green — 18f96c0
 
 #### Manual
 
-- [ ] 2.4 Prove it can fail: guard removal turns `integration` red on case 3, revert turns it green
-- [ ] 2.5 The `integration` job's wall time keeps the overall PR run within ~5 min
+- [x] 2.4 Prove it can fail: guard removal turns `integration` red on case 3, revert turns it green — 18f96c0
+- [x] 2.5 The `integration` job's wall time keeps the overall PR run within ~5 min — 18f96c0
 
 ### Phase 3: Docs sync
 
 #### Automated
 
-- [ ] 3.1 `npx prettier --check CLAUDE.md context/foundation/test-plan.md` passes
-- [ ] 3.2 `grep -n "PR to master" CLAUDE.md` returns nothing (outdated wording gone)
+- [x] 3.1 `npx prettier --check CLAUDE.md context/foundation/test-plan.md` passes
+- [x] 3.2 `grep -n "PR to master" CLAUDE.md` returns nothing (outdated wording gone)
 
 #### Manual
 
-- [ ] 3.3 Reading `CLAUDE.md` `## CI` and `test-plan.md` §5 alone, a newcomer can tell which gates block a PR
+- [x] 3.3 Reading `CLAUDE.md` `## CI` and `test-plan.md` §5 alone, a newcomer can tell which gates block a PR
 
 ### Phase 4: Branch protection on `master`
 
