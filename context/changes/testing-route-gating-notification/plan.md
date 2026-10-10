@@ -558,31 +558,31 @@ Seed changes affect local and CI databases only.
 
 #### Automated
 
-- [x] 2.1 Seed applies and every pgTAP suite still passes
-- [x] 2.2 Extended smoke passes against a build preview
-- [x] 2.3 Lint and type check pass
+- [x] 2.1 Seed applies and every pgTAP suite still passes — d44fff3
+- [x] 2.2 Extended smoke passes against a build preview — d44fff3
+- [x] 2.3 Lint and type check pass — d44fff3
 
 #### Manual
 
-- [x] 2.4 Prove smoke can fail by removing `"/my-bonuses"` from `EMPLOYEE_ROUTES`
-- [x] 2.5 Prove the IDOR content cell can fail by swapping expected amounts
+- [x] 2.4 Prove smoke can fail by removing `"/my-bonuses"` from `EMPLOYEE_ROUTES` — d44fff3
+- [x] 2.5 Prove the IDOR content cell can fail by swapping expected amounts — d44fff3
 - [ ] 2.6 CI `smoke` job is green on the pushed branch (seed loads in CI)
-- [x] 2.7 Seeded `/my-bonuses` as `employee2@meritly.local` shows one Approved line of 400,00 zł
+- [x] 2.7 Seeded `/my-bonuses` as `employee2@meritly.local` shows one Approved line of 400,00 zł — d44fff3
 
 ### Phase 3: Notification pending fix and Mailpit integration suite (risk #5)
 
 #### Automated
 
-- [ ] 3.1 Unit tests pass, including the new mapping tests
-- [ ] 3.2 Type check and lint pass
-- [ ] 3.3 Integration suite passes against local Supabase, `functions serve` and Mailpit: `npm run test:integration`
-- [ ] 3.4 Scoped mutation run on approvals leaves no surviving mutant in `emailNotice` or the response mapping
+- [x] 3.1 Unit tests pass, including the new mapping tests
+- [x] 3.2 Type check and lint pass
+- [x] 3.3 Integration suite passes against local Supabase, `functions serve` and Mailpit: `npm run test:integration`
+- [x] 3.4 Scoped mutation run on approvals leaves no surviving mutant in `emailNotice` or the response mapping
 
 #### Manual
 
-- [ ] 3.5 Prove the suite can fail (Draft guard and `notified_at` filter removed)
-- [ ] 3.6 Provider down shows the failure notice and 0 of N; re-send delivers after restore
-- [ ] 3.7 Planted claim shows the `email_pending` notice on re-send
+- [x] 3.5 Prove the suite can fail (Draft guard and `notified_at` filter removed)
+- [x] 3.6 Provider down shows the failure notice and 0 of N; re-send delivers after restore
+- [x] 3.7 Planted claim shows the `email_pending` notice on re-send
 
 ### Phase 4: Test-plan backport and cookbook
 

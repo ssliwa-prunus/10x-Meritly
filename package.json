@@ -15,7 +15,8 @@
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
