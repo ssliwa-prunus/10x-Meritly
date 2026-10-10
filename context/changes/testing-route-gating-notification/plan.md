@@ -544,30 +544,30 @@ Seed changes affect local and CI databases only.
 
 #### Automated
 
-- [x] 1.1 Unit tests pass: `npm test`
-- [x] 1.2 Type check and lint pass: `npx astro sync && npx astro check && npm run lint`
-- [x] 1.3 Existing smoke still passes against a running dev or preview server: `npm run smoke`
-- [x] 1.4 Scoped mutation run on the new module and `safeNext` leaves no surviving mutant in `decideAccess` branch logic
+- [x] 1.1 Unit tests pass: `npm test` — 2c7ab13
+- [x] 1.2 Type check and lint pass: `npx astro sync && npx astro check && npm run lint` — 2c7ab13
+- [x] 1.3 Existing smoke still passes against a running dev or preview server: `npm run smoke` — 2c7ab13
+- [x] 1.4 Scoped mutation run on the new module and `safeNext` leaves no surviving mutant in `decideAccess` branch logic — 2c7ab13
 
 #### Manual
 
-- [x] 1.5 Prove the rule can fail with a scratch `src/pages/reports.astro`
-- [x] 1.6 Prove the matrix can fail by dropping `"/api/admin"` from `ADMIN_ROUTES`
+- [x] 1.5 Prove the rule can fail with a scratch `src/pages/reports.astro` — 2c7ab13
+- [x] 1.6 Prove the matrix can fail by dropping `"/api/admin"` from `ADMIN_ROUTES` — 2c7ab13
 
 ### Phase 2: Seed fixture and smoke extension (risk #6 HTTP, risk #1 IDOR)
 
 #### Automated
 
-- [ ] 2.1 Seed applies and every pgTAP suite still passes
-- [ ] 2.2 Extended smoke passes against a build preview
-- [ ] 2.3 Lint and type check pass
+- [x] 2.1 Seed applies and every pgTAP suite still passes
+- [x] 2.2 Extended smoke passes against a build preview
+- [x] 2.3 Lint and type check pass
 
 #### Manual
 
-- [ ] 2.4 Prove smoke can fail by removing `"/my-bonuses"` from `EMPLOYEE_ROUTES`
-- [ ] 2.5 Prove the IDOR content cell can fail by swapping expected amounts
+- [x] 2.4 Prove smoke can fail by removing `"/my-bonuses"` from `EMPLOYEE_ROUTES`
+- [x] 2.5 Prove the IDOR content cell can fail by swapping expected amounts
 - [ ] 2.6 CI `smoke` job is green on the pushed branch (seed loads in CI)
-- [ ] 2.7 Seeded `/my-bonuses` as `employee2@meritly.local` shows one Approved line of 400,00 zł
+- [x] 2.7 Seeded `/my-bonuses` as `employee2@meritly.local` shows one Approved line of 400,00 zł
 
 ### Phase 3: Notification pending fix and Mailpit integration suite (risk #5)
 
