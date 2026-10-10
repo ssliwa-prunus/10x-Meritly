@@ -566,7 +566,7 @@ Seed changes affect local and CI databases only.
 
 - [x] 2.4 Prove smoke can fail by removing `"/my-bonuses"` from `EMPLOYEE_ROUTES` — d44fff3
 - [x] 2.5 Prove the IDOR content cell can fail by swapping expected amounts — d44fff3
-- [ ] 2.6 CI `smoke` job is green on the pushed branch (seed loads in CI)
+- [x] 2.6 CI `smoke` job is green on the pushed branch (seed loads in CI) — d44fff3
 - [x] 2.7 Seeded `/my-bonuses` as `employee2@meritly.local` shows one Approved line of 400,00 zł — d44fff3
 
 ### Phase 3: Notification pending fix and Mailpit integration suite (risk #5)
@@ -588,9 +588,9 @@ Seed changes affect local and CI databases only.
 
 #### Automated
 
-- [x] 4.1 Formatting passes on the edited docs
-- [x] 4.2 No §6.3 or §6.4 placeholders remain
+- [x] 4.1 Formatting passes on the edited docs — 0b09960
+- [x] 4.2 No §6.3 or §6.4 placeholders remain — 0b09960
 
 #### Manual
 
-- [x] 4.3 §6.3 and §6.4 read as a complete "how do I add a test for X" answer
+- [x] 4.3 §6.3 and §6.4 read as a complete "how do I add a test for X" answer — 0b09960

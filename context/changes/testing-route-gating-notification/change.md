@@ -1,7 +1,7 @@
 ---
 change_id: testing-route-gating-notification
 title: Test rollout Phase 3 — route gating, approval notification and HTTP IDOR
-status: implementing
+status: implemented
 created: 2026-10-10
 updated: 2026-10-10
 archived_at: null
