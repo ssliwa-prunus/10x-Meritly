@@ -250,7 +250,6 @@ export default {
     if (!milestone || !milestone.projects || milestone.projects.supervisor_id !== ctx.userClaims?.id) {
       return reply(404, { code: "not_found" });
     }
-    if (milestone.status !== "approved") return reply(409, { code: "not_approved" });
 
     const transport = chooseTransport();
     if (!transport) {
