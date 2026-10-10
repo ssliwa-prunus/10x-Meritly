@@ -145,8 +145,19 @@ const steps = [
       request("/api/admin/job-roles", { as: "employee", method: "POST", form: { name: "Smoke Role", weight: "1" } }),
     { status: 403 },
   ],
-  ["employee 200 on /my-bonuses", () => request("/my-bonuses", { as: "employee" }), { status: 200 }],
+  // Positive control for the employee2 excludes below: OTHER_BONUS renders in exactly this form.
+  [
+    "employee 200 on /my-bonuses",
+    () => request("/my-bonuses", { as: "employee" }),
+    { status: 200, bodyIncludes: [OTHER_BONUS, "Approved Milestone"] },
+  ],
   ["supervisor 200 on /projects", () => request("/projects", { as: "supervisor" }), { status: 200 }],
+  // Positive control for the employee2 excludes below: the Draft milestone's name renders.
+  [
+    "supervisor sees the Draft milestone on its project",
+    () => request(`/projects/${APPROVED_PROJECT}`, { as: "supervisor" }),
+    { status: 200, bodyIncludes: ["Draft Milestone"] },
+  ],
   ["supervisor 403 on /admin", () => request("/admin", { as: "supervisor" }), { status: 403 }],
   ["supervisor 403 on /my-bonuses", () => request("/my-bonuses", { as: "supervisor" }), { status: 403 }],
   ["admin 200 on /admin", () => request("/admin", { as: "admin" }), { status: 200, bodyIncludes: [ADMIN_ONLY_TEXT] }],

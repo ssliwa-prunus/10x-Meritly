@@ -5,6 +5,8 @@ import { safeNext } from "@/lib/safe-next";
 // so it is unit-testable. Every page and endpoint under src/pages must be classified here: either
 // public, or protected with exactly one role decision (route-classification.test.ts enforces it).
 // RLS still decides which rows each role sees; this only gates who may reach a route at all.
+// PUBLIC_ROUTES and ANY_SIGNED_IN_ROUTES are enforced by that test, not by decideAccess: the gate
+// still allows any path it does not list (no deny-by-default).
 // ---------------------------------------------------------------------------
 
 /** Exact paths anyone may reach. /auth/confirm stays public: it is how an invited user gets signed in. */

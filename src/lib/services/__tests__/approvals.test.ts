@@ -91,10 +91,12 @@ describe("notifyMilestoneApproved", () => {
   });
 
   // Every documented error code of the function maps to fixed catalog text the page can show.
+  // Oracle: the function's response contract (S-05 plan, archived; index.ts header) and the app's
+  // rule that permission failures read as not_found, as payouts.ts maps 42501 (no existence leak).
   it.each([
-    [400, "invalid_request", "invalid_id"],
-    [403, "forbidden", "not_found"],
-    [404, "not_found", "not_found"],
+    [400, "invalid_request", "invalid_id"], // the only input is the milestone id
+    [403, "forbidden", "not_found"], // not a Supervisor: permission failure, reported as not found
+    [404, "not_found", "not_found"], // not visible or not the owner
     [409, "not_approved", "not_approved"],
     [500, "email_not_configured", "email_not_configured"],
     [502, "send_failed", "send_failed"],

@@ -17,7 +17,8 @@ import {
 // must be explicitly public, or protected with exactly one role decision.
 
 const PAGES_DIR = join(process.cwd(), "src", "pages");
-const ROUTE_FILE = /\.(astro|ts|md|mdx)$/;
+// Every extension Astro turns into a route, not only the ones used today.
+const ROUTE_FILE = /\.(astro|ts|js|mjs|md|mdx|html)$/;
 
 function pageFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

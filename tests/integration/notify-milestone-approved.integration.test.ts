@@ -42,6 +42,10 @@ const AMOUNT_B = "400,00 zł";
 // Delivery is synchronous inside the function, but allow the inbox a moment before asserting absence.
 const SETTLE_MS = 1500;
 const POLL_TIMEOUT_MS = 10_000;
+// An expired claim is planted with this host's clock, but the function compares it with the edge
+// runtime's clock against CLAIM_TIMEOUT_MS (10 min). A day keeps the plant expired despite any
+// Docker/WSL clock drift; just over 10 min would flake once the clocks drift a minute apart.
+const STALE_CLAIM_AGE_MS = 24 * 60 * 60 * 1000;
 
 const runId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 let fixtureSeq = 0;
@@ -348,7 +352,7 @@ describe("notify-milestone-approved (local Edge Function + Mailpit)", () => {
 
     // A re-send more than CLAIM_TIMEOUT_MS later: the first call's claim stays on the sent lines as
     // history, so age it past the timeout. Only notified_at may keep sent lines from being sent again.
-    await plantClaim(fixture.milestoneId, new Date(Date.now() - 11 * 60 * 1000));
+    await plantClaim(fixture.milestoneId, new Date(Date.now() - STALE_CLAIM_AGE_MS));
     expect(await invoke(supervisor, fixture.milestoneId)).toEqual({
       status: 200,
       body: { sent: 0, failed: 0, pending: 0 },
@@ -380,7 +384,7 @@ describe("notify-milestone-approved (local Edge Function + Mailpit)", () => {
     });
     await expectNoMessages(fixture);
 
-    await plantClaim(fixture.milestoneId, new Date(Date.now() - 11 * 60 * 1000));
+    await plantClaim(fixture.milestoneId, new Date(Date.now() - STALE_CLAIM_AGE_MS));
     expect(await invoke(supervisor, fixture.milestoneId)).toEqual({
       status: 200,
       body: { sent: 2, failed: 0, pending: 0 },
