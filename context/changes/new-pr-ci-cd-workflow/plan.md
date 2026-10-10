@@ -320,9 +320,9 @@ Rollback means reverting the commit: `ci.yml` regains its `pull_request` trigger
 
 #### Automated
 
-- [x] 4.1 `gh api …/branches/master/protection` required contexts are exactly `checks`, `smoke`, `integration`
+- [x] 4.1 `gh api …/branches/master/protection` required contexts are exactly `checks`, `smoke`, `integration` — b462b5b
 
 #### Manual
 
-- [x] 4.2 On the open PR into `master`, the merge box lists `checks`, `smoke` and `integration` as required
-- [x] 4.3 Merging the change's PR into `master` succeeds with all three green, and the follow-up push run of "CI" on `master` is green
+- [x] 4.2 On the open PR into `master`, the merge box lists `checks`, `smoke` and `integration` as required — b462b5b
+- [x] 4.3 Merging the change's PR into `master` succeeds with all three green, and the follow-up push run of "CI" on `master` is green — b462b5b
