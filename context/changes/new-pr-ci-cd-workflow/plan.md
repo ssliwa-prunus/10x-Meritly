@@ -309,20 +309,20 @@ Rollback means reverting the commit: `ci.yml` regains its `pull_request` trigger
 
 #### Automated
 
-- [x] 3.1 `npx prettier --check CLAUDE.md context/foundation/test-plan.md` passes
-- [x] 3.2 `grep -n "PR to master" CLAUDE.md` returns nothing (outdated wording gone)
+- [x] 3.1 `npx prettier --check CLAUDE.md context/foundation/test-plan.md` passes — 9a59f90
+- [x] 3.2 `grep -n "PR to master" CLAUDE.md` returns nothing (outdated wording gone) — 9a59f90
 
 #### Manual
 
-- [x] 3.3 Reading `CLAUDE.md` `## CI` and `test-plan.md` §5 alone, a newcomer can tell which gates block a PR
+- [x] 3.3 Reading `CLAUDE.md` `## CI` and `test-plan.md` §5 alone, a newcomer can tell which gates block a PR — 9a59f90
 
 ### Phase 4: Branch protection on `master`
 
 #### Automated
 
-- [ ] 4.1 `gh api …/branches/master/protection` required contexts are exactly `checks`, `smoke`, `integration`
+- [x] 4.1 `gh api …/branches/master/protection` required contexts are exactly `checks`, `smoke`, `integration`
 
 #### Manual
 
-- [ ] 4.2 On the open PR into `master`, the merge box lists `checks`, `smoke` and `integration` as required
-- [ ] 4.3 Merging the change's PR into `master` succeeds with all three green, and the follow-up push run of "CI" on `master` is green
+- [x] 4.2 On the open PR into `master`, the merge box lists `checks`, `smoke` and `integration` as required
+- [x] 4.3 Merging the change's PR into `master` succeeds with all three green, and the follow-up push run of "CI" on `master` is green
