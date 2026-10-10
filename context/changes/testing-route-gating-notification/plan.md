@@ -573,24 +573,24 @@ Seed changes affect local and CI databases only.
 
 #### Automated
 
-- [x] 3.1 Unit tests pass, including the new mapping tests
-- [x] 3.2 Type check and lint pass
-- [x] 3.3 Integration suite passes against local Supabase, `functions serve` and Mailpit: `npm run test:integration`
-- [x] 3.4 Scoped mutation run on approvals leaves no surviving mutant in `emailNotice` or the response mapping
+- [x] 3.1 Unit tests pass, including the new mapping tests — 75efbcd
+- [x] 3.2 Type check and lint pass — 75efbcd
+- [x] 3.3 Integration suite passes against local Supabase, `functions serve` and Mailpit: `npm run test:integration` — 75efbcd
+- [x] 3.4 Scoped mutation run on approvals leaves no surviving mutant in `emailNotice` or the response mapping — 75efbcd
 
 #### Manual
 
-- [x] 3.5 Prove the suite can fail (Draft guard and `notified_at` filter removed)
-- [x] 3.6 Provider down shows the failure notice and 0 of N; re-send delivers after restore
-- [x] 3.7 Planted claim shows the `email_pending` notice on re-send
+- [x] 3.5 Prove the suite can fail (Draft guard and `notified_at` filter removed) — 75efbcd
+- [x] 3.6 Provider down shows the failure notice and 0 of N; re-send delivers after restore — 75efbcd
+- [x] 3.7 Planted claim shows the `email_pending` notice on re-send — 75efbcd
 
 ### Phase 4: Test-plan backport and cookbook
 
 #### Automated
 
-- [ ] 4.1 Formatting passes on the edited docs
-- [ ] 4.2 No §6.3 or §6.4 placeholders remain
+- [x] 4.1 Formatting passes on the edited docs
+- [x] 4.2 No §6.3 or §6.4 placeholders remain
 
 #### Manual
 
-- [ ] 4.3 §6.3 and §6.4 read as a complete "how do I add a test for X" answer
+- [x] 4.3 §6.3 and §6.4 read as a complete "how do I add a test for X" answer
