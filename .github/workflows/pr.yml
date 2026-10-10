@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -33,8 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -56,5 +56,54 @@ jobs:
           npm run preview -- --port 4321 &
           for _ in $(seq 1 60); do curl -sf -o /dev/null http://localhost:4321/ && break; sleep 1; done
           BASE_URL=http://localhost:4321 npm run smoke
+      - if: always()
+        run: npx supabase stop --no-backup
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Start local Supabase
+        run: |
+          npx supabase start -x studio,imgproxy,logflare,vector,realtime,storage-api,postgres-meta,supavisor
+          npx supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=' > "$RUNNER_TEMP/supabase.env"
+      - name: Write CI functions env file
+        run: |
+          # CI-only, in the runner temp dir: empty Resend settings force the Mailpit transport.
+          cat > "$RUNNER_TEMP/functions.env" <<'EOF'
+          APP_URL=http://localhost:4321
+          RESEND_API_KEY=
+          MAIL_FROM=
+          MAILPIT_URL=http://supabase_inbucket_10x-astro-starter:8025
+          EOF
+      - name: Serve Edge Functions
+        run: |
+          nohup npx supabase functions serve --env-file "$RUNNER_TEMP/functions.env" > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+          source "$RUNNER_TEMP/supabase.env"
+          # Ready = the restarted runtime announced itself and the function itself answers a
+          # side-effect-free GET (4xx from the function, not a gateway 502/503 or a refused connection).
+          for _ in $(seq 1 60); do
+            if grep -q 'Serving functions on' "$RUNNER_TEMP/functions-serve.log"; then
+              code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $ANON_KEY" -H "apikey: $ANON_KEY" "$API_URL/functions/v1/notify-milestone-approved" || true)
+              case "$code" in 400|401|403) echo "functions ready (HTTP $code)"; exit 0 ;; esac
+            fi
+            sleep 1
+          done
+          echo "::error::notify-milestone-approved did not become ready within 60 s"
+          exit 1
+      - name: Run integration tests
+        run: |
+          source "$RUNNER_TEMP/supabase.env"
+          SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+            MAILPIT_URL=http://127.0.0.1:54324 npm run test:integration
+      - name: Print functions serve log
+        if: failure()
+        run: cat "$RUNNER_TEMP/functions-serve.log" || true
       - if: always()
         run: npx supabase stop --no-backup
