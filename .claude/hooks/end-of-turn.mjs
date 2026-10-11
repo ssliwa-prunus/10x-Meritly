@@ -12,6 +12,7 @@ import {
   OUT_OF_SCOPE,
   PGTAP_SCOPE,
   SUPABASE,
+  SUPABASE_TIMEOUT_MS,
   UI_LITERALS,
   UNIT_SCOPE,
   VITEST,
@@ -45,17 +46,20 @@ if (roots.length === 0) {
 
 const report = [];
 let skipNote = "";
-let sqlChecked = false;
+let sqlRoot = null;
+const sqlSkipped = [];
+const supabase = (root, args) => runTool(root, SUPABASE, args, { timeoutMs: SUPABASE_TIMEOUT_MS });
 
 // Applies new migrations, then runs pgTAP. An edited, already-applied migration would need
 // db reset, which wipes local data, so that is left to the agent.
 function checkSql(root, files) {
-  const list = runTool(root, SUPABASE, ["migration", "list", "--local", "--output-format", "json"]);
+  const list = supabase(root, ["migration", "list", "--local", "--output-format", "json"]);
   if (!existsSync(path.join(root, SUPABASE))) return void report.push(`pgTAP not run (${root}):\n${list.output}`);
   if (!list.ok) {
     // Docker may simply be off: say so instead of blocking. CI's smoke job is the hard gate.
     skipNote =
-      "end-of-turn.mjs: pgTAP skipped — local Supabase not reachable (npx supabase start); CI smoke still runs it.";
+      `end-of-turn.mjs: pgTAP skipped — local Supabase not reachable${list.timedOut ? " (migration list timed out)" : ""} ` +
+      "(npx supabase start); CI smoke still runs it.";
     return;
   }
   let applied, pending;
@@ -113,14 +117,18 @@ function checkSql(root, files) {
     );
   }
   if (pending) {
-    const up = runTool(root, SUPABASE, ["migration", "up", "--local"]);
+    const up = supabase(root, ["migration", "up", "--local"]);
     if (!up.ok)
-      return void report.push(`Migration failed to apply (npx supabase migration up --local, ${root}):\n${up.output}`);
-    // Applied now, whatever pgTAP says next.
-    for (const f of uncommitted) ledger[version(f)] = hash(f);
+      return void report.push(
+        `Migration failed to apply (npx supabase migration up --local, ${root}):\n${up.output}\n` +
+          "Fix the SQL, then re-run `npx supabase migration up --local` and `npx supabase test db`.",
+      );
+    // Applied now, whatever pgTAP says next. Every changed one that was pending, committed or not:
+    // a committed one left out would read as stale on the next Stop.
+    for (const f of migrations.filter((m) => !applied.has(version(m)))) ledger[version(f)] = hash(f);
     saveLedger();
   }
-  const tests = runTool(root, SUPABASE, ["test", "db"]);
+  const tests = supabase(root, ["test", "db"]);
   if (!tests.ok) {
     report.push(
       `pgTAP fails (npx supabase test db, ${root}). Migrations applied in this step stay applied: after ` +
@@ -147,10 +155,10 @@ for (const root of roots) {
 
   // Once per Stop, in the first checkout with SQL changes: worktrees share one local database.
   const sql = changed.filter((f) => PGTAP_SCOPE.test(f) && existsSync(path.join(root, f)));
-  if (sql.length > 0 && !sqlChecked) {
-    sqlChecked = true;
+  if (sql.length > 0 && sqlRoot === null) {
+    sqlRoot = root;
     checkSql(root, sql);
-  }
+  } else if (sql.length > 0) sqlSkipped.push(root);
 
   const code = changed.filter((f) => LINTED.test(f) && !OUT_OF_SCOPE.test(f) && existsSync(path.join(root, f)));
   // Q&A turns and docs-only changes: nothing to check here.
@@ -174,7 +182,15 @@ for (const root of roots) {
   if (!typecheck.ok) report.push(`astro check fails (${root}):\n${typecheck.output}`);
 }
 
-if (report.length > 0) block(`Fix these before you finish:\n\n${[...report, skipNote].filter(Boolean).join("\n\n")}`);
+// Not silent: SQL in the other checkouts was neither applied nor tested this turn.
+const sqlNote =
+  sqlSkipped.length > 0
+    ? `end-of-turn.mjs: the SQL check ran only in ${sqlRoot}; SQL changes in ${sqlSkipped.join(", ")} were not applied or ` +
+      "tested (worktrees share one local database)."
+    : "";
+const notes = [skipNote, sqlNote].filter(Boolean);
+
+if (report.length > 0) block(`Fix these before you finish:\n\n${[...report, ...notes].join("\n\n")}`);
 
 // Green: the registered checkouts are clean, start the next turn with an empty registry.
 if (registry && existsSync(registry)) {
@@ -184,5 +200,5 @@ if (registry && existsSync(registry)) {
     // Stale entries only widen the next sweep.
   }
 }
-if (skipNote) process.stdout.write(JSON.stringify({ systemMessage: skipNote }));
+if (notes.length > 0) process.stdout.write(JSON.stringify({ systemMessage: notes.join("\n") }));
 process.exit(0);

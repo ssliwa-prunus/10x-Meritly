@@ -113,6 +113,11 @@ Restore the middleware, add the employee 2 direction to US-01, and run the Playw
 - On `failure()`: upload `playwright-report/` and `test-results/` with `actions/upload-artifact`, at the same major-version pinning style as the other actions.
 - `if: always()`: `npx supabase stop --no-backup`.
 
+**Deviations (implementation, user-approved):**
+
+- The `e2e` job writes `.env` as well as `.dev.vars`, as the `smoke` job does (the webServer's `astro build` may read `.env`); `actions/upload-artifact` is pinned at `@v7`, like the other actions.
+- The deliberate-break check for 1.3 also ran in CI: a throwaway commit (`9a35c86`, reverted in `bf70668`) proved the red `e2e` run and the report upload.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -191,6 +196,15 @@ All results go into the existing `report` array and the existing `block(...)`, w
   - passes silently for a clean SQL change;
   - never invokes the CLI on a docs-only or code-only turn (empty call log);
   - runs the SQL step once when a registered sibling worktree also has SQL changes.
+
+**Deviations (implementation, user-approved):**
+
+- **Hash ledger.** `changed` is relative to HEAD, not to the turn, so the hook keeps a ledger (`ledgerPath` in `lib.mjs`, under `os.tmpdir()/claude-hooks/`, keyed by the git common dir) of the applied migrations it has seen. An applied migration is stale when it is committed and its content isn't the one recorded, or uncommitted and changed since it was recorded. An uncommitted, applied migration with no entry is trusted (applied by hand or by a reset).
+- **Tell once.** The hook can't see a `db reset`, so it records the current hash when it blocks a stale migration; the next turn trusts that content. Accepted trade-off: an agent that ignores the instruction gets a false green on the next turn.
+- `migration up --local` runs only when `migration list` shows a pending migration; after a successful `up`, every changed migration that was pending is recorded (review F1).
+- A missing Supabase CLI is a reported failure, not a skip.
+- Each Supabase CLI call has a 60 s timeout: a timed-out `migration list` skips like an unreachable stack; a timed-out `up` or `test db` blocks (review F2).
+- SQL changes in a sibling worktree that the once-per-Stop step didn't cover are named in the report (review F6).
 
 ### Success Criteria:
 
