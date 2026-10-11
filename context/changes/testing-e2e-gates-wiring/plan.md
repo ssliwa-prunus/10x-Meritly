@@ -343,28 +343,28 @@ Make `e2e` a required check, after a green PR run has recorded the context.
 
 #### Automated
 
-- [x] 1.1 `git diff src/middleware.ts` is empty, and `npx playwright test tests/e2e/seed.spec.ts` passes locally
-- [x] 1.2 `npm run test:e2e` passes locally against local Supabase (setup, seed, US-01)
-- [x] 1.3 A planted fault on the employee-view path turns US-01 red locally and names the failing assertion; reverting it turns the suite green
-- [x] 1.4 `npm run lint`, `npx astro check` and `npm test` pass
-- [ ] 1.5 The PR run shows `e2e` green next to `checks`, `smoke` and `integration`
+- [x] 1.1 `git diff src/middleware.ts` is empty, and `npx playwright test tests/e2e/seed.spec.ts` passes locally — 92020e8
+- [x] 1.2 `npm run test:e2e` passes locally against local Supabase (setup, seed, US-01) — 92020e8
+- [x] 1.3 A planted fault on the employee-view path turns US-01 red locally and names the failing assertion; reverting it turns the suite green — 92020e8
+- [x] 1.4 `npm run lint`, `npx astro check` and `npm test` pass — 92020e8
+- [x] 1.5 The PR run shows `e2e` green next to `checks`, `smoke` and `integration` — 92020e8
 
 #### Manual
 
-- [ ] 1.6 The `e2e` job log shows no secrets used, and on a failed run the uploaded report opens with a trace
+- [x] 1.6 The `e2e` job log shows no secrets used, and on a failed run the uploaded report opens with a trace — 92020e8
 
 ### Phase 2: pgTAP in the Stop hook
 
 #### Automated
 
-- [ ] 2.1 `npm run test:hooks` passes, including every new case listed above
-- [ ] 2.2 `npm run lint` passes on the hook and proof files
-- [ ] 2.3 With local Supabase running, a scratch migration that drops an RLS policy makes the real Stop hook exit 2 with a pgTAP failure; the scratch file is removed afterwards and the database is reset
+- [x] 2.1 `npm run test:hooks` passes, including every new case listed above
+- [x] 2.2 `npm run lint` passes on the hook and proof files
+- [x] 2.3 With local Supabase running, a scratch migration that drops an RLS policy makes the real Stop hook exit 2 with a pgTAP failure; the scratch file is removed afterwards and the database is reset
 
 #### Manual
 
-- [ ] 2.4 With `npx supabase stop`, a turn that touches `supabase/tests/*.sql` ends with the "pgTAP skipped" system message and does not block
-- [ ] 2.5 In a real agent session, the hook's block message is enough for the agent to fix and re-verify without further guidance
+- [x] 2.4 With `npx supabase stop`, a turn that touches `supabase/tests/*.sql` ends with the "pgTAP skipped" system message and does not block
+- [x] 2.5 In a real agent session, the hook's block message is enough for the agent to fix and re-verify without further guidance
 
 ### Phase 3: Docs
 

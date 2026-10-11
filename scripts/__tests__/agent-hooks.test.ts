@@ -4,6 +4,7 @@
 // guard, Vitest and astro check are stubbed by marker-flagging scripts; git and the hooks are real.
 // Run: npm run test:hooks
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -44,8 +45,33 @@ const ASTRO_STUB = `${SRC_SCAN}
 const bad = flagged("TYPE_ERROR");
 if (bad.length) { console.log(bad[0] + ":1:7 - error ts(2322): Type 'string' is not assignable to type 'number'."); process.exit(1); }`;
 
+// Supabase CLI: logs each call; the markers live under the gitignored node_modules/ so they never
+// count as changes. SUPABASE_APPLIED lists the versions local Supabase already has; migration up
+// adds the pending ones.
+const SUPABASE_STUB = `
+const fs = require("node:fs"); const path = require("node:path");
+const cmd = process.argv.slice(2).join(" ");
+fs.appendFileSync("node_modules/SUPABASE_CALLS", cmd + "\\n");
+const sql = (d) => fs.existsSync(d) ? fs.readdirSync(d, { recursive: true }).filter((f) => f.endsWith(".sql")).map((f) => path.join(d, f)) : [];
+const has = (files, marker) => files.some((f) => fs.readFileSync(f, "utf8").includes(marker));
+const APPLIED = "node_modules/SUPABASE_APPLIED";
+const applied = () => fs.existsSync(APPLIED) ? fs.readFileSync(APPLIED, "utf8").split("\\n") : [];
+const versions = () => sql("supabase/migrations").map((f) => path.basename(f).split("_")[0]);
+console.error("A new version of Supabase CLI is available");
+if (cmd.startsWith("migration list")) {
+  if (fs.existsSync("node_modules/SUPABASE_DOWN")) { console.error("failed to connect to postgres"); process.exit(1); }
+  if (fs.existsSync("node_modules/SUPABASE_GARBAGE")) { console.log("Connecting to local database..."); process.exit(0); }
+  console.log(JSON.stringify({ migrations: versions().map((v) => ({ local: v, remote: applied().includes(v) ? v : "" })), message: "Migrations listed" }));
+} else if (cmd.startsWith("migration up")) {
+  if (has(sql("supabase/migrations"), "MIGRATION_ERROR")) { console.log("ERROR: syntax error at or near MIGRATION_ERROR"); process.exit(1); }
+  for (const v of versions().filter((v) => !applied().includes(v))) fs.appendFileSync(APPLIED, v + "\\n");
+} else if (cmd === "test db") {
+  if (has(sql("supabase"), "PGTAP_FAIL")) { console.log("rls_matrix.test.sql .. Failed 1/260 subtests"); process.exit(1); }
+}`;
+
 const tmpRoot = mkdtempSync(path.join(os.tmpdir(), "agent-hooks-"));
 let counter = 0;
+const repos: string[] = [];
 
 function git(cwd: string, ...args: string[]) {
   const r = spawnSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
@@ -67,7 +93,14 @@ function installTools(dir: string) {
     "node_modules/astro/bin/astro.mjs",
     `import { createRequire } from "node:module"; const require = createRequire(import.meta.url);${ASTRO_STUB}`,
   );
+  // No package.json in the fixture, so a .js file loads as CommonJS.
+  put("node_modules/supabase/dist/supabase.js", SUPABASE_STUB);
 }
+
+const supabaseCalls = (dir: string) => {
+  const log = path.join(dir, "node_modules/SUPABASE_CALLS");
+  return existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean) : [];
+};
 
 /** A committed repo with the real hooks, a stubbed toolchain and one clean source file. */
 function makeRepo() {
@@ -91,6 +124,7 @@ function makeRepo() {
   git(dir, "add", "-A");
   git(dir, "commit", "-q", "-m", "fixture");
   installTools(dir);
+  repos.push(dir);
   return dir;
 }
 
@@ -132,7 +166,18 @@ const stop = (cwd: string, extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
+// Mirrors ledgerPath in .claude/hooks/lib.mjs: one ledger per fixture repository, in os.tmpdir().
+const ledgerFile = (dir: string) => {
+  const common = git(dir, "rev-parse", "--path-format=absolute", "--git-common-dir");
+  const key = createHash("sha256")
+    .update(path.resolve(common).split(path.sep).join("/").toLowerCase())
+    .digest("hex")
+    .slice(0, 16);
+  return path.join(os.tmpdir(), "claude-hooks", `${key}.ledger.json`);
+};
+
 afterAll(() => {
+  for (const dir of repos) rmSync(ledgerFile(dir), { force: true });
   rmSync(tmpRoot, { recursive: true, force: true });
 });
 
@@ -235,12 +280,185 @@ describe("end-of-turn.mjs (Stop)", () => {
     const repo = makeRepo();
     write(repo, "README.md", "# changed\n");
     expect(hook("end-of-turn.mjs", stop(repo))).toMatchObject({ status: 0, stderr: "" });
+    expect(supabaseCalls(repo)).toEqual([]);
   });
 
   it("passes a clean code change", () => {
     const repo = makeRepo();
     write(repo, "src/clean.ts", "export const ok = 2;\n");
     expect(hook("end-of-turn.mjs", stop(repo))).toMatchObject({ status: 0, stderr: "" });
+    expect(supabaseCalls(repo)).toEqual([]);
+  });
+
+  describe("pgTAP on SQL changes", () => {
+    const MIGRATION = "supabase/migrations/20261001120000_add_thing.sql";
+
+    it("blocks a failing pgTAP run on a migration-only turn", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "drop policy x on t; -- PGTAP_FAIL\n");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("pgTAP fails (npx supabase test db");
+      expect(r.stderr).toContain("db reset --local");
+    });
+
+    it("runs migration up before test db", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      hook("end-of-turn.mjs", stop(repo));
+      expect(supabaseCalls(repo)).toEqual([
+        "migration list --local --output-format json",
+        "migration up --local",
+        "test db",
+      ]);
+    });
+
+    it("blocks a migration that fails to apply", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create tabel MIGRATION_ERROR;\n");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("Migration failed to apply");
+      expect(r.stderr).toContain("MIGRATION_ERROR");
+      expect(supabaseCalls(repo)).not.toContain("test db");
+    });
+
+    // A stale block is told once per content (the hook can't see a db reset): the same content
+    // passes the next Stop, and a further edit blocks again.
+    const expectToldOnce = (repo: string) => {
+      rmSync(path.join(repo, "node_modules/SUPABASE_CALLS"));
+      expect(hook("end-of-turn.mjs", stop(repo))).toMatchObject({ status: 0, stderr: "" });
+      expect(supabaseCalls(repo)).toEqual(["migration list --local --output-format json", "test db"]);
+      write(repo, MIGRATION, "create table t (id text);\n");
+      expect(hook("end-of-turn.mjs", stop(repo)).stderr).toContain(`${MIGRATION}: already applied to local Supabase`);
+    };
+
+    it("blocks a committed, applied migration that changed, once per content", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      git(repo, "add", "-A");
+      git(repo, "commit", "-q", "-m", "migration");
+      write(repo, "node_modules/SUPABASE_APPLIED", "20261001120000\n");
+      write(repo, MIGRATION, "create table t (id bigint);\n");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain(MIGRATION);
+      expect(r.stderr).toContain("already applied to local Supabase");
+      expect(r.stderr).toContain("npx supabase db reset --local");
+      expect(r.stderr).toContain("Reported once per content");
+      expect(supabaseCalls(repo)).toEqual(["migration list --local --output-format json"]);
+      expectToldOnce(repo);
+    });
+
+    it("passes the next turn when the uncommitted migration it applied is unchanged", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      expect(hook("end-of-turn.mjs", stop(repo)).status).toBe(0);
+      expect(existsSync(ledgerFile(repo))).toBe(true);
+      rmSync(path.join(repo, "node_modules/SUPABASE_CALLS"));
+
+      expect(hook("end-of-turn.mjs", stop(repo))).toMatchObject({ status: 0, stderr: "" });
+      expect(supabaseCalls(repo)).toEqual(["migration list --local --output-format json", "test db"]);
+    });
+
+    it("blocks an edit of an uncommitted migration after it was applied, once per content", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      expect(hook("end-of-turn.mjs", stop(repo)).status).toBe(0);
+      write(repo, MIGRATION, "create table t (id bigint);\n");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain(`${MIGRATION}: already applied to local Supabase`);
+      expectToldOnce(repo);
+    });
+
+    it("trusts an uncommitted migration applied by hand, then blocks a later edit of it", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      write(repo, "node_modules/SUPABASE_APPLIED", "20261001120000\n");
+      expect(hook("end-of-turn.mjs", stop(repo))).toMatchObject({ status: 0, stderr: "" });
+      expect(supabaseCalls(repo)).toEqual(["migration list --local --output-format json", "test db"]);
+
+      write(repo, MIGRATION, "create table t (id bigint);\n");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("already applied to local Supabase");
+    });
+
+    it("skips with a systemMessage when local Supabase is down", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "-- PGTAP_FAIL\n");
+      write(repo, "node_modules/SUPABASE_DOWN", "");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r).toMatchObject({ status: 0, stderr: "" });
+      expect(JSON.parse(r.stdout)).toMatchObject({
+        systemMessage: expect.stringContaining("pgTAP skipped — local Supabase not reachable") as unknown,
+      });
+    });
+
+    it("adds the skip note to a block from another check", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      write(repo, "src/bash-written.ts", "const LINT_ERROR = 1;\n");
+      write(repo, "node_modules/SUPABASE_DOWN", "");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("ESLint errors in changed files");
+      expect(r.stderr).toContain("pgTAP skipped");
+    });
+
+    it("fails visibly when the migration list can't be parsed", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      write(repo, "node_modules/SUPABASE_GARBAGE", "");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("Could not parse the output of supabase migration list");
+    });
+
+    it("blocks a failing pgTAP test file change when no migration changed", () => {
+      const repo = makeRepo();
+      write(repo, "supabase/tests/rls_matrix.test.sql", "select ok(false); -- PGTAP_FAIL\n");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("pgTAP fails (npx supabase test db");
+    });
+
+    it("passes a clean SQL change silently", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      write(repo, "supabase/tests/t.test.sql", "select ok(true);\n");
+      expect(hook("end-of-turn.mjs", stop(repo))).toMatchObject({ status: 0, stdout: "", stderr: "" });
+    });
+
+    it("fails visibly when the Supabase CLI is not installed", () => {
+      const repo = makeRepo();
+      rmSync(path.join(repo, "node_modules/supabase"), { recursive: true });
+      write(repo, MIGRATION, "create table t (id int);\n");
+      const r = hook("end-of-turn.mjs", stop(repo));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("node_modules/supabase/dist/supabase.js not found");
+    });
+
+    it("runs once when a registered sibling worktree also has SQL changes", () => {
+      const repo = makeRepo();
+      const wt = path.join(tmpRoot, `sql-wt${String(counter)}`);
+      git(repo, "worktree", "add", "-q", wt);
+      installTools(wt);
+      const session = { session_id: `sql-wt-session-${String(counter)}` };
+      // The per-edit hook registers a checkout only for a linted file.
+      const file = write(wt, "src/clean.ts", "export const ok = 2;\n");
+      expect(hook("check-edited-file.mjs", edit(repo, file, session)).status).toBe(0);
+      write(repo, MIGRATION, "create table t (id int);\n");
+      write(wt, "supabase/migrations/20261002120000_other.sql", "create table u (id int);\n");
+
+      expect(hook("end-of-turn.mjs", stop(repo, session))).toMatchObject({ status: 0, stderr: "" });
+      expect([...supabaseCalls(repo), ...supabaseCalls(wt)]).toEqual([
+        "migration list --local --output-format json",
+        "migration up --local",
+        "test db",
+      ]);
+    });
   });
 
   it("blocks a lint error written through a shell command (no per-edit payload)", () => {

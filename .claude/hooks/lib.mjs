@@ -2,6 +2,7 @@
 // available on every dev machine). Signal contract: exit 2 + stderr reaches the agent;
 // exit 0 means "checked and clean" or "nothing to check"; never exit 1.
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -17,6 +18,8 @@ export const UNIT_SCOPE = /^src\/.*\.(ts|tsx|js|jsx)$/;
 // The hooks, their config and their proof (scripts/__tests__/agent-hooks.test.ts).
 export const HOOK_PROOF_SCOPE =
   /^(\.claude\/hooks\/|\.claude\/settings\.json$|scripts\/__tests__\/agent-hooks\.|vitest\.hooks\.config\.ts$)/;
+// SQL that pgTAP (npx supabase test db) can see: migrations and the tests themselves.
+export const PGTAP_SCOPE = /^supabase\/(migrations|tests)\/[^/]+\.sql$/;
 
 export function readPayload() {
   let raw = "";
@@ -65,11 +68,22 @@ export const ESLINT = "node_modules/eslint/bin/eslint.js";
 export const VITEST = "node_modules/vitest/vitest.mjs";
 export const ASTRO = "node_modules/astro/bin/astro.mjs";
 export const UI_LITERALS = "scripts/check-ui-literals.mjs";
+export const SUPABASE = "node_modules/supabase/dist/supabase.js";
 
 // Checkouts the per-edit hook touched this session, so the Stop hook sweeps sibling worktrees too.
 export function registryPath(sessionId) {
   const sid = String(sessionId ?? "").replace(/[^A-Za-z0-9_-]/g, "");
   return sid ? path.join(os.tmpdir(), "claude-hooks", `${sid}.roots`) : null;
+}
+
+// Hashes of the applied migrations the Stop hook has seen, per repository: all its
+// worktrees share one local database. `changed` is relative to HEAD, not to the turn, so this
+// tells "applied earlier, untouched since" from "edited after it was applied".
+export function ledgerPath(root) {
+  const common = git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  if (!common) return null;
+  const key = createHash("sha256").update(norm(common)).digest("hex").slice(0, 16);
+  return path.join(os.tmpdir(), "claude-hooks", `${key}.ledger.json`);
 }
 
 export function block(message) {
