@@ -107,3 +107,46 @@ jobs:
         run: cat "$RUNNER_TEMP/functions-serve.log" || true
       - if: always()
         run: npx supabase stop --no-backup
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Local seed accounts from supabase/seed.sql (shared public seed password), not secrets.
+      E2E_USERNAME: supervisor@meritly.local
+      E2E_PASSWORD: Meritly-Local-Passw0rd!
+      E2E_EMPLOYEE_USERNAME: employee@meritly.local
+      E2E_EMPLOYEE_PASSWORD: Meritly-Local-Passw0rd!
+      E2E_EMPLOYEE2_USERNAME: employee2@meritly.local
+      E2E_EMPLOYEE2_PASSWORD: Meritly-Local-Passw0rd!
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Start local Supabase
+        run: |
+          npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
+          npx supabase status -o env | grep -E '^(API_URL|ANON_KEY)=' > supabase.env
+      - name: Configure secrets for build and preview
+        run: |
+          source supabase.env
+          printf 'SUPABASE_URL=%s\nSUPABASE_KEY=%s\n' "$API_URL" "$ANON_KEY" > .env
+          cp .env .dev.vars
+      - run: npx playwright install --with-deps chromium
+      # The Playwright webServer builds the app and starts the production preview itself.
+      - run: npm run test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+      - if: always()
+        run: npx supabase stop --no-backup
