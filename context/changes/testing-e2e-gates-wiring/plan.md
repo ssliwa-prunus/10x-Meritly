@@ -370,18 +370,18 @@ Make `e2e` a required check, after a green PR run has recorded the context.
 
 #### Automated
 
-- [x] 3.1 `npx prettier --check context/foundation/test-plan.md context/foundation/test-stack.md CLAUDE.md` passes
+- [x] 3.1 `npx prettier --check context/foundation/test-plan.md context/foundation/test-stack.md CLAUDE.md` passes — 998ceb1
 
 #### Manual
 
-- [x] 3.2 The §5 rows and the CLAUDE.md CI paragraph match the jobs in `pr.yml` and the hook behaviour
+- [x] 3.2 The §5 rows and the CLAUDE.md CI paragraph match the jobs in `pr.yml` and the hook behaviour — 998ceb1
 
 ### Phase 4: Branch protection on `master`
 
 #### Automated
 
-- [ ] 4.1 `gh api repos/ssliwa-prunus/10x-Meritly/branches/master/protection --jq '.required_status_checks.contexts'` returns exactly `checks`, `smoke`, `integration` and `e2e` (order-insensitive)
+- [x] 4.1 `gh api repos/ssliwa-prunus/10x-Meritly/branches/master/protection --jq '.required_status_checks.contexts'` returns exactly `checks`, `smoke`, `integration` and `e2e` (order-insensitive)
 
 #### Manual
 
-- [ ] 4.2 The PR page lists `e2e` as Required
+- [x] 4.2 The PR page lists `e2e` as Required
