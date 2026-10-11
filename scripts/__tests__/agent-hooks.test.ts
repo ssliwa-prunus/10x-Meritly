@@ -47,11 +47,12 @@ if (bad.length) { console.log(bad[0] + ":1:7 - error ts(2322): Type 'string' is 
 
 // Supabase CLI: logs each call; the markers live under the gitignored node_modules/ so they never
 // count as changes. SUPABASE_APPLIED lists the versions local Supabase already has; migration up
-// adds the pending ones.
+// adds the pending ones. SUPABASE_HANG_<first two words> makes that call sleep past the timeout.
 const SUPABASE_STUB = `
 const fs = require("node:fs"); const path = require("node:path");
 const cmd = process.argv.slice(2).join(" ");
 fs.appendFileSync("node_modules/SUPABASE_CALLS", cmd + "\\n");
+if (fs.existsSync("node_modules/SUPABASE_HANG_" + cmd.split(" ").slice(0, 2).join("_"))) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30000);
 const sql = (d) => fs.existsSync(d) ? fs.readdirSync(d, { recursive: true }).filter((f) => f.endsWith(".sql")).map((f) => path.join(d, f)) : [];
 const has = (files, marker) => files.some((f) => fs.readFileSync(f, "utf8").includes(marker));
 const APPLIED = "node_modules/SUPABASE_APPLIED";
@@ -165,6 +166,9 @@ const stop = (cwd: string, extra: Record<string, unknown> = {}) => ({
   stop_hook_active: false,
   ...extra,
 });
+
+// A checkout as the Stop hook names it: git's long path, not a possibly 8.3-short os.tmpdir().
+const top = (dir: string) => path.resolve(git(dir, "rev-parse", "--show-toplevel"));
 
 // Mirrors ledgerPath in .claude/hooks/lib.mjs: one ledger per fixture repository, in os.tmpdir().
 const ledgerFile = (dir: string) => {
@@ -320,7 +324,52 @@ describe("end-of-turn.mjs (Stop)", () => {
       expect(r.status).toBe(2);
       expect(r.stderr).toContain("Migration failed to apply");
       expect(r.stderr).toContain("MIGRATION_ERROR");
+      // The retry Stop exits early, so the block says how to re-verify by hand.
+      expect(r.stderr).toContain("re-run `npx supabase migration up --local` and `npx supabase test db`");
       expect(supabaseCalls(repo)).not.toContain("test db");
+    });
+
+    it("records a committed migration edited while still pending, so the next Stop doesn't call it stale", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      git(repo, "add", "-A");
+      git(repo, "commit", "-q", "-m", "migration");
+      write(repo, MIGRATION, "create table t (id bigint);\n");
+      expect(hook("end-of-turn.mjs", stop(repo))).toMatchObject({ status: 0, stderr: "" });
+      expect(supabaseCalls(repo)).toEqual([
+        "migration list --local --output-format json",
+        "migration up --local",
+        "test db",
+      ]);
+      rmSync(path.join(repo, "node_modules/SUPABASE_CALLS"));
+
+      expect(hook("end-of-turn.mjs", stop(repo))).toMatchObject({ status: 0, stderr: "" });
+      expect(supabaseCalls(repo)).toEqual(["migration list --local --output-format json", "test db"]);
+    });
+
+    // A short per-call timeout keeps these cases fast; the stub sleeps 30 s.
+    const fastTimeout = { env: { CLAUDE_HOOK_SUPABASE_TIMEOUT_MS: "1500" } };
+
+    it("skips with a systemMessage when migration list times out", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      write(repo, "node_modules/SUPABASE_HANG_migration_list", "");
+      const r = hook("end-of-turn.mjs", stop(repo), fastTimeout);
+      expect(r).toMatchObject({ status: 0, stderr: "" });
+      expect(JSON.parse(r.stdout)).toMatchObject({
+        systemMessage: expect.stringContaining("not reachable (migration list timed out)") as unknown,
+      });
+      expect(supabaseCalls(repo)).toEqual(["migration list --local --output-format json"]);
+    });
+
+    it("blocks when test db times out", () => {
+      const repo = makeRepo();
+      write(repo, MIGRATION, "create table t (id int);\n");
+      write(repo, "node_modules/SUPABASE_HANG_test_db", "");
+      const r = hook("end-of-turn.mjs", stop(repo), fastTimeout);
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("pgTAP fails (npx supabase test db");
+      expect(r.stderr).toContain("test db timed out after 1.5 s");
     });
 
     // A stale block is told once per content (the hook can't see a db reset): the same content
@@ -452,12 +501,34 @@ describe("end-of-turn.mjs (Stop)", () => {
       write(repo, MIGRATION, "create table t (id int);\n");
       write(wt, "supabase/migrations/20261002120000_other.sql", "create table u (id int);\n");
 
-      expect(hook("end-of-turn.mjs", stop(repo, session))).toMatchObject({ status: 0, stderr: "" });
+      const r = hook("end-of-turn.mjs", stop(repo, session));
+      expect(r).toMatchObject({ status: 0, stderr: "" });
       expect([...supabaseCalls(repo), ...supabaseCalls(wt)]).toEqual([
         "migration list --local --output-format json",
         "migration up --local",
         "test db",
       ]);
+      // ...and says the sibling's SQL went unchecked.
+      const { systemMessage } = JSON.parse(r.stdout) as { systemMessage: string };
+      expect(systemMessage).toContain(`the SQL check ran only in ${top(repo)}`);
+      expect(systemMessage).toContain(`SQL changes in ${top(wt)} were not applied or tested`);
+    });
+
+    it("names the unchecked sibling worktree in a block too", () => {
+      const repo = makeRepo();
+      const wt = path.join(tmpRoot, `sql-wt${String(counter)}`);
+      git(repo, "worktree", "add", "-q", wt);
+      installTools(wt);
+      const session = { session_id: `sql-wt-block-${String(counter)}` };
+      const file = write(wt, "src/clean.ts", "export const ok = 2;\n");
+      expect(hook("check-edited-file.mjs", edit(repo, file, session)).status).toBe(0);
+      write(repo, MIGRATION, "-- PGTAP_FAIL\n");
+      write(wt, "supabase/migrations/20261002120000_other.sql", "create table u (id int);\n");
+
+      const r = hook("end-of-turn.mjs", stop(repo, session));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("pgTAP fails");
+      expect(r.stderr).toContain(`SQL changes in ${top(wt)} were not applied or tested`);
     });
   });
 

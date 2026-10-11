@@ -1,7 +1,7 @@
 ---
 change_id: testing-e2e-gates-wiring
 title: Test rollout Phase 4 — wire the US-01 e2e into CI and run pgTAP on SQL edits
-status: implemented
+status: impl_reviewed
 created: 2026-10-11
 updated: 2026-10-11
 archived_at: null

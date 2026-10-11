@@ -46,8 +46,9 @@ export const norm = (p) => path.resolve(p).split(path.sep).join("/").toLowerCase
 export const stripAnsi = (s) => s.replace(/\u001b\[[0-9;]*m/g, "");
 
 // Runs a repo-local Node tool (no npx: it costs ~40 s per call on Windows). A missing tool
-// is a failure, never a pass.
-export function runTool(root, relBin, args) {
+// is a failure, never a pass. timeoutMs: kill a hanging call before the harness kills the hook,
+// which would leave no report at all.
+export function runTool(root, relBin, args, { timeoutMs } = {}) {
   const bin = path.join(root, relBin);
   if (!existsSync(bin)) {
     return { ok: false, output: `${relBin} not found in ${root}: run npm install.` };
@@ -58,8 +59,13 @@ export function runTool(root, relBin, args) {
     env: PLAIN_ENV,
     stdio: ["ignore", "pipe", "pipe"],
     maxBuffer: 32 * 1024 * 1024,
+    timeout: timeoutMs,
   });
   const output = stripAnsi(`${r.stdout ?? ""}${r.stderr ?? ""}`).trim();
+  if (r.error?.code === "ETIMEDOUT") {
+    const note = `${relBin} ${args.join(" ")} timed out after ${timeoutMs / 1000} s.`;
+    return { ok: false, timedOut: true, output: output ? `${output}\n${note}` : note };
+  }
   if (r.error) return { ok: false, output: `${relBin} did not run: ${r.error.message}` };
   return { ok: r.status === 0, output };
 }
@@ -69,6 +75,8 @@ export const VITEST = "node_modules/vitest/vitest.mjs";
 export const ASTRO = "node_modules/astro/bin/astro.mjs";
 export const UI_LITERALS = "scripts/check-ui-literals.mjs";
 export const SUPABASE = "node_modules/supabase/dist/supabase.js";
+// Per Supabase CLI call, well inside the Stop hook's 180 s; the env override keeps the proof fast.
+export const SUPABASE_TIMEOUT_MS = Number(process.env.CLAUDE_HOOK_SUPABASE_TIMEOUT_MS) || 60_000;
 
 // Checkouts the per-edit hook touched this session, so the Stop hook sweeps sibling worktrees too.
 export function registryPath(sessionId) {
