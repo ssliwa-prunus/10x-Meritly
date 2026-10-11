@@ -380,8 +380,8 @@ Make `e2e` a required check, after a green PR run has recorded the context.
 
 #### Automated
 
-- [x] 4.1 `gh api repos/ssliwa-prunus/10x-Meritly/branches/master/protection --jq '.required_status_checks.contexts'` returns exactly `checks`, `smoke`, `integration` and `e2e` (order-insensitive)
+- [x] 4.1 `gh api repos/ssliwa-prunus/10x-Meritly/branches/master/protection --jq '.required_status_checks.contexts'` returns exactly `checks`, `smoke`, `integration` and `e2e` (order-insensitive) — 7d88f49
 
 #### Manual
 
-- [x] 4.2 The PR page lists `e2e` as Required
+- [x] 4.2 The PR page lists `e2e` as Required — 7d88f49
