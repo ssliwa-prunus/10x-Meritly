@@ -5,22 +5,53 @@
 // Residue (accepted; same precedent as tests/integration): approval is irreversible by design (no
 // un-approve, nothing is deleted), so every run leaves one uniquely named project with an approved
 // milestone. `npx supabase db reset --local` clears it. The run's token is in the report annotation.
-import { test, expect, type APIResponse, type Page } from "@playwright/test";
+import { test, expect, type APIResponse, type BrowserContext, type Page } from "@playwright/test";
 import { waitForHydration } from "./support/hydration";
 
 // Seeded employee records owned by supervisor@meritly.local (supabase/seed.sql).
 const LOCAL_EMPLOYEE_ID = "00000000-0000-4000-8000-000000000031"; // linked to E2E_EMPLOYEE_USERNAME
-const LOCAL_EMPLOYEE_2_ID = "00000000-0000-4000-8000-000000000033"; // the colleague
+const LOCAL_EMPLOYEE_2_ID = "00000000-0000-4000-8000-000000000033"; // linked to E2E_EMPLOYEE2_USERNAME
 
 // Oracle, derived by hand from the PRD formula (not from the code): all four KPI scores at 100 give
 // M = multiplier max, so the payout pool is the whole 2000.00 target pool. Same job role and rating,
-// so the pool splits by time share alone: 0.60 → 1200.00 (own), 0.40 → 800.00 (colleague).
-const OWN_BONUS = /^1200,00\s*zł$/;
-const COLLEAGUE_BONUS = /800,00\s*zł/;
+// so the pool splits by time share alone: 0.60 → 1200.00 own for employee 1, 0.40 → 800.00 own for
+// employee 2. Each employee sees their own figure in their row and never the other's anywhere.
+// `^…$` pins the own cell; `(?<!\d)` keeps the absence check from matching e.g. "1800,00 zł".
+const EMPLOYEE_1_BONUS_CELL = /^1200,00\s*zł$/;
+const EMPLOYEE_2_BONUS_CELL = /^800,00\s*zł$/;
+const EMPLOYEE_1_BONUS_ANYWHERE = /(?<!\d)1200,00\s*zł/;
+const EMPLOYEE_2_BONUS_ANYWHERE = /(?<!\d)800,00\s*zł/;
+
+interface Credentials {
+  email: string;
+  password: string;
+}
+
+/** Reads one account's credentials from the environment, failing loudly when either is missing. */
+function requireCredentials(userVar: string, passwordVar: string): Credentials {
+  const email = process.env[userVar];
+  const password = process.env[passwordVar];
+  if (!email || !password) {
+    throw new Error(`Set ${userVar} and ${passwordVar} in .dev.vars (see .env.example)`);
+  }
+  return { email, password };
+}
 
 /** Posts an app form the way the browser does (same-origin), without following the redirect. */
 async function postForm(page: Page, baseURL: string, path: string, form: Record<string, string>) {
   return page.request.post(path, { form, headers: { Origin: new URL(baseURL).origin }, maxRedirects: 0 });
+}
+
+/** Signs an isolated, cookie-less context in through the API (not the UI) and opens a page in it. */
+async function signIn(context: BrowserContext, baseURL: string, { email, password }: Credentials) {
+  const res = await context.request.post("/api/auth/signin", {
+    form: { email, password },
+    headers: { Origin: new URL(baseURL).origin },
+    maxRedirects: 0,
+  });
+  expect(res.status()).toBe(302);
+  expect(res.headers().location).toBe("/");
+  return context.newPage();
 }
 
 /** The app's form endpoints answer 302 with `saved=<what>` on success and `error=<code>` otherwise. */
@@ -38,11 +69,8 @@ test.describe("US-01: supervisor approves a milestone and the employee sees thei
     baseURL,
   }) => {
     if (!baseURL) throw new Error("baseURL is not configured");
-    const employeeEmail = process.env.E2E_EMPLOYEE_USERNAME;
-    const employeePassword = process.env.E2E_EMPLOYEE_PASSWORD;
-    if (!employeeEmail || !employeePassword) {
-      throw new Error("Set E2E_EMPLOYEE_USERNAME and E2E_EMPLOYEE_PASSWORD in .dev.vars (see .env.example)");
-    }
+    const employee1 = requireCredentials("E2E_EMPLOYEE_USERNAME", "E2E_EMPLOYEE_PASSWORD");
+    const employee2 = requireCredentials("E2E_EMPLOYEE2_USERNAME", "E2E_EMPLOYEE2_PASSWORD");
     const token = `${Date.now()}-${test.info().workerIndex}`;
     const projectName = `US-01 ${token}`;
     const milestoneName = `US-01 milestone ${token}`;
@@ -99,40 +127,47 @@ test.describe("US-01: supervisor approves a milestone and the employee sees thei
       "kpi",
     );
 
-    // The employee gets their own session, signed in through the API (not the UI).
-    const employeeContext = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+    // Each employee gets their own isolated session, signed in through the API (not the UI).
+    const employee1Context = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
     try {
-      const signIn = await employeeContext.request.post("/api/auth/signin", {
-        form: { email: employeeEmail, password: employeePassword },
-        headers: { Origin: new URL(baseURL).origin },
-        maxRedirects: 0,
-      });
-      expect(signIn.status()).toBe(302);
-      expect(signIn.headers().location).toBe("/");
-      const employeePage = await employeeContext.newPage();
+      const employee2Context = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+      try {
+        const employee1Page = await signIn(employee1Context, baseURL, employee1);
+        const employee2Page = await signIn(employee2Context, baseURL, employee2);
 
-      // Draft: the employee does not see the milestone's results before approval.
-      await employeePage.goto("/my-bonuses");
-      await expect(employeePage.getByRole("heading", { name: "Approved bonuses" })).toBeVisible();
-      await expect(employeePage.getByRole("row").filter({ hasText: projectName })).toHaveCount(0);
+        // Draft: neither employee sees the milestone's results before approval.
+        for (const employeePage of [employee1Page, employee2Page]) {
+          await employeePage.goto("/my-bonuses");
+          await expect(employeePage.getByRole("heading", { name: "Approved bonuses" })).toBeVisible();
+          await expect(employeePage.getByRole("row").filter({ hasText: projectName })).toHaveCount(0);
+        }
 
-      // The supervisor reviews the draft figures and approves the milestone.
-      await page.goto(milestonePath);
-      await waitForHydration(page);
-      await page.getByRole("checkbox", { name: /I understand this is final/ }).check();
-      await page.getByRole("button", { name: "Approve milestone" }).click();
-      await expect(page.getByRole("status").filter({ hasText: "Milestone approved." })).toBeVisible();
+        // The supervisor reviews the draft figures and approves the milestone.
+        await page.goto(milestonePath);
+        await waitForHydration(page);
+        await page.getByRole("checkbox", { name: /I understand this is final/ }).check();
+        await page.getByRole("button", { name: "Approve milestone" }).click();
+        await expect(page.getByRole("status").filter({ hasText: "Milestone approved." })).toBeVisible();
 
-      // Approved: the employee sees exactly their own line, with their own bonus.
-      await employeePage.reload();
-      const ownRows = employeePage.getByRole("row").filter({ hasText: projectName });
-      await expect(ownRows).toHaveCount(1);
-      await expect(ownRows.getByRole("cell", { name: milestoneName, exact: true })).toBeVisible();
-      await expect(ownRows.getByRole("cell", { name: OWN_BONUS })).toBeVisible();
-      // ...and never the colleague's figure for the same milestone.
-      await expect(employeePage.getByText(COLLEAGUE_BONUS)).toHaveCount(0);
+        // Approved: each employee sees exactly their own line, with their own bonus...
+        const views = [
+          { employeePage: employee1Page, ownBonus: EMPLOYEE_1_BONUS_CELL, otherBonus: EMPLOYEE_2_BONUS_ANYWHERE },
+          { employeePage: employee2Page, ownBonus: EMPLOYEE_2_BONUS_CELL, otherBonus: EMPLOYEE_1_BONUS_ANYWHERE },
+        ];
+        for (const { employeePage, ownBonus, otherBonus } of views) {
+          await employeePage.reload();
+          const ownRows = employeePage.getByRole("row").filter({ hasText: projectName });
+          await expect(ownRows).toHaveCount(1);
+          await expect(ownRows.getByRole("cell", { name: milestoneName, exact: true })).toBeVisible();
+          await expect(ownRows.getByRole("cell", { name: ownBonus })).toBeVisible();
+          // ...and never the other employee's figure for the same milestone.
+          await expect(employeePage.getByText(otherBonus)).toHaveCount(0);
+        }
+      } finally {
+        await employee2Context.close();
+      }
     } finally {
-      await employeeContext.close();
+      await employee1Context.close();
     }
     // No cleanup: approval is irreversible by design (see the residue note at the top).
   });
