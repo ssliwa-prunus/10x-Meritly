@@ -1,0 +1,104 @@
+---
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDate, formatMultiplier, formatPercent, formatPln } from "@/lib/format";
+import type { EmployeeHistory } from "@/types";
+
+// An employee's approved history grouped by project (S-06), shared by /my-bonuses and
+// /employees/[id]. Figures come from the frozen approval snapshot, already floored in SQL and
+// grouped/summed by groupHistory(); this view only formats them. Each project is a region named
+// after it, so tests and assistive tech can find one project's results.
+interface Props {
+  history: EmployeeHistory;
+  emptyText: string;
+}
+
+// Both pages place the history under an h2 section heading, so each project is an h3.
+const { history, emptyText } = Astro.props;
+const columnCount = 4;
+const milestones = (count: number) => (count === 1 ? "1 approved milestone" : `${count} approved milestones`);
+---
+
+{history.line_count === 0 ? (
+  <p class="text-muted-foreground text-sm">{emptyText}</p>
+) : (
+  <div class="flex flex-col gap-6">
+    <p class="bg-muted flex flex-wrap items-baseline justify-between gap-2 rounded-lg px-3 py-2 text-sm">
+      <span class="text-muted-foreground">Total across {milestones(history.line_count)}</span>
+      <span class="font-semibold tabular-nums">{formatPln(history.total)}</span>
+    </p>
+
+    {history.groups.map((group) => {
+      const headingId = `history-project-${group.project_id}`;
+      return (
+        <section aria-labelledby={headingId}>
+          <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 id={headingId} class="text-base font-semibold break-words">
+              {group.project_name}
+            </h3>
+            <p class="text-sm">
+              <span class="text-muted-foreground">Subtotal</span>{" "}
+              <span class="font-semibold tabular-nums">{formatPln(group.subtotal)}</span>
+            </p>
+          </div>
+          <Table className="min-w-xl text-left">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead scope="col" className="text-muted-foreground">
+                  Milestone
+                </TableHead>
+                <TableHead scope="col" className="text-muted-foreground">
+                  Period
+                </TableHead>
+                <TableHead scope="col" className="text-muted-foreground">
+                  Approved
+                </TableHead>
+                <TableHead scope="col" className="text-muted-foreground text-right">
+                  Bonus
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            {group.lines.map((line) => (
+              <TableBody className="border-b">
+                <TableRow className="border-0 align-top hover:bg-transparent">
+                  <TableCell className="align-top break-words whitespace-normal">{line.milestone_name}</TableCell>
+                  <TableCell className="align-top">
+                    <span class="whitespace-nowrap">{line.start_date}</span> –{" "}
+                    <span class="whitespace-nowrap">{line.end_date}</span>
+                  </TableCell>
+                  <TableCell className="align-top tabular-nums">{formatDate(line.approved_at)}</TableCell>
+                  <TableCell className="text-right align-top font-semibold tabular-nums">
+                    {formatPln(line.bonus)}
+                  </TableCell>
+                </TableRow>
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableCell colSpan={columnCount} className="pt-0 pb-3 whitespace-normal">
+                    <dl class="bg-muted grid grid-cols-2 gap-3 rounded-lg px-3 py-2 text-xs sm:grid-cols-4">
+                      <div>
+                        <dt class="text-muted-foreground">Time share</dt>
+                        <dd class="mt-1 tabular-nums">{formatPercent(line.time_share)}</dd>
+                      </div>
+                      <div>
+                        <dt class="text-muted-foreground">Role weight ({line.job_role_name})</dt>
+                        <dd class="mt-1 tabular-nums">{formatMultiplier(line.role_weight)}</dd>
+                      </div>
+                      <div>
+                        <dt class="text-muted-foreground">Rating → factor</dt>
+                        <dd class="mt-1 tabular-nums">
+                          {line.rating} → {formatMultiplier(line.rating_factor)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt class="text-muted-foreground">KPI multiplier</dt>
+                        <dd class="mt-1 tabular-nums">{formatMultiplier(line.multiplier)}</dd>
+                      </div>
+                    </dl>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            ))}
+          </Table>
+        </section>
+      );
+    })}
+  </div>
+)}

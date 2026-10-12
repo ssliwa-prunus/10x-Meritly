@@ -10,6 +10,7 @@ const CLEAN_PATHS = [
   "src/pages/projects/[id].astro",
   "src/pages/projects/[id]/milestones/[milestoneId].astro",
   "src/components/engagements/EngagementForm.astro",
+  "src/components/history/EmployeeHistory.astro",
   "src/components/milestones/ApprovalSection.astro",
   "src/components/milestones/KpiScoresSection.astro",
   "src/components/milestones/PayoutSection.astro",
@@ -19,6 +20,7 @@ const CLEAN_PATHS = [
   "src/components/projects/ProjectForm.astro",
   "src/components/SubmitButton.tsx",
   "src/pages/dev/projects-kitchen-sink.astro",
+  "src/pages/employees/[id].astro",
   "src/pages/my-bonuses.astro",
 ];
 

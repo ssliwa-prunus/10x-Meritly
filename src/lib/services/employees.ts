@@ -1,7 +1,15 @@
 import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { toOpenAssignments, type AssignmentRow } from "@/lib/assignments";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
-import type { Employee, EmployeeListItem, EmployeeTimeShare, InviteStatus } from "@/types";
+import type {
+  Employee,
+  EmployeeDetail,
+  EmployeeListItem,
+  EmployeeTimeShare,
+  InviteStatus,
+  OpenAssignment,
+} from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Validation, save and invite failures travel to /employees as a fixed code (plus
@@ -237,6 +245,58 @@ export async function listEmployees(
       };
     }),
   };
+}
+
+/**
+ * One visible employee for /employees/[id], with the open total as the caller sees it (the
+ * Supervisor's own milestones, or all for an Admin). `data: null` when the employee does not exist
+ * or is hidden by RLS: to the caller these are the same. `id` must already be a validated UUID.
+ */
+export async function getEmployeeDetail(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<ServiceResult<EmployeeDetail | null>> {
+  const [employee, total] = await Promise.all([
+    supabase.from("employees").select(EMPLOYEE_COLUMNS).eq("id", id).maybeSingle<EmployeeRow>(),
+    supabase
+      .from("employee_time_share_totals")
+      .select("employee_id, open_total, over_allocated")
+      .eq("employee_id", id)
+      .maybeSingle<TimeShareRow>(),
+  ]);
+
+  if (employee.error) return { error: mapLoadError(employee.error, "getEmployeeDetail") };
+  if (total.error) return { error: mapLoadError(total.error, "getEmployeeTimeShareTotal") };
+  if (!employee.data) return { data: null };
+
+  const { job_roles, ...row } = employee.data;
+  const timeShare = total.data ? toTimeShare(total.data) : null;
+  return {
+    data: {
+      ...row,
+      job_role_name: job_roles?.name ?? "—",
+      open_total: timeShare?.open_total ?? 0,
+      over_allocated: timeShare?.over_allocated ?? false,
+    },
+  };
+}
+
+/**
+ * The employee's engagements on open milestones (toOpenAssignments holds the rule and the order).
+ * RLS on milestone_engagements limits a Supervisor to their own milestones; an Admin sees all.
+ * `employeeId` must already be a validated UUID.
+ */
+export async function listOpenAssignments(
+  supabase: SupabaseClient,
+  employeeId: string,
+): Promise<ServiceResult<OpenAssignment[]>> {
+  const { data, error } = await supabase
+    .from("milestone_engagements")
+    .select("id, time_share, milestones(id, name, status, start_date, end_date, projects(id, name, status))")
+    .eq("employee_id", employeeId)
+    .overrideTypes<AssignmentRow[], { merge: false }>();
+  if (error) return { error: mapLoadError(error, "listOpenAssignments") };
+  return { data: toOpenAssignments(data) };
 }
 
 /** Invite state derived from the system-written timestamps. */

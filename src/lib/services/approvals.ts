@@ -2,7 +2,7 @@ import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@s
 import { z } from "zod";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import { PROJECTS_PATH } from "@/lib/services/projects";
-import type { MilestonePayoutLine, MilestonePayoutSummary, MyBonuses } from "@/types";
+import type { MilestonePayoutLine, MilestonePayoutSummary, MyBonusLine, MyBonuses } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Approval failures travel to the milestone page as a fixed code in the redirect
@@ -372,6 +372,7 @@ export async function notifyMilestoneApproved(
 interface MyBonusRow {
   id: string;
   employee_id: string;
+  project_id: string;
   project_name: string;
   milestone_name: string;
   start_date: string;
@@ -387,7 +388,24 @@ interface MyBonusRow {
 }
 
 const MY_BONUS_COLUMNS =
-  "id, employee_id, project_name, milestone_name, start_date, end_date, approved_at, job_role_name, time_share, role_weight, rating, rating_factor, multiplier, bonus";
+  "id, employee_id, project_id, project_name, milestone_name, start_date, end_date, approved_at, job_role_name, time_share, role_weight, rating, rating_factor, multiplier, bonus";
+
+const toBonusLine = (row: MyBonusRow): MyBonusLine => ({
+  id: row.id,
+  project_id: row.project_id,
+  project_name: row.project_name,
+  milestone_name: row.milestone_name,
+  start_date: row.start_date,
+  end_date: row.end_date,
+  approved_at: row.approved_at,
+  job_role_name: row.job_role_name,
+  time_share: Number(row.time_share),
+  role_weight: Number(row.role_weight),
+  rating: Number(row.rating),
+  rating_factor: Number(row.rating_factor),
+  multiplier: Number(row.multiplier),
+  bonus: Number(row.bonus),
+});
 
 /**
  * The signed-in employee's own approved bonuses, newest approval first. current_employee_id() is
@@ -414,24 +432,27 @@ export async function listMyBonuses(supabase: SupabaseClient): Promise<ServiceRe
   if (error) return { error: mapLoadError(error, "listMyBonuses") };
   const ownRows = data.filter((row) => row.employee_id === employeeId);
 
-  return {
-    data: {
-      not_linked: false,
-      lines: ownRows.map((row) => ({
-        id: row.id,
-        project_name: row.project_name,
-        milestone_name: row.milestone_name,
-        start_date: row.start_date,
-        end_date: row.end_date,
-        approved_at: row.approved_at,
-        job_role_name: row.job_role_name,
-        time_share: Number(row.time_share),
-        role_weight: Number(row.role_weight),
-        rating: Number(row.rating),
-        rating_factor: Number(row.rating_factor),
-        multiplier: Number(row.multiplier),
-        bonus: Number(row.bonus),
-      })),
-    },
-  };
+  return { data: { not_linked: false, lines: ownRows.map(toBonusLine) } };
+}
+
+/**
+ * One employee's approved history for /employees/[id]. RLS decides the scope: the Supervisor's own
+ * milestones only (no hint of other Supervisors' lines), every line for an Admin. Unlike the
+ * employee policy, the Supervisor/Admin policies do not require an approved milestone (only
+ * approve_milestone writes lines), so the read itself keeps approved milestones only: a stored line
+ * of a non-approved milestone never reaches the page. `employeeId` must already be a validated UUID.
+ */
+export async function listEmployeeHistory(
+  supabase: SupabaseClient,
+  employeeId: string,
+): Promise<ServiceResult<MyBonusLine[]>> {
+  // Lines reference milestone_results, which references milestones: two inner embeds reach the status.
+  const { data, error } = await supabase
+    .from("milestone_result_lines")
+    .select(`${MY_BONUS_COLUMNS}, milestone_results!inner(milestones!inner(status))`)
+    .eq("employee_id", employeeId)
+    .eq("milestone_results.milestones.status", "approved")
+    .overrideTypes<MyBonusRow[], { merge: false }>();
+  if (error) return { error: mapLoadError(error, "listEmployeeHistory") };
+  return { data: data.map(toBonusLine) };
 }

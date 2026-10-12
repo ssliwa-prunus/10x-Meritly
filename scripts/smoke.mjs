@@ -16,10 +16,16 @@ const APPROVED_PROJECT = "00000000-0000-4000-8000-000000000012";
 const APPROVED_MILESTONE = "00000000-0000-4000-8000-000000000023";
 const DRAFT_MILESTONE = "00000000-0000-4000-8000-000000000024";
 const EMPLOYEE_1 = "00000000-0000-4000-8000-000000000031";
+const EMPLOYEE_2 = "00000000-0000-4000-8000-000000000033";
+// A well-formed id with no employee behind it.
+const MISSING_EMPLOYEE = "00000000-0000-4000-8000-000000000999";
 // Expected bonuses derived by hand in seed.sql: 1000.00 split 0.60 / 0.40 at the maximum multiplier.
 // Written as /my-bonuses formats them (pl-PL currency), after whitespace normalisation.
 const OWN_BONUS = "400,00 zł";
 const OTHER_BONUS = "600,00 zł";
+// Draft Milestone (…0024): employee2 alone at 0.30, all KPI scores 100, so the Draft bonus is the
+// whole 1000.00 target pool. The Supervisor's milestone page shows it; the employee detail page must not.
+const DRAFT_BONUS = "1000,00 zł";
 // Text only the /admin page renders.
 const ADMIN_ONLY_TEXT = "This page is only for admins.";
 
@@ -75,8 +81,8 @@ async function request(path, { as = "smoke", method = "GET", form } = {}) {
     body: form ? new URLSearchParams(form).toString() : undefined,
   });
   storeCookies(jar, response);
-  const text = response.status === 200 ? normaliseText(await response.text()) : "";
-  return { status: response.status, location: response.headers.get("location") ?? "", text };
+  const html = response.status === 200 ? await response.text() : "";
+  return { status: response.status, location: response.headers.get("location") ?? "", text: normaliseText(html), html };
 }
 
 const signIn = (as, account, next) =>
@@ -215,6 +221,58 @@ const steps = [
       bodyExcludes: [OTHER_BONUS, "Draft Milestone"],
     },
   ],
+
+  // Employee detail (S-06): Supervisor/Admin only, scoped by RLS; employees never reach an ID route.
+  ["employee 403 on /employees/<id>", () => request(`/employees/${EMPLOYEE_1}`, { as: "employee" }), { status: 403 }],
+  [
+    "employee2 403 on another's /employees/<id>",
+    () => request(`/employees/${EMPLOYEE_1}`, { as: "employee2" }),
+    { status: 403 },
+  ],
+  // Positive control for the DRAFT_BONUS exclude below: the Draft figure renders in exactly this form.
+  [
+    "supervisor sees the Draft bonus on the Draft milestone, linked to the employee",
+    () => request(`/projects/${APPROVED_PROJECT}/milestones/${DRAFT_MILESTONE}`, { as: "supervisor" }),
+    { status: 200, bodyIncludes: [DRAFT_BONUS], htmlIncludes: [`href="/employees/${EMPLOYEE_2}"`] },
+  ],
+  [
+    "supervisor's Approved milestone links each employee to their detail",
+    () => request(`/projects/${APPROVED_PROJECT}/milestones/${APPROVED_MILESTONE}`, { as: "supervisor" }),
+    { status: 200, htmlIncludes: [`href="/employees/${EMPLOYEE_1}"`, `href="/employees/${EMPLOYEE_2}"`] },
+  ],
+  [
+    "supervisor sees employee2's history and open assignment, never a Draft figure",
+    () => request(`/employees/${EMPLOYEE_2}`, { as: "supervisor" }),
+    {
+      status: 200,
+      bodyIncludes: [
+        "Local Employee 2",
+        "Approved bonuses on your projects",
+        "Approved Demo Project",
+        "Approved Milestone",
+        OWN_BONUS,
+        "Current assignments",
+        "Draft Milestone",
+        "30%",
+      ],
+      bodyExcludes: [DRAFT_BONUS],
+    },
+  ],
+  [
+    "admin sees employee2's full history",
+    () => request(`/employees/${EMPLOYEE_2}`, { as: "admin" }),
+    { status: 200, bodyIncludes: ["All approved bonuses", "Approved Milestone", OWN_BONUS] },
+  ],
+  [
+    "supervisor gets not found for a missing employee",
+    () => request(`/employees/${MISSING_EMPLOYEE}`, { as: "supervisor" }),
+    { status: 200, bodyIncludes: ["Employee not found."], bodyExcludes: [OWN_BONUS] },
+  ],
+  [
+    "supervisor gets not found for a malformed id",
+    () => request("/employees/not-a-uuid", { as: "supervisor" }),
+    { status: 200, bodyIncludes: ["Employee not found."] },
+  ],
 ];
 
 let failed = 0;
@@ -230,6 +288,8 @@ for (const [name, run, expected] of steps) {
     if (!actual.text.includes(needle)) problems.push(`body is missing "${needle}"`);
   for (const needle of expected.bodyExcludes ?? [])
     if (actual.text.includes(needle)) problems.push(`body must not contain "${needle}"`);
+  for (const needle of expected.htmlIncludes ?? [])
+    if (!actual.html.includes(needle)) problems.push(`HTML is missing "${needle}"`);
 
   console.log(`${problems.length ? "FAIL" : "PASS"}  ${name}  -> ${actual.status} ${actual.location}`);
   if (problems.length) {
