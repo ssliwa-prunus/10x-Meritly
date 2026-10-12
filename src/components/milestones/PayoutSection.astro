@@ -123,7 +123,11 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
           <TableBody>
             {lines.map((line) => (
               <TableRow className="align-top hover:bg-transparent">
-                <TableCell className="align-top break-words whitespace-normal">{line.employee_name}</TableCell>
+                <TableCell className="align-top break-words whitespace-normal">
+                  <a href={`/employees/${line.employee_id}`} class:list={cn("text-primary hover:underline", focusRing)}>
+                    {line.employee_name}
+                  </a>
+                </TableCell>
                 <TableCell className="align-top whitespace-normal">{line.job_role_name}</TableCell>
                 <TableCell className="text-right align-top tabular-nums">{formatPercent(line.time_share)}</TableCell>
                 <TableCell className="text-right align-top tabular-nums">

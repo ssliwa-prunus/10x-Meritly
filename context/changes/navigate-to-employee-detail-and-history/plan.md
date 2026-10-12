@@ -284,6 +284,8 @@ Update `plan(N)` and the fixture-map comment.
 
 #### 2. Smoke cells
 
+> **Note (implementation, Phase 3):** these cells were written in Phase 3 as the test-first RED driver for the detail page and links (agreed at the `/10x-tdd` gate), together with an `htmlIncludes` check in the harness for link hrefs. A Draft-figure cell was added: the employee detail page must not show the Draft milestone's 1000,00 zł, which the Supervisor's milestone page does show (positive control). Phase 4 keeps step 4.3 (smoke passes) as the final check.
+
 **File**: `scripts/smoke.mjs`
 
 **Intent**: Cover the new route that carries data an employee must not see.
@@ -376,29 +378,29 @@ None. No schema, policy or data changes.
 
 #### Automated
 
-- [x] 2.1 Lint, UI literal guard, type-check and unit tests pass
-- [x] 2.2 US-01 e2e passes
-- [x] 2.3 Deliberate break: making `/my-bonuses` render the colleague's line (or rendering the group before approval) turns the named US-01 assertion red; reverted afterwards
-- [x] 2.4 Existing `/my-bonuses` smoke cells pass
+- [x] 2.1 Lint, UI literal guard, type-check and unit tests pass — 46b3554
+- [x] 2.2 US-01 e2e passes — 46b3554
+- [x] 2.3 Deliberate break: making `/my-bonuses` render the colleague's line (or rendering the group before approval) turns the named US-01 assertion red; reverted afterwards — 46b3554
+- [x] 2.4 Existing `/my-bonuses` smoke cells pass — 46b3554
 
 #### Manual
 
-- [x] 2.5 As `employee@meritly.local`, `/my-bonuses` shows "Approved Demo Project" as a group with its milestone, 600,00 zł, the breakdown, the subtotal and the total
-- [x] 2.6 The page reads correctly at phone width, with no horizontal page scroll beyond the table's own overflow
+- [x] 2.5 As `employee@meritly.local`, `/my-bonuses` shows "Approved Demo Project" as a group with its milestone, 600,00 zł, the breakdown, the subtotal and the total — 46b3554
+- [x] 2.6 The page reads correctly at phone width, with no horizontal page scroll beyond the table's own overflow — 46b3554
 
 ### Phase 3: Employee detail page and links
 
 #### Automated
 
-- [ ] 3.1 Route-classification and route-access tests pass
-- [ ] 3.2 Lint, UI literal guard (new page and component in `CLEAN_PATHS`), type-check, unit tests and build pass
+- [x] 3.1 Route-classification and route-access tests pass
+- [x] 3.2 Lint, UI literal guard (new page and component in `CLEAN_PATHS`), type-check, unit tests and build pass
 
 #### Manual
 
-- [ ] 3.3 As the seeded supervisor, clicking an employee's name on milestones `…0023` and `…0024` opens a detail page with the header, the Draft milestone under current assignments (no bonus) and 600,00 zł under history
-- [ ] 3.4 As admin, the same page shows the "All approved bonuses" heading
-- [ ] 3.5 A nonexistent and an invalid id show "Employee not found."
-- [ ] 3.6 Kitchen sink: the new states render correctly, and the focus ring is visible on the name links
+- [x] 3.3 As the seeded supervisor, clicking an employee's name on milestones `…0023` and `…0024` opens a detail page with the header, the Draft milestone under current assignments (no bonus) and 600,00 zł under history
+- [x] 3.4 As admin, the same page shows the "All approved bonuses" heading
+- [x] 3.5 A nonexistent and an invalid id show "Employee not found."
+- [x] 3.6 Kitchen sink: the new states render correctly, and the focus ring is visible on the name links
 
 ### Phase 4: Boundary tests and docs
 

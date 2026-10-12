@@ -2,6 +2,7 @@
 import Layout from "@/layouts/Layout.astro";
 import ApprovalSection from "@/components/milestones/ApprovalSection.astro";
 import KpiScoresSection from "@/components/milestones/KpiScoresSection.astro";
+import EmployeeHistory from "@/components/history/EmployeeHistory.astro";
 import PayoutSection from "@/components/milestones/PayoutSection.astro";
 import BudgetExposurePanel from "@/components/projects/BudgetExposurePanel.astro";
 import MilestonesSection from "@/components/projects/MilestonesSection.astro";
@@ -10,10 +11,12 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { groupHistory } from "@/lib/history";
 import type {
   Milestone,
   MilestonePayoutLine,
   MilestonePayoutSummary,
+  MyBonusLine,
   Profile,
   Project,
   ProjectExposure,
@@ -199,6 +202,44 @@ const unscoredLines = scoredLines.map((line) => ({ ...line, bonus: null }));
 // Approval fixtures: the worked example approved (snapshot timestamp in UTC; shown in Warsaw time).
 const approvedAt = "2026-10-05T14:30:00Z";
 
+// Employee history fixtures (S-06): two projects, the newer approval first; one project has two
+// milestones so its subtotal differs from its bonuses.
+const historyLine = (id: string, overrides: Partial<MyBonusLine>): MyBonusLine => ({
+  id,
+  project_id: activeProject.id,
+  project_name: activeProject.name,
+  milestone_name: "Discovery and design",
+  start_date: "2026-01-01",
+  end_date: "2026-03-31",
+  approved_at: "2026-04-02T09:00:00Z",
+  job_role_name: "Senior",
+  time_share: 0.6,
+  role_weight: 1.2,
+  rating: 4,
+  rating_factor: 1.1,
+  multiplier: 1.35,
+  bonus: 3240.5,
+  ...overrides,
+});
+const employeeHistory = groupHistory([
+  historyLine("h-1", {}),
+  historyLine("h-2", {
+    milestone_name: "Build and launch",
+    start_date: "2026-04-01",
+    end_date: "2026-06-30",
+    approved_at: "2026-07-03T09:00:00Z",
+    bonus: 4120,
+  }),
+  historyLine("h-3", {
+    project_id: "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+    project_name: "Data warehouse migration with a deliberately long name that has to wrap on narrow screens",
+    milestone_name: "Cut-over",
+    approved_at: "2026-09-15T09:00:00Z",
+    time_share: 0.25,
+    bonus: 980.75,
+  }),
+]);
+
 const states = [
   { state: "default", where: "All sections below (first variant of each)." },
   {
@@ -222,7 +263,8 @@ const states = [
   },
   {
     state: "empty",
-    where: "Milestones: empty and editable. KPI scores: editable empty. Computed bonuses: no engagements.",
+    where:
+      "Milestones: empty and editable. KPI scores: editable empty. Computed bonuses: no engagements. Employee history: no approved bonuses.",
   },
   {
     state: "loading",
@@ -592,6 +634,28 @@ const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide 
           <ProjectForm project={activeProject} saved={true} error={null} />
           <h3 class:list={variantHeading}>Error</h3>
           <ProjectForm project={activeProject} saved={false} error="The end date must be on or after the start date." />
+        </section>
+
+        <section class="flex flex-col gap-6" aria-labelledby="ks-history">
+          <h2 id="ks-history" class:list={groupHeading}>
+            Employee history
+          </h2>
+          <p class="text-muted-foreground text-sm">
+            Shared by <code>/my-bonuses</code> and <code>/employees/[id]</code>. Employee names in the computed bonuses
+            tables above link to <code>/employees/[id]</code> (hover and focus-visible).
+          </p>
+          <h3 class:list={variantHeading}>Default — two projects, one with two milestones</h3>
+          <Card>
+            <CardContent>
+              <EmployeeHistory history={employeeHistory} emptyText="No approved bonuses yet." />
+            </CardContent>
+          </Card>
+          <h3 class:list={variantHeading}>Empty</h3>
+          <Card>
+            <CardContent>
+              <EmployeeHistory history={groupHistory([])} emptyText="No approved bonuses yet." />
+            </CardContent>
+          </Card>
         </section>
 
         <section class="flex flex-col gap-6" aria-labelledby="ks-disabled">
