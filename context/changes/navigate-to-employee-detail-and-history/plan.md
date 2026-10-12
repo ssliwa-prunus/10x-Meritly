@@ -406,11 +406,11 @@ None. No schema, policy or data changes.
 
 #### Automated
 
-- [x] 4.1 pgTAP passes with the new cells
-- [x] 4.2 Deliberate break: a scratch migration that widens `milestone_result_lines_select_supervisor` to any supervisor turns the named SB cell red; scratch file deleted and database reset afterwards
-- [x] 4.3 Smoke passes against the rebuilt preview
-- [x] 4.4 Full checks pass
+- [x] 4.1 pgTAP passes with the new cells — 43875b3
+- [x] 4.2 Deliberate break: a scratch migration that widens `milestone_result_lines_select_supervisor` to any supervisor turns the named SB cell red; scratch file deleted and database reset afterwards — 43875b3
+- [x] 4.3 Smoke passes against the rebuilt preview — 43875b3
+- [x] 4.4 Full checks pass — 43875b3
 
 #### Manual
 
-- [x] 4.5 The test-plan §6.3 and §6.6 wording matches what was built
+- [x] 4.5 The test-plan §6.3 and §6.6 wording matches what was built — 43875b3

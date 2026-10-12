@@ -1,7 +1,7 @@
 ---
 change_id: navigate-to-employee-detail-and-history
 title: Navigate to employee detail and history (roadmap S-06)
-status: implementing
+status: implemented
 created: 2026-10-12
 updated: 2026-10-12
 archived_at: null
