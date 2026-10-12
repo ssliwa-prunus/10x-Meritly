@@ -234,10 +234,15 @@ export interface MilestoneResultLine {
   notify_claimed_at: string | null;
 }
 
-/** One of the signed-in employee's own approved bonuses on `/my-bonuses`: a `MilestoneResultLine` minus ids and colleague-facing fields. */
+/**
+ * One approved bonus in an employee's history (`/my-bonuses`, `/employees/[id]`): a
+ * `MilestoneResultLine` minus colleague-facing fields. `project_id` is the grouping key only; no
+ * employee URL takes it.
+ */
 export type MyBonusLine = Pick<
   MilestoneResultLine,
   | "id"
+  | "project_id"
   | "project_name"
   | "milestone_name"
   | "start_date"
@@ -256,4 +261,36 @@ export type MyBonusLine = Pick<
 export interface MyBonuses {
   lines: MyBonusLine[];
   not_linked: boolean;
+}
+
+/** One project in an employee's history: its approved lines and their subtotal (S-06). */
+export interface HistoryProjectGroup {
+  project_id: string;
+  /** Name from the group's most recently approved line (snapshot names are frozen per approval). */
+  project_name: string;
+  latest_approved_at: string;
+  subtotal: number;
+  lines: MyBonusLine[];
+}
+
+/** An employee's approved history grouped by project, newest approval first (`groupHistory`). */
+export interface EmployeeHistory {
+  groups: HistoryProjectGroup[];
+  total: number;
+  line_count: number;
+}
+
+/** Header of `/employees/[id]`: the same shape as a list row, open total as the caller sees it. */
+export type EmployeeDetail = EmployeeListItem;
+
+/** An engagement on an open milestone (not completed, cancelled or approved; project still open). */
+export interface OpenAssignment {
+  engagement_id: string;
+  project_id: string;
+  project_name: string;
+  milestone_id: string;
+  milestone_name: string;
+  start_date: string;
+  end_date: string;
+  time_share: number;
 }
