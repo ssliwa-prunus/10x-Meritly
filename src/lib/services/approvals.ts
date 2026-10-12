@@ -437,17 +437,21 @@ export async function listMyBonuses(supabase: SupabaseClient): Promise<ServiceRe
 
 /**
  * One employee's approved history for /employees/[id]. RLS decides the scope: the Supervisor's own
- * milestones only (no hint of other Supervisors' lines), every line for an Admin. `employeeId` must
- * already be a validated UUID.
+ * milestones only (no hint of other Supervisors' lines), every line for an Admin. Unlike the
+ * employee policy, the Supervisor/Admin policies do not require an approved milestone (only
+ * approve_milestone writes lines), so the read itself keeps approved milestones only: a stored line
+ * of a non-approved milestone never reaches the page. `employeeId` must already be a validated UUID.
  */
 export async function listEmployeeHistory(
   supabase: SupabaseClient,
   employeeId: string,
 ): Promise<ServiceResult<MyBonusLine[]>> {
+  // Lines reference milestone_results, which references milestones: two inner embeds reach the status.
   const { data, error } = await supabase
     .from("milestone_result_lines")
-    .select(MY_BONUS_COLUMNS)
+    .select(`${MY_BONUS_COLUMNS}, milestone_results!inner(milestones!inner(status))`)
     .eq("employee_id", employeeId)
+    .eq("milestone_results.milestones.status", "approved")
     .overrideTypes<MyBonusRow[], { merge: false }>();
   if (error) return { error: mapLoadError(error, "listEmployeeHistory") };
   return { data: data.map(toBonusLine) };

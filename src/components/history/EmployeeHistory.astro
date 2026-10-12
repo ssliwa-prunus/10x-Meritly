@@ -10,12 +10,10 @@ import type { EmployeeHistory } from "@/types";
 interface Props {
   history: EmployeeHistory;
   emptyText: string;
-  /** Level of each project's heading; 3 when the history sits under a page section heading. */
-  headingLevel?: 2 | 3;
 }
 
-const { history, emptyText, headingLevel = 3 } = Astro.props;
-const ProjectHeading = headingLevel === 2 ? "h2" : "h3";
+// Both pages place the history under an h2 section heading, so each project is an h3.
+const { history, emptyText } = Astro.props;
 const columnCount = 4;
 const milestones = (count: number) => (count === 1 ? "1 approved milestone" : `${count} approved milestones`);
 ---
@@ -34,9 +32,9 @@ const milestones = (count: number) => (count === 1 ? "1 approved milestone" : `$
       return (
         <section aria-labelledby={headingId}>
           <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-            <ProjectHeading id={headingId} class="text-base font-semibold break-words">
+            <h3 id={headingId} class="text-base font-semibold break-words">
               {group.project_name}
-            </ProjectHeading>
+            </h3>
             <p class="text-sm">
               <span class="text-muted-foreground">Subtotal</span>{" "}
               <span class="font-semibold tabular-nums">{formatPln(group.subtotal)}</span>

@@ -25,6 +25,7 @@ Roadmap S-06 (FR-013, FR-014). A Supervisor or Admin opens an employee's detail 
   - **Approved history:** grouped by project, with a subtotal per project and an overall total.
 - What a Supervisor sees is limited to milestones they own. An Admin sees all.
 - An unknown, invalid or RLS-hidden id shows "Employee not found." An Employee gets 403.
+- Accepted (impl-review F4): a Supervisor can open any employee RLS lets them read, so not only their own but also another Supervisor's employee engaged on one of their milestones (`employees_select_supervisor`, reached through the payout-table links). The header then shows that employee's email and account status. This is intended: the policy grants the read deliberately, and the page adds nothing beyond it. History and assignments stay limited to the Supervisor's own milestones.
 - `/my-bonuses` shows the same project-grouped history through the same component, still taking no parameters.
 - Ordering: projects by their most recent `approved_at`, newest first. Milestones within a project by `end_date`, newest first.
 - Verified by: unit tests for the grouping helper, `rls_matrix` cells pinning the scope, smoke cells for the new route, the updated US-01 e2e, and the kitchen sink.
@@ -266,6 +267,12 @@ Pin the decided visibility at the database and HTTP layers, and record the new I
 ### Changes Required:
 
 #### 1. `rls_matrix` cells
+
+> **Note (implementation and impl-review, 2026-10-12):** what was built differs from the contract below in three ways, each recorded on purpose.
+>
+> - **The SA history cell pins MA_appr + MA_draft + MR_appr.** MA_draft is the injected Draft line: the Supervisor policy is `owns_milestone` only. The detail page therefore filters to approved milestones itself (impl-review F1: `listEmployeeHistory` embeds `milestone_results!inner(milestones!inner(status))` = `approved`). This was proven red→green with an injected Draft line.
+> - **The SA engagements cell pins the raw RLS scope** (all four E1 engagements). The "open" rule runs in TypeScript and is unit-tested in `src/lib/__tests__/assignments.test.ts` (impl-review F2, `toOpenAssignments`).
+> - **The positive smoke cells use employee2** (`…0033`, 400,00 zł), not employee (`…0031`, 600,00 zł). employee2 holds the open Draft assignment the Draft-figure cell needs.
 
 **File**: `supabase/tests/rls_matrix.test.sql`
 

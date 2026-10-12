@@ -1,5 +1,6 @@
 import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { toOpenAssignments, type AssignmentRow } from "@/lib/assignments";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import type {
   Employee,
@@ -7,9 +8,7 @@ import type {
   EmployeeListItem,
   EmployeeTimeShare,
   InviteStatus,
-  MilestoneStatus,
   OpenAssignment,
-  WorkStatus,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -250,15 +249,13 @@ export async function listEmployees(
 
 /**
  * One visible employee for /employees/[id], with the open total as the caller sees it (the
- * Supervisor's own milestones, or all for an Admin). `data: null` when the id is not a UUID, does
- * not exist or is hidden by RLS: to the caller these are the same.
+ * Supervisor's own milestones, or all for an Admin). `data: null` when the employee does not exist
+ * or is hidden by RLS: to the caller these are the same. `id` must already be a validated UUID.
  */
 export async function getEmployeeDetail(
   supabase: SupabaseClient,
   id: string,
 ): Promise<ServiceResult<EmployeeDetail | null>> {
-  if (!employeeIdSchema.safeParse(id).success) return { data: null };
-
   const [employee, total] = await Promise.all([
     supabase.from("employees").select(EMPLOYEE_COLUMNS).eq("id", id).maybeSingle<EmployeeRow>(),
     supabase
@@ -284,27 +281,10 @@ export async function getEmployeeDetail(
   };
 }
 
-interface AssignmentRow {
-  id: string;
-  time_share: number | string;
-  milestones: {
-    id: string;
-    name: string;
-    status: MilestoneStatus;
-    start_date: string;
-    end_date: string;
-    projects: { id: string; name: string; status: WorkStatus } | null;
-  } | null;
-}
-
-/** Same rule as employee_time_share_totals: a closed milestone or a closed project is not open. */
-const CLOSED_MILESTONE: readonly MilestoneStatus[] = ["completed", "cancelled", "approved"];
-const CLOSED_PROJECT: readonly WorkStatus[] = ["completed", "cancelled"];
-
 /**
- * The employee's engagements on open milestones, earliest start first. RLS on milestone_engagements
- * limits a Supervisor to their own milestones; an Admin sees all. `employeeId` must already be a
- * validated UUID.
+ * The employee's engagements on open milestones (toOpenAssignments holds the rule and the order).
+ * RLS on milestone_engagements limits a Supervisor to their own milestones; an Admin sees all.
+ * `employeeId` must already be a validated UUID.
  */
 export async function listOpenAssignments(
   supabase: SupabaseClient,
@@ -316,25 +296,7 @@ export async function listOpenAssignments(
     .eq("employee_id", employeeId)
     .overrideTypes<AssignmentRow[], { merge: false }>();
   if (error) return { error: mapLoadError(error, "listOpenAssignments") };
-
-  const open: OpenAssignment[] = [];
-  for (const row of data) {
-    const milestone = row.milestones;
-    const project = milestone?.projects;
-    if (!milestone || !project) continue;
-    if (CLOSED_MILESTONE.includes(milestone.status) || CLOSED_PROJECT.includes(project.status)) continue;
-    open.push({
-      engagement_id: row.id,
-      project_id: project.id,
-      project_name: project.name,
-      milestone_id: milestone.id,
-      milestone_name: milestone.name,
-      start_date: milestone.start_date,
-      end_date: milestone.end_date,
-      time_share: Number(row.time_share),
-    });
-  }
-  return { data: open.sort((a, b) => (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0)) };
+  return { data: toOpenAssignments(data) };
 }
 
 /** Invite state derived from the system-written timestamps. */
