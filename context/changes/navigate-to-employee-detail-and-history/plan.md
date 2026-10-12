@@ -392,25 +392,25 @@ None. No schema, policy or data changes.
 
 #### Automated
 
-- [x] 3.1 Route-classification and route-access tests pass
-- [x] 3.2 Lint, UI literal guard (new page and component in `CLEAN_PATHS`), type-check, unit tests and build pass
+- [x] 3.1 Route-classification and route-access tests pass — 1a8a59b
+- [x] 3.2 Lint, UI literal guard (new page and component in `CLEAN_PATHS`), type-check, unit tests and build pass — 1a8a59b
 
 #### Manual
 
-- [x] 3.3 As the seeded supervisor, clicking an employee's name on milestones `…0023` and `…0024` opens a detail page with the header, the Draft milestone under current assignments (no bonus) and 600,00 zł under history
-- [x] 3.4 As admin, the same page shows the "All approved bonuses" heading
-- [x] 3.5 A nonexistent and an invalid id show "Employee not found."
-- [x] 3.6 Kitchen sink: the new states render correctly, and the focus ring is visible on the name links
+- [x] 3.3 As the seeded supervisor, clicking an employee's name on milestones `…0023` and `…0024` opens a detail page with the header, the Draft milestone under current assignments (no bonus) and 600,00 zł under history — 1a8a59b
+- [x] 3.4 As admin, the same page shows the "All approved bonuses" heading — 1a8a59b
+- [x] 3.5 A nonexistent and an invalid id show "Employee not found." — 1a8a59b
+- [x] 3.6 Kitchen sink: the new states render correctly, and the focus ring is visible on the name links — 1a8a59b
 
 ### Phase 4: Boundary tests and docs
 
 #### Automated
 
-- [ ] 4.1 pgTAP passes with the new cells
-- [ ] 4.2 Deliberate break: a scratch migration that widens `milestone_result_lines_select_supervisor` to any supervisor turns the named SB cell red; scratch file deleted and database reset afterwards
-- [ ] 4.3 Smoke passes against the rebuilt preview
-- [ ] 4.4 Full checks pass
+- [x] 4.1 pgTAP passes with the new cells
+- [x] 4.2 Deliberate break: a scratch migration that widens `milestone_result_lines_select_supervisor` to any supervisor turns the named SB cell red; scratch file deleted and database reset afterwards
+- [x] 4.3 Smoke passes against the rebuilt preview
+- [x] 4.4 Full checks pass
 
 #### Manual
 
-- [ ] 4.5 The test-plan §6.3 and §6.6 wording matches what was built
+- [x] 4.5 The test-plan §6.3 and §6.6 wording matches what was built

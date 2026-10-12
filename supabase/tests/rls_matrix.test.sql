@@ -27,7 +27,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(252);
+select plan(264);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so owners are explicit)
@@ -250,6 +250,73 @@ select is(
   2,
   'fixture: E1 and E2 are linked to their accounts and activated'
 );
+
+-- ---------------------------------------------------------------------------
+-- S-06 employee detail and history: the exact reads /employees/[id] and /my-bonuses make
+-- (`where employee_id = …`), per actor, on the untouched fixtures. Decided matrix: a Supervisor
+-- sees E1's history and engagements only on milestones they own (no other Supervisor's lines and no
+-- hint of them); an Admin sees all; an employee sees only their own approved lines. The injected
+-- Draft line on MA_draft can only exist by injection (approve_milestone is the only writer); its
+-- owner and the Admin see it, E1 never does.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000703"}';
+
+select results_eq(
+  $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' order by milestone_id $$,
+  $$ values ('00000000-0000-4000-8000-000000000721'::uuid), ('00000000-0000-4000-8000-000000000722'::uuid), ('00000000-0000-4000-8000-000000000724'::uuid) $$,
+  'S-06: SA reading E1''s history sees the lines of SA''s MA_appr, MA_draft (injected) and MR_appr'
+);
+select results_eq(
+  $$ select id from public.milestone_engagements where employee_id = '00000000-0000-4000-8000-000000000731' order by id $$,
+  $$ values ('00000000-0000-4000-8000-000000000741'::uuid), ('00000000-0000-4000-8000-000000000743'::uuid), ('00000000-0000-4000-8000-000000000746'::uuid), ('00000000-0000-4000-8000-000000000747'::uuid) $$,
+  'S-06: SA reading E1''s engagements sees all four, all on SA''s milestones'
+);
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000704"}';
+
+select is_empty(
+  $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' $$,
+  'S-06: SB reading E1''s history sees none (no SB milestone)'
+);
+select is_empty(
+  $$ select id from public.milestone_engagements where employee_id = '00000000-0000-4000-8000-000000000731' $$,
+  'S-06: SB reading E1''s engagements sees none'
+);
+select is_empty(
+  $$ select id from public.employees where id = '00000000-0000-4000-8000-000000000731' $$,
+  'S-06: SB cannot open E1 before owning one of E1''s milestones'
+);
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000705"}';
+
+select results_eq(
+  $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' order by milestone_id $$,
+  $$ values ('00000000-0000-4000-8000-000000000721'::uuid), ('00000000-0000-4000-8000-000000000722'::uuid), ('00000000-0000-4000-8000-000000000724'::uuid) $$,
+  'S-06: AD reading E1''s history sees every E1 line'
+);
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000702"}';
+
+select is_empty(
+  $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' $$,
+  'S-06: E2 reading E1''s history sees none'
+);
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000701"}';
+
+select results_eq(
+  $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' order by milestone_id $$,
+  $$ values ('00000000-0000-4000-8000-000000000721'::uuid), ('00000000-0000-4000-8000-000000000724'::uuid) $$,
+  'S-06: E1 reading own history sees MA_appr and MR_appr, never the injected Draft line'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
 
 -- ---------------------------------------------------------------------------
 -- anon: no privilege on any table or view (select raises 42501, so no row is visible)
@@ -1377,6 +1444,38 @@ set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000706"}';
 select is_empty(
   $$ select id from public.milestone_result_lines where milestone_id = '00000000-0000-4000-8000-000000000724' $$,
   'after reassignment U sees none of MR_appr''s lines'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+
+-- S-06 after reassignment: SB now owns PR, so SB opens E1 (engaged on SB's MR_appr) and sees exactly
+-- that milestone's line and engagement, never SA's MA_appr; SA keeps only PA's lines.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000704"}';
+
+select isnt_empty(
+  $$ select id from public.employees where id = '00000000-0000-4000-8000-000000000731' $$,
+  'S-06: after reassignment SB can open E1 (engaged on SB''s MR_appr)'
+);
+select results_eq(
+  $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' order by milestone_id $$,
+  $$ values ('00000000-0000-4000-8000-000000000724'::uuid) $$,
+  'S-06: after reassignment SB reading E1''s history sees only MR_appr'
+);
+select results_eq(
+  $$ select id from public.milestone_engagements where employee_id = '00000000-0000-4000-8000-000000000731' order by id $$,
+  $$ values ('00000000-0000-4000-8000-000000000746'::uuid) $$,
+  'S-06: after reassignment SB reading E1''s engagements sees only E1@MR_appr'
+);
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000703"}';
+
+select results_eq(
+  $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' order by milestone_id $$,
+  $$ values ('00000000-0000-4000-8000-000000000721'::uuid), ('00000000-0000-4000-8000-000000000722'::uuid) $$,
+  'S-06: after reassignment SA reading E1''s history sees only PA''s lines'
 );
 
 reset role;
