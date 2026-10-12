@@ -368,23 +368,23 @@ None. No schema, policy or data changes.
 
 #### Automated
 
-- [x] 1.1 Grouping unit tests pass, including: two projects with the same name stay separate, group order follows the latest approval rather than the end date, a sub-grosz float sum is exact (e.g. 0.1 + 0.2 style), and empty input
-- [x] 1.2 Mutation testing of the helper leaves no surviving mutant in ordering or summing
-- [x] 1.3 Full unit suite, lint and type-check pass
+- [x] 1.1 Grouping unit tests pass, including: two projects with the same name stay separate, group order follows the latest approval rather than the end date, a sub-grosz float sum is exact (e.g. 0.1 + 0.2 style), and empty input — f2432ba
+- [x] 1.2 Mutation testing of the helper leaves no surviving mutant in ordering or summing — f2432ba
+- [x] 1.3 Full unit suite, lint and type-check pass — f2432ba
 
 ### Phase 2: `/my-bonuses` grouped by project
 
 #### Automated
 
-- [ ] 2.1 Lint, UI literal guard, type-check and unit tests pass
-- [ ] 2.2 US-01 e2e passes
-- [ ] 2.3 Deliberate break: making `/my-bonuses` render the colleague's line (or rendering the group before approval) turns the named US-01 assertion red; reverted afterwards
-- [ ] 2.4 Existing `/my-bonuses` smoke cells pass
+- [x] 2.1 Lint, UI literal guard, type-check and unit tests pass
+- [x] 2.2 US-01 e2e passes
+- [x] 2.3 Deliberate break: making `/my-bonuses` render the colleague's line (or rendering the group before approval) turns the named US-01 assertion red; reverted afterwards
+- [x] 2.4 Existing `/my-bonuses` smoke cells pass
 
 #### Manual
 
-- [ ] 2.5 As `employee@meritly.local`, `/my-bonuses` shows "Approved Demo Project" as a group with its milestone, 600,00 zł, the breakdown, the subtotal and the total
-- [ ] 2.6 The page reads correctly at phone width, with no horizontal page scroll beyond the table's own overflow
+- [x] 2.5 As `employee@meritly.local`, `/my-bonuses` shows "Approved Demo Project" as a group with its milestone, 600,00 zł, the breakdown, the subtotal and the total
+- [x] 2.6 The page reads correctly at phone width, with no horizontal page scroll beyond the table's own overflow
 
 ### Phase 3: Employee detail page and links
 

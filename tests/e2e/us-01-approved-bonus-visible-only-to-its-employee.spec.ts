@@ -11,16 +11,23 @@ import { waitForHydration } from "./support/hydration";
 // Seeded employee records owned by supervisor@meritly.local (supabase/seed.sql).
 const LOCAL_EMPLOYEE_ID = "00000000-0000-4000-8000-000000000031"; // linked to E2E_EMPLOYEE_USERNAME
 const LOCAL_EMPLOYEE_2_ID = "00000000-0000-4000-8000-000000000033"; // linked to E2E_EMPLOYEE2_USERNAME
+// Seeded project with an Approved milestone for both employees (supabase/seed.sql).
+const SEEDED_APPROVED_PROJECT = "Approved Demo Project";
 
 // Oracle, derived by hand from the PRD formula (not from the code): all four KPI scores at 100 give
-// M = multiplier max, so the payout pool is the whole 2000.00 target pool. Same job role and rating,
-// so the pool splits by time share alone: 0.60 → 1200.00 own for employee 1, 0.40 → 800.00 own for
+// M = multiplier max, so the payout pool is the whole 2100.00 target pool. Same job role and rating,
+// so the pool splits by time share alone: 0.60 → 1260.00 own for employee 1, 0.40 → 840.00 own for
 // employee 2. Each employee sees their own figure in their row and never the other's anywhere.
-// `^…$` pins the own cell; `(?<!\d)` keeps the absence check from matching e.g. "1800,00 zł".
-const EMPLOYEE_1_BONUS_CELL = /^1200,00\s*zł$/;
-const EMPLOYEE_2_BONUS_CELL = /^800,00\s*zł$/;
-const EMPLOYEE_1_BONUS_ANYWHERE = /(?<!\d)1200,00\s*zł/;
-const EMPLOYEE_2_BONUS_ANYWHERE = /(?<!\d)800,00\s*zł/;
+// `^…$` pins the own cell; `(?<!\d\s?)` keeps the absence check from matching a larger
+// amount ending in the same digits, e.g. "1840,00 zł" or pl-PL's grouped "30 840,00 zł".
+// Why 2100 and not a rounder target: /my-bonuses also shows a total. Employee 2's total is the seeded
+// 400.00 plus 840.00 per run (residue), employee 1's is 600.00 plus 1260.00 per run; neither total can
+// ever equal the other employee's bonus, so the page-wide absence check stays sound. (With 2000 the
+// fresh-database total 400 + 800 = 1200 would equal employee 1's bonus.)
+const EMPLOYEE_1_BONUS_CELL = /^1260,00\s*zł$/;
+const EMPLOYEE_2_BONUS_CELL = /^840,00\s*zł$/;
+const EMPLOYEE_1_BONUS_ANYWHERE = /(?<!\d\s?)1260,00\s*zł/;
+const EMPLOYEE_2_BONUS_ANYWHERE = /(?<!\d\s?)840,00\s*zł/;
 
 interface Credentials {
   email: string;
@@ -95,7 +102,7 @@ test.describe("US-01: supervisor approves a milestone and the employee sees thei
         start_date: "2026-01-01",
         end_date: "2026-03-31",
         status: "active",
-        target_pool: "2000",
+        target_pool: "2100",
         notes: "",
       }),
       "milestones",
@@ -135,11 +142,14 @@ test.describe("US-01: supervisor approves a milestone and the employee sees thei
         const employee1Page = await signIn(employee1Context, baseURL, employee1);
         const employee2Page = await signIn(employee2Context, baseURL, employee2);
 
-        // Draft: neither employee sees the milestone's results before approval.
+        // Draft: neither employee sees the milestone's results before approval. /my-bonuses groups
+        // results per project as a region named after it; the seeded approved project's group being
+        // visible proves the groups render, so the absence below cannot pass for the wrong reason.
         for (const employeePage of [employee1Page, employee2Page]) {
           await employeePage.goto("/my-bonuses");
           await expect(employeePage.getByRole("heading", { name: "Approved bonuses" })).toBeVisible();
-          await expect(employeePage.getByRole("row").filter({ hasText: projectName })).toHaveCount(0);
+          await expect(employeePage.getByRole("region", { name: SEEDED_APPROVED_PROJECT, exact: true })).toBeVisible();
+          await expect(employeePage.getByRole("region", { name: projectName, exact: true })).toHaveCount(0);
         }
 
         // The supervisor reviews the draft figures and approves the milestone.
@@ -156,7 +166,10 @@ test.describe("US-01: supervisor approves a milestone and the employee sees thei
         ];
         for (const { employeePage, ownBonus, otherBonus } of views) {
           await employeePage.reload();
-          const ownRows = employeePage.getByRole("row").filter({ hasText: projectName });
+          const projectGroup = employeePage.getByRole("region", { name: projectName, exact: true });
+          await expect(projectGroup).toBeVisible();
+          // The milestone's row, not the group's subtotal (equal to the bonus for a one-milestone project).
+          const ownRows = projectGroup.getByRole("row").filter({ hasText: milestoneName });
           await expect(ownRows).toHaveCount(1);
           await expect(ownRows.getByRole("cell", { name: milestoneName, exact: true })).toBeVisible();
           await expect(ownRows.getByRole("cell", { name: ownBonus })).toBeVisible();
