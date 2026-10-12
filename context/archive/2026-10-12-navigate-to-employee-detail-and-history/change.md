@@ -1,10 +1,10 @@
 ---
 change_id: navigate-to-employee-detail-and-history
 title: Navigate to employee detail and history (roadmap S-06)
-status: impl_reviewed
+status: archived
 created: 2026-10-12
 updated: 2026-10-12
-archived_at: null
+archived_at: 2026-10-12T18:06:38Z
 ---
 
 ## Notes
