@@ -46,7 +46,7 @@ let exposureResult: Awaited<ReturnType<typeof getProjectExposure>> = {};
 let supervisorsResult: Awaited<ReturnType<typeof listSupervisors>> = {};
 
 if (!supabase) {
-  loadError = "Supabase is not configured";
+  loadError = t.common.supabaseNotConfigured;
 } else if (id.success) {
   [projectResult, milestonesResult, exposureResult, supervisorsResult] = await Promise.all([
     getProject(supabase, id.data),
@@ -76,17 +76,19 @@ const addFormError = canEditMilestones && errorMilestoneId === null ? milestones
 const sectionError = rowErrorId || addFormError ? null : milestonesStatus.error;
 ---
 
-<Layout title={project ? project.name : "Project"}>
+<Layout title={project ? project.name : t.projects.detail.fallbackTitle}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
       <Topbar />
       <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">{project ? project.name : "Project"}</h1>
+        <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">
+          {project ? project.name : t.projects.detail.fallbackTitle}
+        </h1>
         <a
           href="/projects"
           class="text-primary focus-visible:ring-ring/50 rounded-sm text-sm hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
-          Back to projects
+          {t.projects.detail.backToProjects}
         </a>
       </div>
 
@@ -98,14 +100,14 @@ const sectionError = rowErrorId || addFormError ? null : milestonesStatus.error;
 
       {loadError ? (
         <Alert variant="destructive">
-          <AlertTitle>Could not load the project.</AlertTitle>
+          <AlertTitle>{t.projects.detail.loadFailedTitle}</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       ) : !project ? (
         <Card>
           <CardHeader>
-            <CardTitle>Project not found.</CardTitle>
-            <CardDescription>It does not exist or you do not have access to it.</CardDescription>
+            <CardTitle>{t.projects.detail.notFound}</CardTitle>
+            <CardDescription>{t.projects.detail.notFoundDescription}</CardDescription>
           </CardHeader>
         </Card>
       ) : (

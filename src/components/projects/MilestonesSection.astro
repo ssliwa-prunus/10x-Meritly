@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatPln } from "@/lib/format";
+import { format, getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { Milestone, Project } from "@/types";
 
@@ -26,6 +27,11 @@ interface Props {
 const { project, milestones, isAdmin, canEditMilestones, saved, sectionError, rowErrorId, rowError, addFormError } =
   Astro.props;
 
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
+const f = t.common.fields;
+const labels = t.milestones.section;
+
 const isClosed = project.status === "completed" || project.status === "cancelled";
 // Approved milestones are frozen: no edit row (MilestoneForm has no 'approved' option, so a submit
 // would send another status and hit MR015). A row error for one, e.g. from a replayed form, shows
@@ -42,18 +48,17 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
   <Card>
     <CardHeader>
       <h2 id="milestones-heading" class="text-xl leading-none font-semibold">
-        Milestones
+        {labels.heading}
       </h2>
       <CardDescription>
-        Each milestone's period must lie within the project's ({project.start_date} – {project.end_date}). Cancelled
-        milestones are not reserved in the budget; approved ones reserve their actual payout pool.
+        {format(labels.description, { start: project.start_date, end: project.end_date })}
       </CardDescription>
     </CardHeader>
 
     <CardContent className="flex flex-col gap-4">
       {saved && (
         <Alert variant="success" role="status">
-          <AlertDescription>Milestones saved.</AlertDescription>
+          <AlertDescription>{labels.saved}</AlertDescription>
         </Alert>
       )}
       {(sectionError ?? orphanRowError) && (
@@ -62,37 +67,32 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
         </Alert>
       )}
       {isAdmin ? (
-        <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
-          Admins can view milestones but not change them.
-        </p>
+        <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{labels.adminReadOnly}</p>
       ) : (
         isClosed && (
           <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
-            This project is {project.status}. Reopen the project (set it to planned or active) before adding or changing
-            its milestones.
+            {format(labels.projectClosed, { status: t.status.work[project.status].toLocaleLowerCase(locale) })}
           </p>
         )
       )}
 
       {milestones.length === 0 ? (
-        <p class="text-muted-foreground text-sm">
-          No milestones yet.{canEditMilestones && " Add the first one below."}
-        </p>
+        <p class="text-muted-foreground text-sm">{canEditMilestones ? labels.emptyCanAdd : labels.empty}</p>
       ) : (
         <Table className="text-left">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead scope="col" className="text-muted-foreground">
-                Name
+                {f.name}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground">
-                Period
+                {f.period}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground">
-                Status
+                {f.status}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground text-right">
-                Target pool
+                {f.targetPool}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -116,11 +116,11 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                   <span class="whitespace-nowrap">{milestone.start_date}</span> –{" "}
                   <span class="whitespace-nowrap">{milestone.end_date}</span>
                 </TableCell>
-                <TableCell className="align-top capitalize">
+                <TableCell className="align-top">
                   {milestone.status === "approved" ? (
-                    <Badge className="bg-success text-success-foreground">Approved</Badge>
+                    <Badge className="bg-success text-success-foreground">{t.status.milestone.approved}</Badge>
                   ) : (
-                    milestone.status
+                    t.status.milestone[milestone.status]
                   )}
                 </TableCell>
                 <TableCell className="text-right align-top tabular-nums">{formatPln(milestone.target_pool)}</TableCell>
@@ -137,7 +137,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                   <TableCell colSpan={4} className="pt-0 pb-3 whitespace-normal">
                     <details open={rowErrorId === milestone.id} class="bg-muted rounded-xl border p-3">
                       <summary class:list={cn("text-primary cursor-pointer text-sm hover:underline", focusRing)}>
-                        Edit {milestone.name}
+                        {format(t.common.editName, { name: milestone.name })}
                       </summary>
                       <div class="mt-3">
                         <MilestoneForm
@@ -157,7 +157,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
 
       {canEditMilestones && (
         <div class="mt-2 border-t pt-5">
-          <h3 class="text-muted-foreground mb-2 text-sm font-medium tracking-wide uppercase">Add milestone</h3>
+          <h3 class="text-muted-foreground mb-2 text-sm font-medium tracking-wide uppercase">{labels.addHeading}</h3>
           <MilestoneForm projectId={project.id} error={addFormError} />
         </div>
       )}

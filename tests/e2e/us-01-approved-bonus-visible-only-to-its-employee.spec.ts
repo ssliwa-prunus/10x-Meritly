@@ -51,6 +51,9 @@ async function postForm(page: Page, baseURL: string, path: string, form: Record<
 
 /** Signs an isolated, cookie-less context in through the API (not the UI) and opens a page in it. */
 async function signIn(context: BrowserContext, baseURL: string, { email, password }: Credentials) {
+  // The assertions use the Polish dictionary text. Pin the language as auth.setup.ts does: sign-in
+  // saves the cookie's choice to the profile, so a language left on a seeded profile cannot leak in.
+  await context.addCookies([{ name: "lang", value: "pl", url: baseURL }]);
   const res = await context.request.post("/api/auth/signin", {
     form: { email, password },
     headers: { Origin: new URL(baseURL).origin },
@@ -147,7 +150,7 @@ test.describe("US-01: supervisor approves a milestone and the employee sees thei
         // visible proves the groups render, so the absence below cannot pass for the wrong reason.
         for (const employeePage of [employee1Page, employee2Page]) {
           await employeePage.goto("/my-bonuses");
-          await expect(employeePage.getByRole("heading", { name: "Approved bonuses" })).toBeVisible();
+          await expect(employeePage.getByRole("heading", { name: "Zatwierdzone premie" })).toBeVisible();
           await expect(employeePage.getByRole("region", { name: SEEDED_APPROVED_PROJECT, exact: true })).toBeVisible();
           await expect(employeePage.getByRole("region", { name: projectName, exact: true })).toHaveCount(0);
         }
@@ -155,9 +158,9 @@ test.describe("US-01: supervisor approves a milestone and the employee sees thei
         // The supervisor reviews the draft figures and approves the milestone.
         await page.goto(milestonePath);
         await waitForHydration(page);
-        await page.getByRole("checkbox", { name: /I understand this is final/ }).check();
-        await page.getByRole("button", { name: "Approve milestone" }).click();
-        await expect(page.getByRole("status").filter({ hasText: "Milestone approved." })).toBeVisible();
+        await page.getByRole("checkbox", { name: /Rozumiem, że to ostateczne/ }).check();
+        await page.getByRole("button", { name: "Zatwierdź kamień milowy" }).click();
+        await expect(page.getByRole("status").filter({ hasText: "Kamień milowy zatwierdzony." })).toBeVisible();
 
         // Approved: each employee sees exactly their own line, with their own bonus...
         const views = [

@@ -20,7 +20,7 @@ let loadError: string | null = null;
 let bonuses: MyBonuses = { lines: [], not_linked: false };
 
 if (!supabase) {
-  loadError = "Supabase is not configured";
+  loadError = t.common.supabaseNotConfigured;
 } else {
   const result = await listMyBonuses(supabase);
   if (result.error || !result.data) loadError = t.myBonuses.loadFailed;
@@ -30,15 +30,15 @@ if (!supabase) {
 const history = groupHistory(bonuses.lines);
 ---
 
-<Layout title="My bonuses">
+<Layout title={t.myBonuses.title}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
       <Topbar />
-      <h1 class="text-foreground mb-6 text-3xl font-bold">My bonuses</h1>
+      <h1 class="text-foreground mb-6 text-3xl font-bold">{t.myBonuses.title}</h1>
 
       {loadError ? (
         <Alert variant="destructive">
-          <AlertTitle>Could not load your bonuses.</AlertTitle>
+          <AlertTitle>{t.myBonuses.loadFailedTitle}</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       ) : (
@@ -46,20 +46,15 @@ const history = groupHistory(bonuses.lines);
           <Card>
             <CardHeader>
               <h2 id="bonuses-heading" class="text-xl leading-none font-semibold">
-                Approved bonuses
+                {t.myBonuses.approvedHeading}
               </h2>
-              <CardDescription>
-                Your bonus for each approved milestone, grouped by project with a subtotal per project and a total, and
-                the figures each bonus was computed from. Approved results are final.
-              </CardDescription>
+              <CardDescription>{t.myBonuses.description}</CardDescription>
             </CardHeader>
             <CardContent>
               {bonuses.not_linked ? (
-                <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
-                  Your account isn't linked to an employee record yet; ask your supervisor to invite you.
-                </p>
+                <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{t.myBonuses.notLinked}</p>
               ) : (
-                <EmployeeHistory history={history} emptyText="No approved bonuses yet." />
+                <EmployeeHistory history={history} emptyText={t.history.empty} />
               )}
             </CardContent>
           </Card>

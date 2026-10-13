@@ -1,4 +1,5 @@
 ---
+import { getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { JobRole } from "@/types";
 import { buttonClass, inputClass } from "@/components/form-classes";
@@ -10,13 +11,15 @@ interface Props {
 }
 
 const { roles, saved, error } = Astro.props;
+const t = getMessages(Astro.locals.locale);
+const labels = t.admin.jobRoles;
 
 const activeRoles = roles.filter((role) => role.archived_at === null);
 const archivedRoles = roles.filter((role) => role.archived_at !== null);
 
 const groups = [
-  { key: "active", title: "Active roles", roles: activeRoles, archived: false },
-  { key: "archived", title: "Archived roles", roles: archivedRoles, archived: true },
+  { key: "active", title: labels.active, roles: activeRoles, archived: false },
+  { key: "archived", title: labels.archived, roles: archivedRoles, archived: true },
 ].filter((group) => group.roles.length > 0);
 
 const formGridClass = "grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_7rem_minmax(0,3fr)_auto] sm:items-end";
@@ -28,16 +31,13 @@ const formGridClass = "grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_7rem_m
   class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
 >
   <h2 id="roles-heading" class="text-xl font-semibold">
-    Job roles
+    {labels.heading}
   </h2>
-  <p class="mt-1 text-sm text-blue-100/60">
-    Role weight is greater than 0 and at most 3, with up to 2 decimals. Archived roles stay readable for existing
-    assignments but cannot be picked for new ones.
-  </p>
+  <p class="mt-1 text-sm text-blue-100/60">{labels.description}</p>
 
   {saved && (
     <p role="status" class="mt-3 rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">
-      Job roles saved.
+      {labels.saved}
     </p>
   )}
   {error && (
@@ -59,11 +59,11 @@ const formGridClass = "grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_7rem_m
           >
             <form method="POST" action={`/api/admin/job-roles/${role.id}`} class:list={cn(formGridClass, "flex-1")}>
               <label class="flex flex-col gap-1 text-sm">
-                <span class="text-blue-100/80">Name</span>
+                <span class="text-blue-100/80">{t.common.fields.name}</span>
                 <input type="text" name="name" value={role.name} maxlength="100" required class:list={inputClass} />
               </label>
               <label class="flex flex-col gap-1 text-sm">
-                <span class="text-blue-100/80">Weight</span>
+                <span class="text-blue-100/80">{labels.weight}</span>
                 <input
                   type="number"
                   name="weight"
@@ -76,17 +76,17 @@ const formGridClass = "grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_7rem_m
                 />
               </label>
               <label class="flex flex-col gap-1 text-sm">
-                <span class="text-blue-100/80">Description</span>
+                <span class="text-blue-100/80">{labels.descriptionLabel}</span>
                 <input type="text" name="description" value={role.description ?? ""} class:list={inputClass} />
               </label>
               <button type="submit" class:list={buttonClass}>
-                Save
+                {t.common.save}
               </button>
             </form>
             <form method="POST" action={`/api/admin/job-roles/${role.id}/archive`}>
               <input type="hidden" name="archived" value={group.archived ? "false" : "true"} />
               <button type="submit" class:list={cn(buttonClass, "w-full sm:w-auto")}>
-                {group.archived ? "Restore" : "Archive"}
+                {group.archived ? labels.restore : labels.archive}
               </button>
             </form>
           </li>
@@ -96,22 +96,22 @@ const formGridClass = "grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_7rem_m
   ))}
 
   <div class="mt-6 border-t border-white/10 pt-5">
-    <h3 class="mb-2 text-sm font-medium tracking-wide text-blue-100/70 uppercase">Add role</h3>
+    <h3 class="mb-2 text-sm font-medium tracking-wide text-blue-100/70 uppercase">{labels.addHeading}</h3>
     <form method="POST" action="/api/admin/job-roles" class:list={formGridClass}>
       <label class="flex flex-col gap-1 text-sm">
-        <span class="text-blue-100/80">Name</span>
+        <span class="text-blue-100/80">{t.common.fields.name}</span>
         <input type="text" name="name" maxlength="100" required class:list={inputClass} />
       </label>
       <label class="flex flex-col gap-1 text-sm">
-        <span class="text-blue-100/80">Weight</span>
+        <span class="text-blue-100/80">{labels.weight}</span>
         <input type="number" name="weight" min="0.01" max="3" step="0.01" required class:list={inputClass} />
       </label>
       <label class="flex flex-col gap-1 text-sm">
-        <span class="text-blue-100/80">Description</span>
+        <span class="text-blue-100/80">{labels.descriptionLabel}</span>
         <input type="text" name="description" class:list={inputClass} />
       </label>
       <button type="submit" class:list={buttonClass}>
-        Add role
+        {labels.add}
       </button>
     </form>
   </div>

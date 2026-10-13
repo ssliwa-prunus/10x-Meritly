@@ -26,17 +26,29 @@ const OTHER_BONUS = "600,00 zł";
 // Draft Milestone (…0024): employee2 alone at 0.30, all KPI scores 100, so the Draft bonus is the
 // whole 1000.00 target pool. The Supervisor's milestone page shows it; the employee detail page must not.
 const DRAFT_BONUS = "1000,00 zł";
-// Text only the /admin page renders.
-const ADMIN_ONLY_TEXT = "This page is only for admins.";
+// Text only the /admin page renders. Pages render in Polish (the default with no `lang` cookie; the
+// seeded actors pin `lang=pl`), so every UI needle below is the exact pl dictionary value
+// (src/lib/i18n/messages/pl.ts).
+const ADMIN_ONLY_TEXT = "Ta strona jest dostępna tylko dla administratorów.";
+// The landing pitch in English (en dictionary), shown only with `lang=en`.
+const EN_LANDING_TEXT = "Fair split of milestone bonus pools";
 
 /** One cookie jar per actor, so sessions never leak between roles. */
 const jars = {
   smoke: new Map(),
   anon: new Map(),
-  employee: new Map(),
-  employee2: new Map(),
-  supervisor: new Map(),
-  admin: new Map(),
+  // An anonymous visitor who already chose English.
+  english: new Map([["lang", "en"]]),
+  // A fresh anonymous visitor for each language-switch POST (no cookie carried over).
+  switchToEn: new Map(),
+  switchOffsite: new Map(),
+  switchInvalid: new Map(),
+  // Seeded actors pin Polish: sign-in saves the cookie's language to the profile (latest choice
+  // wins), so a language left on a seeded profile by a manual check cannot switch the needles.
+  employee: new Map([["lang", "pl"]]),
+  employee2: new Map([["lang", "pl"]]),
+  supervisor: new Map([["lang", "pl"]]),
+  admin: new Map([["lang", "pl"]]),
 };
 
 function cookieHeader(jar) {
@@ -80,9 +92,16 @@ async function request(path, { as = "smoke", method = "GET", form } = {}) {
     },
     body: form ? new URLSearchParams(form).toString() : undefined,
   });
+  const setCookies = response.headers.getSetCookie();
   storeCookies(jar, response);
   const html = response.status === 200 ? await response.text() : "";
-  return { status: response.status, location: response.headers.get("location") ?? "", text: normaliseText(html), html };
+  return {
+    status: response.status,
+    location: response.headers.get("location") ?? "",
+    text: normaliseText(html),
+    html,
+    setCookies,
+  };
 }
 
 const signIn = (as, account, next) =>
@@ -93,6 +112,31 @@ const signIn = (as, account, next) =>
   });
 
 const steps = [
+  // Locale: Polish without a cookie, English with `lang=en`; the switch endpoint sets the cookie,
+  // keeps only same-origin return targets and ignores an unsupported locale.
+  ["home is Polish without a cookie", () => request("/", { as: "anon" }), { status: 200, htmlIncludes: ['lang="pl"'] }],
+  [
+    "home is English with lang=en",
+    () => request("/", { as: "english" }),
+    { status: 200, htmlIncludes: ['lang="en"'], bodyIncludes: [EN_LANDING_TEXT] },
+  ],
+  [
+    "language switch sets lang=en and returns to next",
+    () => request("/api/locale", { as: "switchToEn", method: "POST", form: { locale: "en", next: "/auth/signin" } }),
+    { status: 302, exact: "/auth/signin", setsCookie: "lang=en" },
+  ],
+  [
+    "language switch drops an off-site next",
+    () =>
+      request("/api/locale", { as: "switchOffsite", method: "POST", form: { locale: "en", next: "//evil.example" } }),
+    { status: 302, exact: "/" },
+  ],
+  [
+    "language switch ignores an unsupported locale",
+    () => request("/api/locale", { as: "switchInvalid", method: "POST", form: { locale: "de", next: "/" } }),
+    { status: 302, exact: "/", setsNoCookie: "lang" },
+  ],
+
   // Auth flow with a fresh sign-up (default jar).
   ["home renders", () => request("/"), { status: 200 }],
   ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
@@ -247,11 +291,11 @@ const steps = [
       status: 200,
       bodyIncludes: [
         "Local Employee 2",
-        "Approved bonuses on your projects",
+        "Zatwierdzone premie w Twoich projektach",
         "Approved Demo Project",
         "Approved Milestone",
         OWN_BONUS,
-        "Current assignments",
+        "Bieżące przypisania",
         "Draft Milestone",
         "30%",
       ],
@@ -261,17 +305,17 @@ const steps = [
   [
     "admin sees employee2's full history",
     () => request(`/employees/${EMPLOYEE_2}`, { as: "admin" }),
-    { status: 200, bodyIncludes: ["All approved bonuses", "Approved Milestone", OWN_BONUS] },
+    { status: 200, bodyIncludes: ["Wszystkie zatwierdzone premie", "Approved Milestone", OWN_BONUS] },
   ],
   [
     "supervisor gets not found for a missing employee",
     () => request(`/employees/${MISSING_EMPLOYEE}`, { as: "supervisor" }),
-    { status: 200, bodyIncludes: ["Employee not found."], bodyExcludes: [OWN_BONUS] },
+    { status: 200, bodyIncludes: ["Nie znaleziono pracownika."], bodyExcludes: [OWN_BONUS] },
   ],
   [
     "supervisor gets not found for a malformed id",
     () => request("/employees/not-a-uuid", { as: "supervisor" }),
-    { status: 200, bodyIncludes: ["Employee not found."] },
+    { status: 200, bodyIncludes: ["Nie znaleziono pracownika."] },
   ],
 ];
 
@@ -290,6 +334,13 @@ for (const [name, run, expected] of steps) {
     if (actual.text.includes(needle)) problems.push(`body must not contain "${needle}"`);
   for (const needle of expected.htmlIncludes ?? [])
     if (!actual.html.includes(needle)) problems.push(`HTML is missing "${needle}"`);
+  if (expected.setsCookie !== undefined && !actual.setCookies.some((raw) => raw.startsWith(`${expected.setsCookie};`)))
+    problems.push(`expected Set-Cookie "${expected.setsCookie}"`);
+  if (
+    expected.setsNoCookie !== undefined &&
+    actual.setCookies.some((raw) => raw.startsWith(`${expected.setsNoCookie}=`))
+  )
+    problems.push(`expected no "${expected.setsNoCookie}" Set-Cookie`);
 
   console.log(`${problems.length ? "FAIL" : "PASS"}  ${name}  -> ${actual.status} ${actual.location}`);
   if (problems.length) {

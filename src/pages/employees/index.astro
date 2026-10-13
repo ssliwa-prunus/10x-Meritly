@@ -5,7 +5,7 @@ import EmployeeForm from "@/components/employees/EmployeeForm.astro";
 import { buttonClass } from "@/components/form-classes";
 import { createClient } from "@/lib/supabase";
 import { formatPercent } from "@/lib/format";
-import { getMessages } from "@/lib/i18n";
+import { format, getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { listJobRoles } from "@/lib/services/bonus-config";
 import { employeesErrorMessage, inviteStatus, listEmployees } from "@/lib/services/employees";
@@ -16,6 +16,7 @@ const profile = Astro.locals.profile;
 const isAdmin = profile?.role === "admin";
 const locale = Astro.locals.locale;
 const t = getMessages(locale);
+const f = t.common.fields;
 
 const saved = Astro.url.searchParams.get("saved");
 const errorCode = Astro.url.searchParams.get("error");
@@ -24,12 +25,9 @@ const errorEmployeeId = Astro.url.searchParams.get("employee");
 
 // The URL carries only codes; the displayed text always comes from fixed catalogs.
 const errorMessage = errorCode ? employeesErrorMessage(errorCode, errorField, locale) : null;
-const SAVED_MESSAGES: Record<string, string> = {
-  created: "Employee registered. Send the invite when you are ready.",
-  updated: "Employee saved.",
-  invited: "Invite sent.",
-};
-const savedMessage = saved !== null && Object.hasOwn(SAVED_MESSAGES, saved) ? SAVED_MESSAGES[saved] : null;
+const savedMessages = t.employees.saved;
+const savedMessage =
+  saved !== null && Object.hasOwn(savedMessages, saved) ? savedMessages[saved as keyof typeof savedMessages] : null;
 
 const supabase = createClient(Astro.request.headers, Astro.cookies);
 
@@ -39,7 +37,7 @@ let jobRolesResult: Awaited<ReturnType<typeof listJobRoles>> = {};
 let supervisorsResult: Awaited<ReturnType<typeof listSupervisors>> = {};
 
 if (!supabase || !profile) {
-  loadError = supabase ? "Your profile could not be loaded" : "Supabase is not configured";
+  loadError = supabase ? t.common.profileLoadFailed : t.common.supabaseNotConfigured;
 } else {
   [employeesResult, jobRolesResult, supervisorsResult] = await Promise.all([
     // A Supervisor lists only the employees they own, not ones they merely see through an assignment.
@@ -79,17 +77,14 @@ const columnCount = isAdmin ? 7 : 6;
 const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || supervisors);
 ---
 
-<Layout title="Employees">
+<Layout title={t.employees.title}>
   <div class="bg-cosmic min-h-screen p-4 text-white">
     <div class="mx-auto w-full max-w-5xl">
       <Topbar />
       <h1 class="mb-2 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
-        Employees
+        {t.employees.title}
       </h1>
-      <p class="mb-6 text-sm text-blue-100/60">
-        The open total is the employee's time share across milestones that are not completed, cancelled or approved, in
-        projects that are still open. Above 100% is a warning only.
-      </p>
+      <p class="mb-6 text-sm text-blue-100/60">{t.common.openTotalNote}</p>
 
       {savedMessage && (
         <p role="status" class="mb-6 rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">
@@ -104,8 +99,8 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
 
       {!loaded ? (
         <div role="alert" class="rounded-2xl border border-red-400/40 bg-red-500/15 p-6 text-red-100">
-          <p class="font-semibold">Could not load employees.</p>
-          <p class="mt-1 text-sm text-red-100/80">{loadError ?? "Unknown error"}</p>
+          <p class="font-semibold">{t.employees.listLoadFailedTitle}</p>
+          <p class="mt-1 text-sm text-red-100/80">{loadError ?? t.common.unknownError}</p>
         </div>
       ) : (
         <div class="flex flex-col gap-6">
@@ -115,37 +110,37 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
             class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
           >
             <h2 id="list-heading" class="text-xl font-semibold">
-              {isAdmin ? "All employees" : "Your employees"}
+              {isAdmin ? t.employees.allEmployees : t.employees.yourEmployees}
             </h2>
             {employees.length === 0 ? (
-              <p class="mt-3 text-sm text-blue-100/60">No employees yet. Register one below.</p>
+              <p class="mt-3 text-sm text-blue-100/60">{t.employees.empty}</p>
             ) : (
               <div class="mt-4 overflow-x-auto">
                 <table class="w-full min-w-[44rem] text-left text-sm">
                   <thead class="text-blue-100/70">
                     <tr class="border-b border-white/10">
                       <th scope="col" class="py-2 pr-3 font-medium">
-                        Name
+                        {t.employees.fullName}
                       </th>
                       <th scope="col" class="py-2 pr-3 font-medium">
-                        Email
+                        {f.email}
                       </th>
                       <th scope="col" class="py-2 pr-3 font-medium">
-                        Job role
+                        {f.jobRole}
                       </th>
                       {isAdmin && (
                         <th scope="col" class="py-2 pr-3 font-medium">
-                          Owner
+                          {f.owner}
                         </th>
                       )}
                       <th scope="col" class="py-2 pr-3 font-medium">
-                        Status
+                        {f.status}
                       </th>
                       <th scope="col" class="py-2 pr-3 text-right font-medium">
-                        {isAdmin ? "Open total (all milestones)" : "Open total (your milestones)"}
+                        {isAdmin ? f.openTotalAll : f.openTotalOwn}
                       </th>
                       <th scope="col" class="py-2 font-medium">
-                        <span class="sr-only">Invite</span>
+                        <span class="sr-only">{t.employees.invite}</span>
                       </th>
                     </tr>
                   </thead>
@@ -182,7 +177,7 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
                               {formatPercent(employee.open_total)}
                               {employee.over_allocated && (
                                 <span class="rounded-full border border-red-400/40 bg-red-500/20 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-red-100">
-                                  Over 100%
+                                  {t.common.over100}
                                 </span>
                               )}
                             </span>
@@ -191,7 +186,7 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
                             {status !== "active" && (
                               <form method="POST" action={`/api/employees/${employee.id}/invite`}>
                                 <button type="submit" class:list={cn(buttonClass, "px-3 py-1 text-xs")}>
-                                  {status === "invited" ? "Resend invite" : "Send invite"}
+                                  {status === "invited" ? t.employees.resendInvite : t.employees.sendInvite}
                                 </button>
                               </form>
                             )}
@@ -204,7 +199,7 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
                               class="rounded-xl border border-white/10 bg-white/5 p-3"
                             >
                               <summary class="cursor-pointer text-sm text-purple-300 hover:text-purple-100">
-                                Edit {employee.full_name}
+                                {format(t.common.editName, { name: employee.full_name })}
                               </summary>
                               <div class="mt-3">
                                 <EmployeeForm
@@ -231,12 +226,9 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
             class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
           >
             <h2 id="new-heading" class="text-xl font-semibold">
-              Register employee
+              {t.employees.registerHeading}
             </h2>
-            <p class="mt-1 mb-4 text-sm text-blue-100/60">
-              Registering does not send email. Send the invite from the list when you are ready; the email cannot be
-              changed after that.
-            </p>
+            <p class="mt-1 mb-4 text-sm text-blue-100/60">{t.employees.registerNote}</p>
             <EmployeeForm
               jobRoles={activeJobRoles}
               supervisors={isAdmin ? supervisors : undefined}

@@ -1,4 +1,5 @@
 ---
+import { getMessages } from "@/lib/i18n";
 import type { BonusSettings } from "@/types";
 import { buttonClass, inputClass } from "@/components/form-classes";
 
@@ -9,7 +10,9 @@ interface Props {
 }
 
 const { settings, saved, error } = Astro.props;
+const labels = getMessages(Astro.locals.locale).admin.kpi;
 
+// The KPI names are product terms and stay the same in every language.
 const weights = [
   { name: "kpi_weight_schedule", label: "Termin", value: settings.kpi_weight_schedule },
   { name: "kpi_weight_budget", label: "Budżet", value: settings.kpi_weight_budget },
@@ -18,8 +21,8 @@ const weights = [
 ];
 
 const bounds = [
-  { name: "multiplier_min", label: "Minimum multiplier", value: settings.multiplier_min },
-  { name: "multiplier_max", label: "Maximum multiplier", value: settings.multiplier_max },
+  { name: "multiplier_min", label: labels.minMultiplier, value: settings.multiplier_min },
+  { name: "multiplier_max", label: labels.maxMultiplier, value: settings.multiplier_max },
 ];
 ---
 
@@ -29,15 +32,13 @@ const bounds = [
   class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
 >
   <h2 id="kpi-heading" class="text-xl font-semibold">
-    Milestone KPI
+    {labels.heading}
   </h2>
-  <p class="mt-1 text-sm text-blue-100/60">
-    KPI weights must sum to 1.00. The milestone multiplier stays between the minimum and maximum bounds.
-  </p>
+  <p class="mt-1 text-sm text-blue-100/60">{labels.description}</p>
 
   {saved && (
     <p role="status" class="mt-3 rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">
-      KPI settings saved.
+      {labels.saved}
     </p>
   )}
   {error && (
@@ -48,7 +49,7 @@ const bounds = [
 
   <form method="POST" action="/api/admin/bonus-settings/kpi" class="mt-4 flex flex-col gap-4">
     <fieldset class="min-w-0">
-      <legend class="mb-2 text-sm font-medium text-blue-100/80">KPI weights (must sum to 1.00)</legend>
+      <legend class="mb-2 text-sm font-medium text-blue-100/80">{labels.weightsLegend}</legend>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         {weights.map((field) => (
           <label class="flex flex-col gap-1 text-sm">
@@ -68,9 +69,7 @@ const bounds = [
       </div>
     </fieldset>
     <fieldset class="min-w-0">
-      <legend class="mb-2 text-sm font-medium text-blue-100/80">
-        Milestone multiplier bounds (0 &lt; min &lt; max ≤ 3)
-      </legend>
+      <legend class="mb-2 text-sm font-medium text-blue-100/80">{labels.boundsLegend}</legend>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {bounds.map((field) => (
           <label class="flex flex-col gap-1 text-sm">
@@ -91,7 +90,7 @@ const bounds = [
     </fieldset>
     <div>
       <button type="submit" class:list={buttonClass}>
-        Save KPI settings
+        {labels.save}
       </button>
     </div>
   </form>

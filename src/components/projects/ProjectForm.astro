@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { getMessages } from "@/lib/i18n";
 import { WORK_STATUSES } from "@/lib/services/projects";
 import type { Profile, Project } from "@/types";
 
@@ -19,6 +20,8 @@ interface Props {
 }
 
 const { project, supervisors, saved, error } = Astro.props;
+const t = getMessages(Astro.locals.locale);
+const f = t.common.fields;
 
 const sectionId = project ? "project" : "new";
 const headingId = `${sectionId}-heading`;
@@ -31,17 +34,15 @@ const currentStatus = project?.status ?? "planned";
   <Card>
     <CardHeader>
       <h2 id={headingId} class="text-xl leading-none font-semibold">
-        {project ? "Project details" : "New project"}
+        {project ? t.projects.form.detailsHeading : t.projects.form.newHeading}
       </h2>
-      <CardDescription>
-        Amounts in PLN, above 0 with at most 2 decimals. The end date must be on or after the start date.
-      </CardDescription>
+      <CardDescription>{t.projects.form.description}</CardDescription>
     </CardHeader>
 
     <CardContent className="flex flex-col gap-4">
       {saved && (
         <Alert variant="success" role="status">
-          <AlertDescription>Project saved.</AlertDescription>
+          <AlertDescription>{t.projects.form.saved}</AlertDescription>
         </Alert>
       )}
       {error && (
@@ -53,11 +54,11 @@ const currentStatus = project?.status ?? "planned";
       <form method="POST" action={action} class="flex flex-col gap-4">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div class="flex flex-col gap-2 sm:col-span-2">
-            <Label htmlFor={fieldId("name")}>Name</Label>
+            <Label htmlFor={fieldId("name")}>{f.name}</Label>
             <Input id={fieldId("name")} type="text" name="name" defaultValue={project?.name} maxLength={100} required />
           </div>
           <div class="flex flex-col gap-2">
-            <Label htmlFor={fieldId("start-date")}>Start date</Label>
+            <Label htmlFor={fieldId("start-date")}>{f.startDate}</Label>
             <Input
               id={fieldId("start-date")}
               type="date"
@@ -67,21 +68,21 @@ const currentStatus = project?.status ?? "planned";
             />
           </div>
           <div class="flex flex-col gap-2">
-            <Label htmlFor={fieldId("end-date")}>End date</Label>
+            <Label htmlFor={fieldId("end-date")}>{f.endDate}</Label>
             <Input id={fieldId("end-date")} type="date" name="end_date" defaultValue={project?.end_date} required />
           </div>
           <div class="flex flex-col gap-2 [&>[data-slot=native-select-wrapper]]:w-full">
-            <Label htmlFor={fieldId("status")}>Status</Label>
+            <Label htmlFor={fieldId("status")}>{f.status}</Label>
             <NativeSelect id={fieldId("status")} name="status" required>
               {WORK_STATUSES.map((status) => (
                 <option value={status} selected={status === currentStatus}>
-                  {status}
+                  {t.status.work[status]}
                 </option>
               ))}
             </NativeSelect>
           </div>
           <div class="flex flex-col gap-2">
-            <Label htmlFor={fieldId("total-budget")}>Total budget (PLN)</Label>
+            <Label htmlFor={fieldId("total-budget")}>{t.projects.form.totalBudget}</Label>
             <Input
               id={fieldId("total-budget")}
               type="text"
@@ -94,11 +95,11 @@ const currentStatus = project?.status ?? "planned";
           </div>
           {supervisors && (
             <div class="flex flex-col gap-2 sm:col-span-2 [&>[data-slot=native-select-wrapper]]:w-full">
-              <Label htmlFor={fieldId("owner")}>Owner</Label>
+              <Label htmlFor={fieldId("owner")}>{f.owner}</Label>
               <NativeSelect id={fieldId("owner")} name="supervisor_id" required>
                 {!project && (
                   <option value="" selected>
-                    Choose a supervisor
+                    {f.chooseSupervisor}
                   </option>
                 )}
                 {supervisors.map((supervisor) => (
@@ -110,7 +111,7 @@ const currentStatus = project?.status ?? "planned";
             </div>
           )}
           <div class="flex flex-col gap-2 sm:col-span-2">
-            <Label htmlFor={fieldId("notes")}>Notes</Label>
+            <Label htmlFor={fieldId("notes")}>{f.notes}</Label>
             <Textarea
               id={fieldId("notes")}
               name="notes"
@@ -121,8 +122,8 @@ const currentStatus = project?.status ?? "planned";
           </div>
         </div>
         <div>
-          <SubmitButton client:load pendingText={project ? "Saving…" : "Creating…"}>
-            {project ? "Save project" : "Create project"}
+          <SubmitButton client:load pendingText={project ? t.common.saving : t.projects.form.creating}>
+            {project ? t.projects.form.save : t.projects.form.create}
           </SubmitButton>
         </div>
       </form>

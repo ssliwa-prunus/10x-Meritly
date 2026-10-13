@@ -672,33 +672,33 @@ None material. Dictionaries are module constants, resolution happens once per re
 
 #### Automated
 
-- [x] 3.1 Type check passes
-- [x] 3.2 Unit tests pass
-- [x] 3.3 Mutation score for touched resolvers does not drop
-- [x] 3.4 Lint and UI literal check pass
+- [x] 3.1 Type check passes — 15b139e
+- [x] 3.2 Unit tests pass — 15b139e
+- [x] 3.3 Mutation score for touched resolvers does not drop — 15b139e
+- [x] 3.4 Lint and UI literal check pass — 15b139e
 
 #### Manual
 
-- [x] 3.5 Project and employee form errors translated in both languages
-- [x] 3.6 Budget exposure styling unchanged in both languages
+- [x] 3.5 Project and employee form errors translated in both languages — 15b139e
+- [x] 3.6 Budget exposure styling unchanged in both languages — 15b139e
 
 ### Phase 4: Feature views
 
 #### Automated
 
-- [ ] 4.1 Type check passes
-- [ ] 4.2 Unit tests pass
-- [ ] 4.3 Lint and UI literal check pass
-- [ ] 4.4 Smoke passes with the new locale steps
-- [ ] 4.5 e2e passes
-- [ ] 4.6 No English UI string left in translated views
+- [x] 4.1 Type check passes
+- [x] 4.2 Unit tests pass
+- [x] 4.3 Lint and UI literal check pass
+- [x] 4.4 Smoke passes with the new locale steps
+- [x] 4.5 e2e passes
+- [x] 4.6 No English UI string left in translated views
 
 #### Manual
 
-- [ ] 4.7 Full PL walk as admin, supervisor and employee
-- [ ] 4.8 Full EN walk with nothing untranslated
-- [ ] 4.9 Long Polish labels fit at phone width
-- [ ] 4.10 Kitchen sink still renders all 7 states
+- [x] 4.7 Full PL walk as admin, supervisor and employee
+- [x] 4.8 Full EN walk with nothing untranslated
+- [x] 4.9 Long Polish labels fit at phone width
+- [x] 4.10 Kitchen sink still renders all 7 states
 
 ### Phase 5: Emails, switch e2e and docs
 

@@ -1,6 +1,7 @@
 ---
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatMultiplier, formatPercent, formatPln } from "@/lib/format";
+import { format, getMessages, plural } from "@/lib/i18n";
 import type { EmployeeHistory } from "@/types";
 
 // An employee's approved history grouped by project (S-06), shared by /my-bonuses and
@@ -15,7 +16,11 @@ interface Props {
 // Both pages place the history under an h2 section heading, so each project is an h3.
 const { history, emptyText } = Astro.props;
 const columnCount = 4;
-const milestones = (count: number) => (count === 1 ? "1 approved milestone" : `${count} approved milestones`);
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
+const f = t.common.fields;
+const labels = t.history;
+const approvedMilestones = (count: number) => format(plural(locale, count, labels.approvedMilestones), { count });
 ---
 
 {history.line_count === 0 ? (
@@ -23,7 +28,9 @@ const milestones = (count: number) => (count === 1 ? "1 approved milestone" : `$
 ) : (
   <div class="flex flex-col gap-6">
     <p class="bg-muted flex flex-wrap items-baseline justify-between gap-2 rounded-lg px-3 py-2 text-sm">
-      <span class="text-muted-foreground">Total across {milestones(history.line_count)}</span>
+      <span class="text-muted-foreground">
+        {format(labels.totalAcross, { milestones: approvedMilestones(history.line_count) })}
+      </span>
       <span class="font-semibold tabular-nums">{formatPln(history.total)}</span>
     </p>
 
@@ -36,7 +43,7 @@ const milestones = (count: number) => (count === 1 ? "1 approved milestone" : `$
               {group.project_name}
             </h3>
             <p class="text-sm">
-              <span class="text-muted-foreground">Subtotal</span>{" "}
+              <span class="text-muted-foreground">{labels.subtotal}</span>{" "}
               <span class="font-semibold tabular-nums">{formatPln(group.subtotal)}</span>
             </p>
           </div>
@@ -44,16 +51,16 @@ const milestones = (count: number) => (count === 1 ? "1 approved milestone" : `$
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead scope="col" className="text-muted-foreground">
-                  Milestone
+                  {f.milestone}
                 </TableHead>
                 <TableHead scope="col" className="text-muted-foreground">
-                  Period
+                  {f.period}
                 </TableHead>
                 <TableHead scope="col" className="text-muted-foreground">
-                  Approved
+                  {labels.approvedAt}
                 </TableHead>
                 <TableHead scope="col" className="text-muted-foreground text-right">
-                  Bonus
+                  {f.bonus}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -74,21 +81,23 @@ const milestones = (count: number) => (count === 1 ? "1 approved milestone" : `$
                   <TableCell colSpan={columnCount} className="pt-0 pb-3 whitespace-normal">
                     <dl class="bg-muted grid grid-cols-2 gap-3 rounded-lg px-3 py-2 text-xs sm:grid-cols-4">
                       <div>
-                        <dt class="text-muted-foreground">Time share</dt>
+                        <dt class="text-muted-foreground">{f.timeShare}</dt>
                         <dd class="mt-1 tabular-nums">{formatPercent(line.time_share)}</dd>
                       </div>
                       <div>
-                        <dt class="text-muted-foreground">Role weight ({line.job_role_name})</dt>
+                        <dt class="text-muted-foreground">
+                          {format(labels.roleWeightOf, { role: line.job_role_name })}
+                        </dt>
                         <dd class="mt-1 tabular-nums">{formatMultiplier(line.role_weight)}</dd>
                       </div>
                       <div>
-                        <dt class="text-muted-foreground">Rating → factor</dt>
+                        <dt class="text-muted-foreground">{f.ratingFactor}</dt>
                         <dd class="mt-1 tabular-nums">
                           {line.rating} → {formatMultiplier(line.rating_factor)}
                         </dd>
                       </div>
                       <div>
-                        <dt class="text-muted-foreground">KPI multiplier</dt>
+                        <dt class="text-muted-foreground">{f.kpiMultiplier}</dt>
                         <dd class="mt-1 tabular-nums">{formatMultiplier(line.multiplier)}</dd>
                       </div>
                     </dl>

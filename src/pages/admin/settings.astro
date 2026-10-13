@@ -34,7 +34,7 @@ let rolesResult: Awaited<ReturnType<typeof listJobRoles>> = {};
 let settingsResult: Awaited<ReturnType<typeof getBonusSettings>> = {};
 
 if (!supabase) {
-  loadError = "Supabase is not configured";
+  loadError = t.common.supabaseNotConfigured;
 } else {
   [rolesResult, settingsResult] = await Promise.all([listJobRoles(supabase), getBonusSettings(supabase)]);
   loadError =
@@ -49,26 +49,24 @@ const roles = rolesResult.data;
 const settings = settingsResult.data;
 ---
 
-<Layout title="Bonus settings">
+<Layout title={t.admin.bonusSettings}>
   <div class="bg-cosmic min-h-screen p-4 text-white">
     <div class="mx-auto w-full max-w-4xl">
       <Topbar />
       <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h1 class="bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
-          Bonus settings
+          {t.admin.bonusSettings}
         </h1>
         <a href="/admin" class="text-sm text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-          Back to admin
+          {t.admin.settings.backToAdmin}
         </a>
       </div>
-      <p class="mb-6 text-sm text-blue-100/60">
-        Changes apply to future computations only. Approved milestones keep the values they were computed with.
-      </p>
+      <p class="mb-6 text-sm text-blue-100/60">{t.admin.settings.intro}</p>
 
       {loadError || !roles || !settings ? (
         <div role="alert" class="rounded-2xl border border-red-400/40 bg-red-500/15 p-6 text-red-100">
-          <p class="font-semibold">Could not load the bonus configuration.</p>
-          <p class="mt-1 text-sm text-red-100/80">{loadError ?? "Unknown error"}</p>
+          <p class="font-semibold">{t.admin.settings.loadFailedTitle}</p>
+          <p class="mt-1 text-sm text-red-100/80">{loadError ?? t.common.unknownError}</p>
         </div>
       ) : (
         <div class="flex flex-col gap-6">

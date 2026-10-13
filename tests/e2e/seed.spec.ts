@@ -31,7 +31,7 @@ test("signed-out visit to a protected page returns there after sign-in", async (
 
   // Back on the requested page (not the "/" fallback), signed in.
   await expect(page).toHaveURL("/projects");
-  await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Projekty", level: 1 })).toBeVisible();
   await expect(page.getByRole("button", { name: "Wyloguj się" })).toBeVisible();
 
   // No cleanup: the test creates no data. Don't sign out here: sign-out may revoke the shared
