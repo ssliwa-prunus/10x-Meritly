@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { LOCALE_COOKIE, parseLocale } from "@/lib/i18n";
 import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase";
 
@@ -21,6 +22,16 @@ export const POST: APIRoute = async (context) => {
     const code =
       error.code === "invalid_credentials" || error.code === "email_not_confirmed" ? error.code : "signin_failed";
     return context.redirect(`/auth/signin?error=${code}${nextParam}`);
+  }
+
+  // A language chosen before signing in is the latest choice: save it to the profile. Never blocks.
+  const locale = parseLocale(context.cookies.get(LOCALE_COOKIE)?.value);
+  if (locale) {
+    const { error: localeError } = await supabase.rpc("set_my_locale", { p_locale: locale });
+    if (localeError) {
+      // eslint-disable-next-line no-console -- intentional: a failed profile write must not block sign-in
+      console.error("set_my_locale at sign-in failed", { code: localeError.code, message: localeError.message });
+    }
   }
 
   return context.redirect(next ?? "/");

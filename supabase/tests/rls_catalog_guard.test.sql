@@ -194,7 +194,9 @@ select set_eq(
       ('current_employee_id()'),
       -- F4 accepted: unscoped, but returns only a boolean for an unguessable UUID
       ('is_approved_milestone(uuid)'),
-      ('approve_milestone(uuid)')
+      ('approve_milestone(uuid)'),
+      -- own row, locale column only
+      ('set_my_locale(text)')
   $$,
   'security definer functions executable by authenticated match the allowlist (update rls_catalog_guard.test.sql and rls_matrix.test.sql)'
 );

@@ -1,4 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
+import { LOCALE_COOKIE, localeCookieOptions, resolveLocale } from "@/lib/i18n";
 import { decideAccess, matchesRoute, SET_PASSWORD_ROUTES } from "@/lib/route-access";
 import { isInviteSession } from "@/lib/set-password";
 import { createClient } from "@/lib/supabase";
@@ -22,7 +23,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       // Queried as the signed-in user, so RLS applies.
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, display_name, role")
+        .select("id, email, display_name, role, locale")
         .eq("id", user.id)
         .maybeSingle<Profile>();
 
@@ -34,6 +35,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
         context.locals.profile = data;
       }
     }
+  }
+
+  // Before the access decision, so redirect targets and error paths render in the right language.
+  // A signed-in request without a valid cookie gets it restored from the saved profile choice.
+  const { locale, writeCookie } = resolveLocale({
+    cookie: context.cookies.get(LOCALE_COOKIE)?.value,
+    profileLocale: context.locals.profile?.locale,
+  });
+  context.locals.locale = locale;
+  if (writeCookie) {
+    context.cookies.set(LOCALE_COOKIE, locale, localeCookieOptions(context.url));
   }
 
   const { pathname, search } = context.url;

@@ -357,7 +357,7 @@ export async function getProjectExposure(
 export async function listSupervisors(supabase: SupabaseClient): Promise<ServiceResult<Profile[]>> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, display_name, role")
+    .select("id, email, display_name, role, locale")
     .eq("role", "supervisor")
     .order("email", { ascending: true })
     .overrideTypes<Profile[], { merge: false }>();

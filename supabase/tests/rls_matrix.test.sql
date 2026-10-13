@@ -27,7 +27,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(264);
+select plan(274);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so owners are explicit)
@@ -1480,6 +1480,89 @@ select results_eq(
 
 reset role;
 set local request.jwt.claims = '{}';
+
+-- ---------------------------------------------------------------------------
+-- set_my_locale (language-switch-pl-en): the only write path to profiles for a non-admin. It writes
+-- the caller's own locale and nothing else: never another user's row, never role. Runs last because
+-- it changes fixture profiles on purpose; its own baseline below covers every other fixture row.
+-- ---------------------------------------------------------------------------
+create temp table pgtap_matrix_profiles0 as
+select t.* from public.profiles t where t.id::text like '00000000-0000-4000-8000-0000000007%';
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000701"}';
+
+select lives_ok(
+  $$ select public.set_my_locale('en') $$,
+  'E1 calling set_my_locale(''en'') succeeds'
+);
+select throws_ok(
+  $$ select public.set_my_locale('de') $$,
+  '23514', null, 'E1 calling set_my_locale(''de'') is rejected by the check constraint (23514)'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+
+select is(
+  (select locale from public.profiles where id = '00000000-0000-4000-8000-000000000701'),
+  'en',
+  'after set_my_locale(''en'') E1''s profile locale is en'
+);
+select is(
+  (select role::text from public.profiles where id = '00000000-0000-4000-8000-000000000701'),
+  (select role::text from pgtap_matrix_profiles0 where id = '00000000-0000-4000-8000-000000000701'),
+  'after set_my_locale E1''s role is unchanged'
+);
+select is(
+  (select md5(coalesce(string_agg(t::text, '|' order by t.id), ''))
+   from public.profiles t
+   where t.id::text like '00000000-0000-4000-8000-0000000007%' and t.id <> '00000000-0000-4000-8000-000000000701'),
+  (select md5(coalesce(string_agg(t::text, '|' order by t.id), ''))
+   from pgtap_matrix_profiles0 t where t.id <> '00000000-0000-4000-8000-000000000701'),
+  'owner read after E1''s set_my_locale: no other fixture profile changed (E2 included)'
+);
+
+set local role anon;
+set local request.jwt.claims = '{}';
+
+select throws_ok(
+  $$ select public.set_my_locale('en') $$,
+  '42501', null, 'anon calling set_my_locale is denied (42501)'
+);
+
+reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000705"}';
+
+select lives_ok(
+  $$ select public.set_my_locale('pl') $$,
+  'AD calling set_my_locale(''pl'') succeeds'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+
+select is(
+  (select locale from public.profiles where id = '00000000-0000-4000-8000-000000000705'),
+  'pl',
+  'after set_my_locale(''pl'') AD''s profile locale is pl'
+);
+select is(
+  (select locale from public.profiles where id = '00000000-0000-4000-8000-000000000701'),
+  'en',
+  'after AD''s set_my_locale E1''s locale is still en'
+);
+select is(
+  (select md5(coalesce(string_agg(t::text, '|' order by t.id), ''))
+   from public.profiles t
+   where t.id::text like '00000000-0000-4000-8000-0000000007%'
+     and t.id not in ('00000000-0000-4000-8000-000000000701', '00000000-0000-4000-8000-000000000705')),
+  (select md5(coalesce(string_agg(t::text, '|' order by t.id), ''))
+   from pgtap_matrix_profiles0 t
+   where t.id not in ('00000000-0000-4000-8000-000000000701', '00000000-0000-4000-8000-000000000705')),
+  'owner read after AD''s set_my_locale: only AD''s own row changed'
+);
 
 select * from finish();
 

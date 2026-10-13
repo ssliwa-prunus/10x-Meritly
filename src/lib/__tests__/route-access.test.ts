@@ -32,6 +32,8 @@ describe("decideAccess — signed-out visitor", () => {
     ["/auth/signin", "", allow],
     ["/auth/confirm", "?token_hash=x&type=invite", allow],
     ["/api/auth/signin", "", allow],
+    // The language switch works before sign-in (first page, sign-in page).
+    ["/api/locale", "", allow],
   ])("%s%s → %o", (pathname, search, expected) => {
     expect(decideAccess(pathname, search, anon)).toEqual(expected);
   });
