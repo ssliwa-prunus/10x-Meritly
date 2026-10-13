@@ -35,6 +35,7 @@ RLS rules for this project:
 - **React**: no Next.js directives ("use client" etc.). Extract hooks to `src/components/hooks/`.
 - **Services/helpers** go in `src/lib/` (or `src/lib/services/` for extracted business logic).
 - **Shared types** (entities, DTOs) go in `src/types.ts`.
+- **i18n (PL default, EN)**: user-visible text lives in `src/lib/i18n/messages/{pl,en}.ts` (or a service's locale-keyed catalog), never as literals. Read it via `getMessages(Astro.locals.locale)`; resolvers take `locale`; React islands get plain-string label props. Number formats stay pl-PL in both languages. Tests assert the PL dictionary text and pin `lang=pl` for seeded sessions.
 
 ## Commands
 
@@ -72,6 +73,7 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All pages a
 - `src/lib/supabase.ts` — creates a Supabase SSR client using `@supabase/ssr` with cookie-based sessions. Uses `astro:env/server` for `SUPABASE_URL` and `SUPABASE_KEY` (server-only secrets declared in astro.config.mjs `env.schema`).
 - `src/middleware.ts` — runs on every request, resolves the current user, attaches to `context.locals.user`. Redirects unauthenticated users away from routes listed in `PROTECTED_ROUTES` to `/auth/signin?next=<page>` (pages only, validated by `safeNext`), so sign-in returns them there. `ADMIN_ROUTES` (`/admin`, `/api/admin`) require the `admin` role and `PROJECT_ROUTES` (`/projects`, `/api/projects`, `/employees`, `/api/employees`) require `supervisor` or `admin`, and `EMPLOYEE_ROUTES` (`/my-bonuses`) require `employee` (403 otherwise, 503 when the profile lookup failed); RLS still decides which projects and employees each role sees.
 - API endpoints: `src/pages/api/auth/{signin,signup,signout,set-password}.ts`
+- Language: the `lang` cookie (default `pl`) decides `locals.locale`. `POST /api/locale` (public form, `LanguageSwitch.astro` in Layout) sets it and, when signed in, saves it to `profiles.locale` via the `set_my_locale` RPC; sign-in saves the cookie's language the same way, and the middleware restores a missing cookie from the profile.
 - Auth pages: `src/pages/auth/{signin,signup,confirm-email,set-password}.astro`
 - `/auth/confirm` (`src/pages/auth/confirm.ts`) — public invite-link target: `verifyOtp` with the `token_hash` (type `invite`) signs the user in, then redirects to `/auth/set-password`, a protected page where the invited employee sets a password.
 - Supabase Edge Functions `invite-employee` (`supabase/functions/invite-employee/`, sends invites) and `notify-milestone-approved` (`supabase/functions/notify-milestone-approved/`, emails each employee their own bonus after approval and stamps `notified_at`; Resend in production, Mailpit locally) are the only code that uses the secret key. They run in Supabase, not the Worker; the app calls them with the user's JWT via `supabase.functions.invoke`. The Worker still has only `SUPABASE_URL`/`SUPABASE_KEY`.

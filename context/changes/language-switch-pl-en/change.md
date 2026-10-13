@@ -10,3 +10,5 @@ archived_at: null
 ## Notes
 
 Translate all application text to Polish. Enable switch form EN to PL and PL to EN directly from first page of aplication
+
+Manual production step (Phase 5): the hosted Supabase dashboard invite template (Authentication → Email Templates → Invite user) must be updated by hand with the body of `supabase/templates/invite.html` and the subject "Zaproszenie do Meritly"; `supabase/config.toml` only covers local Supabase.

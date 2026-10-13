@@ -686,31 +686,31 @@ None material. Dictionaries are module constants, resolution happens once per re
 
 #### Automated
 
-- [x] 4.1 Type check passes
-- [x] 4.2 Unit tests pass
-- [x] 4.3 Lint and UI literal check pass
-- [x] 4.4 Smoke passes with the new locale steps
-- [x] 4.5 e2e passes
-- [x] 4.6 No English UI string left in translated views
+- [x] 4.1 Type check passes — 3613b60
+- [x] 4.2 Unit tests pass — 3613b60
+- [x] 4.3 Lint and UI literal check pass — 3613b60
+- [x] 4.4 Smoke passes with the new locale steps — 3613b60
+- [x] 4.5 e2e passes — 3613b60
+- [x] 4.6 No English UI string left in translated views — 3613b60
 
 #### Manual
 
-- [x] 4.7 Full PL walk as admin, supervisor and employee
-- [x] 4.8 Full EN walk with nothing untranslated
-- [x] 4.9 Long Polish labels fit at phone width
-- [x] 4.10 Kitchen sink still renders all 7 states
+- [x] 4.7 Full PL walk as admin, supervisor and employee — 3613b60
+- [x] 4.8 Full EN walk with nothing untranslated — 3613b60
+- [x] 4.9 Long Polish labels fit at phone width — 3613b60
+- [x] 4.10 Kitchen sink still renders all 7 states — 3613b60
 
 ### Phase 5: Emails, switch e2e and docs
 
 #### Automated
 
-- [ ] 5.1 Integration suite passes
-- [ ] 5.2 e2e passes including the new spec
-- [ ] 5.3 Deliberate break makes the switch spec fail
-- [ ] 5.4 Unit tests and type check pass
+- [x] 5.1 Integration suite passes
+- [x] 5.2 e2e passes including the new spec
+- [x] 5.3 Deliberate break makes the switch spec fail
+- [x] 5.4 Unit tests and type check pass
 
 #### Manual
 
-- [ ] 5.5 Local invite email is Polish and its link works
-- [ ] 5.6 Local approval emails are Polish with correct amounts
-- [ ] 5.7 Hosted dashboard invite template updated
+- [x] 5.5 Local invite email is Polish and its link works
+- [x] 5.6 Local approval emails are Polish with correct amounts
+- [x] 5.7 Hosted dashboard invite template updated

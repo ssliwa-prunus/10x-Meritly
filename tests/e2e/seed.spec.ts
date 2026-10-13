@@ -6,12 +6,17 @@ import { test, expect } from "@playwright/test";
 // The risk is the signed-out path, so this test opts out of the saved session.
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test("signed-out visit to a protected page returns there after sign-in", async ({ page }) => {
+test("signed-out visit to a protected page returns there after sign-in", async ({ page, baseURL }) => {
   const username = process.env.E2E_USERNAME;
   const password = process.env.E2E_PASSWORD;
   if (!username || !password) {
     throw new Error("Set E2E_USERNAME and E2E_PASSWORD (see context/foundation/test-stack.md, ## E2E)");
   }
+
+  // The assertions use the Polish dictionary text. Pin the language as auth.setup.ts does: without a
+  // cookie, sign-in restores the shared seed user's saved language, which language-switch.spec.ts
+  // briefly sets to EN while it runs in parallel.
+  await page.context().addCookies([{ name: "lang", value: "pl", url: baseURL ?? "" }]);
 
   await page.goto("/projects");
 
