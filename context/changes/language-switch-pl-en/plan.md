@@ -704,13 +704,13 @@ None material. Dictionaries are module constants, resolution happens once per re
 
 #### Automated
 
-- [x] 5.1 Integration suite passes
-- [x] 5.2 e2e passes including the new spec
-- [x] 5.3 Deliberate break makes the switch spec fail
-- [x] 5.4 Unit tests and type check pass
+- [x] 5.1 Integration suite passes — c4de9bf
+- [x] 5.2 e2e passes including the new spec — c4de9bf
+- [x] 5.3 Deliberate break makes the switch spec fail — c4de9bf
+- [x] 5.4 Unit tests and type check pass — c4de9bf
 
 #### Manual
 
-- [x] 5.5 Local invite email is Polish and its link works
-- [x] 5.6 Local approval emails are Polish with correct amounts
-- [x] 5.7 Hosted dashboard invite template updated
+- [x] 5.5 Local invite email is Polish and its link works — c4de9bf
+- [x] 5.6 Local approval emails are Polish with correct amounts — c4de9bf
+- [x] 5.7 Hosted dashboard invite template updated — c4de9bf
