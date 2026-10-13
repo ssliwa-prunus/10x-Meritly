@@ -1,18 +1,23 @@
 ---
 import "../styles/global.css";
+import { SUPABASE_KEY, SUPABASE_URL } from "astro:env/server";
 import Banner from "@/components/Banner.astro";
 import LanguageSwitch from "@/components/LanguageSwitch.astro";
 import { missingConfigs } from "@/lib/config-status";
+import { getMessages } from "@/lib/i18n";
 
 interface Props {
   title?: string;
 }
 
-const { title = "10x Astro Starter" } = Astro.props;
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
+const { title = t.common.appName } = Astro.props;
+const missing = missingConfigs({ supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_KEY }, locale);
 ---
 
 <!doctype html>
-<html lang={Astro.locals.locale} class="dark">
+<html lang={locale} class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -20,14 +25,14 @@ const { title = "10x Astro Starter" } = Astro.props;
     <title>{title}</title>
   </head>
   <body>
-    {missingConfigs.map((cfg) => (
+    {missing.map((cfg) => (
       <Banner variant="error">
-        <strong>Uwaga:</strong> {cfg.message}
+        <strong>{t.layout.bannerAttention}</strong> {cfg.message}
         {cfg.docsUrl && (
           <>
             {" "}
             <a href={cfg.docsUrl} target="_blank" rel="noopener noreferrer">
-              {cfg.docsLabel ?? "Dokumentacja"}
+              {cfg.docsLabel ?? t.layout.bannerDocs}
             </a>
             .
           </>

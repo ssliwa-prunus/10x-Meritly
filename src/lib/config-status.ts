@@ -1,4 +1,7 @@
-import { SUPABASE_URL, SUPABASE_KEY } from "astro:env/server";
+import { getMessages, type Locale } from "@/lib/i18n";
+
+// Configuration banner shown by Layout. Pure (no astro:* imports) so it is unit-testable: Layout
+// reads the env values from astro:env/server and passes them in with the request's locale.
 
 export interface ConfigStatus {
   name: string;
@@ -8,14 +11,24 @@ export interface ConfigStatus {
   docsLabel?: string;
 }
 
-export const configStatuses: ConfigStatus[] = [
-  {
-    name: "Supabase",
-    configured: Boolean(SUPABASE_URL && SUPABASE_KEY),
-    message: "Supabase nie jest skonfigurowany — funkcje uwierzytelniania są wyłączone.",
-    docsUrl: "https://github.com/przeprogramowani/10x-astro-starter#supabase-configuration",
-    docsLabel: "Zobacz instrukcję konfiguracji",
-  },
-];
+export interface ConfigEnv {
+  supabaseUrl?: string;
+  supabaseKey?: string;
+}
 
-export const missingConfigs = configStatuses.filter((s) => !s.configured);
+export function configStatuses(env: ConfigEnv, locale: Locale): ConfigStatus[] {
+  const t = getMessages(locale);
+  return [
+    {
+      name: "Supabase",
+      configured: Boolean(env.supabaseUrl && env.supabaseKey),
+      message: t.layout.supabaseNotConfigured,
+      docsUrl: "https://github.com/przeprogramowani/10x-astro-starter#supabase-configuration",
+      docsLabel: t.layout.supabaseDocsLabel,
+    },
+  ];
+}
+
+export function missingConfigs(env: ConfigEnv, locale: Locale): ConfigStatus[] {
+  return configStatuses(env, locale).filter((s) => !s.configured);
+}

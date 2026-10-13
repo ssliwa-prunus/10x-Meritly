@@ -1,20 +1,22 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import { getMessages } from "@/lib/i18n";
 
+const t = getMessages(Astro.locals.locale).auth.confirmEmail;
 const isAutoConfirmed = import.meta.env.DEV;
 
 const content = isAutoConfirmed
   ? {
       emoji: "✅",
-      heading: "Registration successful",
-      description: "Your account has been created. You can now sign in.",
-      linkText: "Go to sign in",
+      heading: t.doneHeading,
+      description: t.doneDescription,
+      linkText: t.doneLink,
     }
   : {
       emoji: "📧",
-      heading: "Check your email",
-      description: "We've sent a confirmation link to your email address. Click it to activate your account.",
-      linkText: "Back to sign in",
+      heading: t.checkHeading,
+      description: t.checkDescription,
+      linkText: t.checkLink,
     };
 ---
 

@@ -20,6 +20,7 @@ const CLEAN_PATHS = [
   "src/components/projects/MilestonesSection.astro",
   "src/components/projects/ProjectForm.astro",
   "src/components/SubmitButton.tsx",
+  "src/components/Welcome.astro",
   "src/pages/dev/projects-kitchen-sink.astro",
   "src/pages/employees/[id].astro",
   "src/pages/my-bonuses.astro",

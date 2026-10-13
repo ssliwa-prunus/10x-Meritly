@@ -1,41 +1,31 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import SignInForm from "@/components/auth/SignInForm";
+import { errorMessage } from "@/lib/auth-errors";
+import { getMessages } from "@/lib/i18n";
 import { safeNext } from "@/lib/safe-next";
 
-// The URL carries only an error code; the displayed text always comes from this fixed catalog,
-// so a crafted ?error= link cannot put arbitrary text on the page.
-const SIGNIN_ERROR_MESSAGES: Record<string, string> = {
-  invalid_credentials: "Invalid login credentials",
-  email_not_confirmed: "Confirm your email before signing in",
-  invite_invalid: "This invite link is invalid or expired. Ask your supervisor to resend it.",
-  not_configured: "Supabase is not configured",
-  signin_failed: "Could not sign in. Please try again.",
-};
+const t = getMessages(Astro.locals.locale);
 
-const errorParam = Astro.url.searchParams.get("error");
-const error =
-  errorParam === null
-    ? null
-    : Object.hasOwn(SIGNIN_ERROR_MESSAGES, errorParam)
-      ? SIGNIN_ERROR_MESSAGES[errorParam]
-      : SIGNIN_ERROR_MESSAGES.signin_failed;
+// The URL carries only an error code; the displayed text always comes from the fixed dictionary
+// catalog, so a crafted ?error= link cannot put arbitrary text on the page.
+const error = errorMessage(t.auth.signinErrors, Astro.url.searchParams.get("error"), "signin_failed");
 
 // Where to go after sign-in; only a same-origin path is passed on to the form.
 const next = safeNext(Astro.url.searchParams.get("next"));
 ---
 
-<Layout title="Sign in">
+<Layout title={t.auth.signin.title}>
   <div class="bg-cosmic flex min-h-screen items-center justify-center p-4">
     <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-white/10 p-8 text-white backdrop-blur-xl">
       <h1 class="mb-6 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-center text-2xl font-bold text-transparent">
-        Sign in
+        {t.auth.signin.heading}
       </h1>
-      <SignInForm serverError={error} next={next} client:load />
+      <SignInForm serverError={error} next={next} labels={t.auth.signInForm} client:load />
       <p class="mt-4 text-center text-sm text-blue-100/60">
-        Don't have an account?{" "}
+        {t.auth.signin.noAccount}{" "}
         <a href="/auth/signup" class="text-purple-300 hover:underline">
-          Sign up
+          {t.common.signUp}
         </a>
       </p>
     </div>

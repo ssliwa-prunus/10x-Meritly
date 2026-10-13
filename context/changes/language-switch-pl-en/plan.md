@@ -639,34 +639,34 @@ None material. Dictionaries are module constants, resolution happens once per re
 
 #### Automated
 
-- [x] 1.1 Migration applies and pgTAP passes
-- [x] 1.2 Type check passes
-- [x] 1.3 Unit tests pass
-- [x] 1.4 Lint and UI literal check pass
-- [x] 1.5 Smoke passes unchanged
+- [x] 1.1 Migration applies and pgTAP passes — 31ee1ee
+- [x] 1.2 Type check passes — 31ee1ee
+- [x] 1.3 Unit tests pass — 31ee1ee
+- [x] 1.4 Lint and UI literal check pass — 31ee1ee
+- [x] 1.5 Smoke passes unchanged — 31ee1ee
 
 #### Manual
 
-- [x] 1.6 Switch visible on /, /auth/signin and /projects without overlap at phone width
-- [x] 1.7 Switch returns to the same URL and html lang follows the choice
-- [x] 1.8 Profile restores the cookie after sign-in on a cleared browser
+- [x] 1.6 Switch visible on /, /auth/signin and /projects without overlap at phone width — 31ee1ee
+- [x] 1.7 Switch returns to the same URL and html lang follows the choice — 31ee1ee
+- [x] 1.8 Profile restores the cookie after sign-in on a cleared browser — 31ee1ee
 
 ### Phase 2: First page, shell and auth
 
 #### Automated
 
-- [ ] 2.1 Type check passes
-- [ ] 2.2 Unit tests pass
-- [ ] 2.3 Lint and UI literal check pass
-- [ ] 2.4 Smoke passes
-- [ ] 2.5 e2e passes
+- [x] 2.1 Type check passes
+- [x] 2.2 Unit tests pass
+- [x] 2.3 Lint and UI literal check pass
+- [x] 2.4 Smoke passes
+- [x] 2.5 e2e passes
 
 #### Manual
 
-- [ ] 2.6 Landing, auth pages and dashboard read correctly in both languages
-- [ ] 2.7 Signup client-side error shows correct Polish plural forms
-- [ ] 2.8 Signup existing-email error is translated
-- [ ] 2.9 Password toggle aria-label follows the active language
+- [x] 2.6 Landing, auth pages and dashboard read correctly in both languages
+- [x] 2.7 Signup client-side error shows correct Polish plural forms
+- [x] 2.8 Signup existing-email error is translated
+- [x] 2.9 Password toggle aria-label follows the active language
 
 ### Phase 3: Service catalogs, labels and label-as-logic fixes
 
