@@ -13,11 +13,12 @@ interface Props {
 
 const { exposure } = Astro.props;
 
+// `key` drives styling (over budget marks every figure except the budget itself red); the label is display text only.
 const figures = exposure
   ? [
-      { label: "Budget", value: exposure.total_budget },
-      { label: "Reserved (worst case)", value: exposure.reserved_total },
-      { label: "Remaining", value: exposure.remaining },
+      { key: "budget", label: "Budget", value: exposure.total_budget },
+      { key: "reserved", label: "Reserved (worst case)", value: exposure.reserved_total },
+      { key: "remaining", label: "Remaining", value: exposure.remaining },
     ]
   : [];
 ---
@@ -46,7 +47,7 @@ const figures = exposure
               <dd
                 class:list={cn(
                   "mt-1 text-lg font-semibold tabular-nums",
-                  exposure.over_budget && figure.label !== "Budget" && "text-destructive",
+                  exposure.over_budget && figure.key !== "budget" && "text-destructive",
                 )}
               >
                 {formatPln(figure.value)}

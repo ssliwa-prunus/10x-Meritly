@@ -8,16 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase";
 import { formatPercent } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import { groupHistory } from "@/lib/history";
 import { cn } from "@/lib/utils";
 import { listEmployeeHistory } from "@/lib/services/approvals";
 import { employeeIdSchema, getEmployeeDetail, inviteStatus, listOpenAssignments } from "@/lib/services/employees";
-import type { InviteStatus } from "@/types";
 
 // S-06 employee detail. Middleware limits it to Supervisor/Admin; RLS decides what each sees: a
 // Supervisor only their own milestones (history and assignments), an Admin everything. Draft
 // figures are never shown here; history comes from the frozen approval snapshot.
 const isAdmin = Astro.locals.profile?.role === "admin";
+const t = getMessages(Astro.locals.locale);
 const id = employeeIdSchema.safeParse(Astro.params.id);
 const supabase = createClient(Astro.request.headers, Astro.cookies);
 
@@ -34,7 +35,12 @@ if (!supabase) {
     listOpenAssignments(supabase, id.data),
     listEmployeeHistory(supabase, id.data),
   ]);
-  loadError = detailResult.error ?? assignmentsResult.error ?? historyResult.error ?? null;
+  loadError =
+    detailResult.error || assignmentsResult.error
+      ? t.employees.loadFailed
+      : historyResult.error
+        ? t.history.loadFailed
+        : null;
 }
 
 // An invalid id, a missing employee and one hidden by RLS all look the same: not found.
@@ -42,11 +48,6 @@ const employee = id.success ? (detailResult.data ?? null) : null;
 const assignments = assignmentsResult.data ?? [];
 const history = groupHistory(historyResult.data ?? []);
 
-const STATUS_LABELS: Record<InviteStatus, string> = {
-  not_invited: "Not invited",
-  invited: "Invited",
-  active: "Active",
-};
 const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 ---
 
@@ -90,7 +91,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                 </div>
                 <div>
                   <dt class="text-muted-foreground">Account</dt>
-                  <dd class="mt-1">{STATUS_LABELS[inviteStatus(employee)]}</dd>
+                  <dd class="mt-1">{t.status.invite[inviteStatus(employee)]}</dd>
                 </div>
                 <div>
                   <dt class="text-muted-foreground">

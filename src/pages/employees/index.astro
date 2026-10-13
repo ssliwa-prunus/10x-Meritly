@@ -5,6 +5,7 @@ import EmployeeForm from "@/components/employees/EmployeeForm.astro";
 import { buttonClass } from "@/components/form-classes";
 import { createClient } from "@/lib/supabase";
 import { formatPercent } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { listJobRoles } from "@/lib/services/bonus-config";
 import { employeesErrorMessage, inviteStatus, listEmployees } from "@/lib/services/employees";
@@ -13,6 +14,8 @@ import type { EmployeeListItem, InviteStatus } from "@/types";
 
 const profile = Astro.locals.profile;
 const isAdmin = profile?.role === "admin";
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
 
 const saved = Astro.url.searchParams.get("saved");
 const errorCode = Astro.url.searchParams.get("error");
@@ -20,7 +23,7 @@ const errorField = Astro.url.searchParams.get("field");
 const errorEmployeeId = Astro.url.searchParams.get("employee");
 
 // The URL carries only codes; the displayed text always comes from fixed catalogs.
-const errorMessage = errorCode ? employeesErrorMessage(errorCode, errorField) : null;
+const errorMessage = errorCode ? employeesErrorMessage(errorCode, errorField, locale) : null;
 const SAVED_MESSAGES: Record<string, string> = {
   created: "Employee registered. Send the invite when you are ready.",
   updated: "Employee saved.",
@@ -44,7 +47,8 @@ if (!supabase || !profile) {
     listJobRoles(supabase),
     isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
   ]);
-  loadError = employeesResult.error ?? jobRolesResult.error ?? supervisorsResult.error ?? null;
+  const failed = employeesResult.error ?? jobRolesResult.error ?? supervisorsResult.error;
+  loadError = failed ? t.employees.loadFailed : null;
 }
 
 const employees = employeesResult.data;
@@ -65,11 +69,6 @@ const rowErrorId =
 const registerError = errorEmployeeId === null ? errorMessage : null;
 const pageError = rowErrorId === null && registerError === null ? errorMessage : null;
 
-const STATUS_LABELS: Record<InviteStatus, string> = {
-  not_invited: "Not invited",
-  invited: "Invited",
-  active: "Active",
-};
 const STATUS_CLASSES: Record<InviteStatus, string> = {
   not_invited: "border-white/20 bg-white/10 text-blue-100",
   invited: "border-amber-400/40 bg-amber-500/20 text-amber-100",
@@ -175,7 +174,7 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
                                 STATUS_CLASSES[status],
                               )}
                             >
-                              {STATUS_LABELS[status]}
+                              {t.status.invite[status]}
                             </span>
                           </td>
                           <td class="py-2 pr-3 text-right whitespace-nowrap tabular-nums">

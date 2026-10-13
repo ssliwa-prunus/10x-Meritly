@@ -655,32 +655,32 @@ None material. Dictionaries are module constants, resolution happens once per re
 
 #### Automated
 
-- [x] 2.1 Type check passes
-- [x] 2.2 Unit tests pass
-- [x] 2.3 Lint and UI literal check pass
-- [x] 2.4 Smoke passes
-- [x] 2.5 e2e passes
+- [x] 2.1 Type check passes — 375f989
+- [x] 2.2 Unit tests pass — 375f989
+- [x] 2.3 Lint and UI literal check pass — 375f989
+- [x] 2.4 Smoke passes — 375f989
+- [x] 2.5 e2e passes — 375f989
 
 #### Manual
 
-- [x] 2.6 Landing, auth pages and dashboard read correctly in both languages
-- [x] 2.7 Signup client-side error shows correct Polish plural forms
-- [x] 2.8 Signup existing-email error is translated
-- [x] 2.9 Password toggle aria-label follows the active language
+- [x] 2.6 Landing, auth pages and dashboard read correctly in both languages — 375f989
+- [x] 2.7 Signup client-side error shows correct Polish plural forms — 375f989
+- [x] 2.8 Signup existing-email error is translated — 375f989
+- [x] 2.9 Password toggle aria-label follows the active language — 375f989
 
 ### Phase 3: Service catalogs, labels and label-as-logic fixes
 
 #### Automated
 
-- [ ] 3.1 Type check passes
-- [ ] 3.2 Unit tests pass
-- [ ] 3.3 Mutation score for touched resolvers does not drop
-- [ ] 3.4 Lint and UI literal check pass
+- [x] 3.1 Type check passes
+- [x] 3.2 Unit tests pass
+- [x] 3.3 Mutation score for touched resolvers does not drop
+- [x] 3.4 Lint and UI literal check pass
 
 #### Manual
 
-- [ ] 3.5 Project and employee form errors translated in both languages
-- [ ] 3.6 Budget exposure styling unchanged in both languages
+- [x] 3.5 Project and employee form errors translated in both languages
+- [x] 3.6 Budget exposure styling unchanged in both languages
 
 ### Phase 4: Feature views
 

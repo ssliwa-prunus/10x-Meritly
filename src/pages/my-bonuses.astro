@@ -6,12 +6,14 @@ import EmployeeHistory from "@/components/history/EmployeeHistory.astro";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase";
 import { groupHistory } from "@/lib/history";
+import { getMessages } from "@/lib/i18n";
 import { listMyBonuses } from "@/lib/services/approvals";
 import type { MyBonuses } from "@/types";
 
 // Middleware limits this page to the employee role, and it reads no query parameters. Figures come
 // from the frozen approval snapshot, grouped per project by the shared EmployeeHistory view. It
 // shows no share, pool or colleague data.
+const t = getMessages(Astro.locals.locale);
 const supabase = createClient(Astro.request.headers, Astro.cookies);
 
 let loadError: string | null = null;
@@ -21,7 +23,7 @@ if (!supabase) {
   loadError = "Supabase is not configured";
 } else {
   const result = await listMyBonuses(supabase);
-  if (result.error || !result.data) loadError = result.error ?? "Could not load bonuses. Please try again.";
+  if (result.error || !result.data) loadError = t.myBonuses.loadFailed;
   else bonuses = result.data;
 }
 

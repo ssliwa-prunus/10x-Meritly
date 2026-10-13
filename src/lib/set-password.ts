@@ -1,12 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import type { Locale } from "@/lib/i18n";
 
 // ---------------------------------------------------------------------------
 // Set-password form (invite acceptance). Errors travel to /auth/set-password as a fixed code in the
-// redirect URL, never as free text; the page resolves them with setPasswordErrorMessage().
+// redirect URL, never as free text; the page resolves them with setPasswordErrorMessage() in the
+// request's locale. The EN catalog defines the codes and the PL catalog is typed against them.
 // ---------------------------------------------------------------------------
 
-const SET_PASSWORD_ERROR_MESSAGES = {
+const SET_PASSWORD_ERROR_MESSAGES_EN = {
   invalid_form: "Invalid form submission",
   required: "Enter and confirm your new password",
   password_too_short: "Password must be at least 6 characters",
@@ -16,16 +18,32 @@ const SET_PASSWORD_ERROR_MESSAGES = {
   not_configured: "Supabase is not configured",
 } as const;
 
-export type SetPasswordErrorCode = keyof typeof SET_PASSWORD_ERROR_MESSAGES;
+export type SetPasswordErrorCode = keyof typeof SET_PASSWORD_ERROR_MESSAGES_EN;
 
-const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+const SET_PASSWORD_ERROR_MESSAGES: Record<Locale, Record<SetPasswordErrorCode, string>> = {
+  en: SET_PASSWORD_ERROR_MESSAGES_EN,
+  pl: {
+    invalid_form: "Nieprawidłowe dane formularza",
+    required: "Wpisz i potwierdź nowe hasło",
+    password_too_short: "Hasło musi mieć co najmniej 6 znaków",
+    password_too_long: "Hasło może mieć najwyżej 72 znaki",
+    password_mismatch: "Hasła nie są zgodne",
+    update_failed: "Nie udało się ustawić hasła. Spróbuj ponownie.",
+    not_configured: "Supabase nie jest skonfigurowany",
+  },
+};
+
+const GENERIC_ERROR_MESSAGE: Record<Locale, string> = {
+  en: "Something went wrong. Please try again.",
+  pl: "Coś poszło nie tak. Spróbuj ponownie.",
+};
 
 export const isSetPasswordErrorCode = (value: string): value is SetPasswordErrorCode =>
-  Object.hasOwn(SET_PASSWORD_ERROR_MESSAGES, value);
+  Object.hasOwn(SET_PASSWORD_ERROR_MESSAGES_EN, value);
 
 /** Message for an error code taken from the URL. Only fixed catalog text is ever returned. */
-export function setPasswordErrorMessage(code: string): string {
-  return isSetPasswordErrorCode(code) ? SET_PASSWORD_ERROR_MESSAGES[code] : GENERIC_ERROR_MESSAGE;
+export function setPasswordErrorMessage(code: string, locale: Locale): string {
+  return isSetPasswordErrorCode(code) ? SET_PASSWORD_ERROR_MESSAGES[locale][code] : GENERIC_ERROR_MESSAGE[locale];
 }
 
 /** Minimum matches supabase/config.toml minimum_password_length; 72 is the Auth (bcrypt) maximum. Not trimmed. */

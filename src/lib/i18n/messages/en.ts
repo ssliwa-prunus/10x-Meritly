@@ -133,11 +133,52 @@ export const en: Messages = {
       pending: "Creating account...",
     },
   },
+  projects: {
+    loadFailed: "Could not load projects. Please try again.",
+  },
+  milestones: {
+    assignmentsLoadFailed: "Could not load assignments. Please try again.",
+    bonusesLoadFailed: "Could not load bonuses. Please try again.",
+    unscored: "Enter KPI scores",
+    emailsSent: "Emails sent",
+    resendUnsentEmails: "Re-send unsent emails",
+  },
+  employees: {
+    loadFailed: "Could not load employees. Please try again.",
+  },
+  history: {
+    loadFailed: "Could not load bonuses. Please try again.",
+  },
+  myBonuses: {
+    loadFailed: "Could not load bonuses. Please try again.",
+  },
+  admin: {
+    loadFailed: "Could not load configuration. Please try again.",
+    settingsMissing: "Bonus settings are missing.",
+  },
   status: {
     role: {
       admin: "Admin",
       supervisor: "Supervisor",
       employee: "Employee",
+    },
+    work: {
+      planned: "Planned",
+      active: "Active",
+      completed: "Completed",
+      cancelled: "Cancelled",
+    },
+    milestone: {
+      planned: "Planned",
+      active: "Active",
+      completed: "Completed",
+      cancelled: "Cancelled",
+      approved: "Approved",
+    },
+    invite: {
+      not_invited: "Not invited",
+      invited: "Invited",
+      active: "Active",
     },
   },
 };

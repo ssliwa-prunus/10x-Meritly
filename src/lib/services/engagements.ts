@@ -6,17 +6,19 @@ import {
   parseForm as parseFormWith,
   toHundredths,
 } from "@/lib/forms";
+import type { Locale } from "@/lib/i18n";
 import { PROJECTS_PATH } from "@/lib/services/projects";
-import type { AssignableEmployee, Engagement, EngagementListItem } from "@/types";
+import type { AssignableEmployee, Engagement, EngagementListItem, LoadErrorCode } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Validation and save failures travel to the milestone page as a fixed code (plus
 // an optional field name) in the redirect URL, never as free text, so a crafted link cannot put
-// arbitrary text on the page. The page resolves codes with engagementsErrorMessage(); unknown
-// codes fall back to a generic message.
+// arbitrary text on the page. The page resolves codes with engagementsErrorMessage() in the
+// request's locale; unknown codes fall back to a generic message. The EN catalog defines the codes
+// and the PL catalog is typed against them, so a missing translation fails the type check.
 // ---------------------------------------------------------------------------
 
-const ENGAGEMENTS_ERROR_MESSAGES = {
+const ENGAGEMENTS_ERROR_MESSAGES_EN = {
   invalid_form: "Invalid form submission",
   invalid_id: "Invalid id",
   required: "{field} is required",
@@ -35,15 +37,53 @@ const ENGAGEMENTS_ERROR_MESSAGES = {
   admin_read_only: "Admins can view assignments but not change them",
 } as const;
 
-export type EngagementsErrorCode = keyof typeof ENGAGEMENTS_ERROR_MESSAGES;
+export type EngagementsErrorCode = keyof typeof ENGAGEMENTS_ERROR_MESSAGES_EN;
 
-const FIELD_LABELS: Record<string, string> = {
+const ENGAGEMENTS_ERROR_MESSAGES: Record<Locale, Record<EngagementsErrorCode, string>> = {
+  en: ENGAGEMENTS_ERROR_MESSAGES_EN,
+  pl: {
+    invalid_form: "Nieprawidłowe dane formularza",
+    invalid_id: "Nieprawidłowy identyfikator",
+    required: "Pole „{field}” jest wymagane",
+    not_a_number: "Pole „{field}” musi być liczbą",
+    too_many_decimals: "Pole „{field}” może mieć najwyżej 2 miejsca po przecinku",
+    not_found: "Nie znaleziono",
+    save_failed: "Nie udało się zapisać zmian. Spróbuj ponownie.",
+    not_configured: "Supabase nie jest skonfigurowany",
+    time_share_range: "Udział czasowy musi być większy od 0 i nie większy niż 1.00",
+    rating_range: "Ocena musi być liczbą całkowitą od 1 do 5",
+    already_assigned: "Ten pracownik jest już przypisany do tego kamienia milowego",
+    milestone_closed:
+      "Kamień milowy jest zatwierdzony albo on lub jego projekt jest zakończony lub anulowany. Zatwierdzone kamienie milowe są zamrożone; wznów zakończony lub anulowany kamień milowy przed zmianą jego przypisań",
+    milestone_approved: "Ten kamień milowy jest zatwierdzony i zamrożony",
+    employee_not_available:
+      "Tego pracownika nie można przypisać do tego kamienia milowego. Wybierz jednego ze swoich pracowników.",
+    admin_read_only: "Administratorzy mogą przeglądać przypisania, ale nie mogą ich zmieniać",
+  },
+};
+
+const FIELD_LABELS_EN = {
   employee_id: "Employee",
   time_share: "Time share",
   rating: "Rating",
 };
 
-const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+const FIELD_LABELS: Record<Locale, Record<keyof typeof FIELD_LABELS_EN, string>> = {
+  en: FIELD_LABELS_EN,
+  pl: {
+    employee_id: "Pracownik",
+    time_share: "Udział czasowy",
+    rating: "Ocena",
+  },
+};
+
+/** Label for a field outside FIELD_LABELS (or no field at all). */
+const FALLBACK_FIELD_LABEL: Record<Locale, string> = { en: "Value", pl: "Wartość" };
+
+const GENERIC_ERROR_MESSAGE: Record<Locale, string> = {
+  en: "Something went wrong. Please try again.",
+  pl: "Coś poszło nie tak. Spróbuj ponownie.",
+};
 
 export interface EngagementsError {
   code: EngagementsErrorCode;
@@ -51,13 +91,14 @@ export interface EngagementsError {
 }
 
 const isEngagementsErrorCode = (value: string): value is EngagementsErrorCode =>
-  Object.hasOwn(ENGAGEMENTS_ERROR_MESSAGES, value);
+  Object.hasOwn(ENGAGEMENTS_ERROR_MESSAGES_EN, value);
 
 /** Message for an error code taken from the URL. Only fixed catalog text is ever returned. */
-export function engagementsErrorMessage(code: string, field: string | null): string {
-  if (!isEngagementsErrorCode(code)) return GENERIC_ERROR_MESSAGE;
-  const label = (field !== null && Object.hasOwn(FIELD_LABELS, field) ? FIELD_LABELS[field] : undefined) ?? "Value";
-  return ENGAGEMENTS_ERROR_MESSAGES[code].replace("{field}", label);
+export function engagementsErrorMessage(code: string, field: string | null, locale: Locale): string {
+  if (!isEngagementsErrorCode(code)) return GENERIC_ERROR_MESSAGE[locale];
+  const labels: Record<string, string> = FIELD_LABELS[locale];
+  const label = field !== null && Object.hasOwn(labels, field) ? labels[field] : FALLBACK_FIELD_LABEL[locale];
+  return ENGAGEMENTS_ERROR_MESSAGES[locale][code].replace("{field}", label);
 }
 
 // ---------------------------------------------------------------------------
@@ -144,7 +185,7 @@ export function milestoneUrl(
 
 export interface ServiceResult<T = undefined> {
   data?: T;
-  error?: string;
+  error?: LoadErrorCode;
 }
 
 export interface WriteResult<T = undefined> {
@@ -172,10 +213,10 @@ function mapPostgrestError(error: PostgrestError, context: string): EngagementsE
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): string {
+function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
   // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
   console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "Could not load assignments. Please try again.";
+  return "load_failed";
 }
 
 interface EngagementRow extends Omit<Engagement, "time_share" | "rating"> {

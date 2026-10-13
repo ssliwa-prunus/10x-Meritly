@@ -1,16 +1,19 @@
 import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
+import { format, getMessages, type Locale } from "@/lib/i18n";
 import { PROJECTS_PATH } from "@/lib/services/projects";
-import type { MilestonePayoutLine, MilestonePayoutSummary, MyBonusLine, MyBonuses } from "@/types";
+import type { LoadErrorCode, MilestonePayoutLine, MilestonePayoutSummary, MyBonusLine, MyBonuses } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Approval failures travel to the milestone page as a fixed code in the redirect
 // URL, never as free text, so a crafted link cannot put arbitrary text on the page. The page
-// resolves codes with approvalErrorMessage(); unknown codes fall back to a generic message.
+// resolves codes with approvalErrorMessage() in the request's locale; unknown codes fall back to a
+// generic message. The EN catalog defines the codes and the PL catalog is typed against them, so a
+// missing translation fails the type check.
 // ---------------------------------------------------------------------------
 
-const APPROVAL_ERROR_MESSAGES = {
+const APPROVAL_ERROR_MESSAGES_EN = {
   invalid_form: "Invalid form submission",
   invalid_id: "Invalid id",
   confirm_required: "Tick the confirmation to approve the milestone",
@@ -28,9 +31,35 @@ const APPROVAL_ERROR_MESSAGES = {
   notify_failed: "Could not send the bonus emails. Please try again.",
 } as const;
 
-export type ApprovalErrorCode = keyof typeof APPROVAL_ERROR_MESSAGES;
+export type ApprovalErrorCode = keyof typeof APPROVAL_ERROR_MESSAGES_EN;
 
-const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+const APPROVAL_ERROR_MESSAGES: Record<Locale, Record<ApprovalErrorCode, string>> = {
+  en: APPROVAL_ERROR_MESSAGES_EN,
+  pl: {
+    invalid_form: "Nieprawidłowe dane formularza",
+    invalid_id: "Nieprawidłowy identyfikator",
+    confirm_required: "Zaznacz potwierdzenie, aby zatwierdzić kamień milowy",
+    not_found: "Nie znaleziono",
+    not_approvable:
+      "Tego kamienia milowego nie można zatwierdzić: wymaga wszystkich czterech wyników KPI i co najmniej jednego przypisania oraz nie może być anulowany",
+    already_approved: "Ten kamień milowy jest już zatwierdzony",
+    project_closed: "Projekt jest zakończony lub anulowany; wznów go przed zatwierdzaniem jego kamieni milowych",
+    admin_read_only: "Administratorzy mogą przeglądać zatwierdzenia, ale nie mogą zatwierdzać kamieni milowych",
+    save_failed: "Nie udało się zatwierdzić kamienia milowego. Spróbuj ponownie.",
+    not_configured: "Supabase nie jest skonfigurowany",
+    not_approved:
+      "Ten kamień milowy nie jest jeszcze zatwierdzony; e-maile o premiach są wysyłane dopiero po zatwierdzeniu",
+    email_not_configured:
+      "Wysyłka e-maili o premiach nie jest skonfigurowana. Poproś administratora o skonfigurowanie dostawcy poczty.",
+    send_failed: "Nie udało się wysłać żadnego e-maila o premii. Spróbuj ponownie później.",
+    notify_failed: "Nie udało się wysłać e-maili o premiach. Spróbuj ponownie.",
+  },
+};
+
+const GENERIC_ERROR_MESSAGE: Record<Locale, string> = {
+  en: "Something went wrong. Please try again.",
+  pl: "Coś poszło nie tak. Spróbuj ponownie.",
+};
 
 export interface ApprovalError {
   code: ApprovalErrorCode;
@@ -38,32 +67,48 @@ export interface ApprovalError {
 }
 
 const isApprovalErrorCode = (value: string): value is ApprovalErrorCode =>
-  Object.hasOwn(APPROVAL_ERROR_MESSAGES, value);
+  Object.hasOwn(APPROVAL_ERROR_MESSAGES_EN, value);
 
 /** Message for an error code taken from the URL. Only fixed catalog text is ever returned. */
-export function approvalErrorMessage(code: string): string {
-  if (!isApprovalErrorCode(code)) return GENERIC_ERROR_MESSAGE;
-  return APPROVAL_ERROR_MESSAGES[code];
+export function approvalErrorMessage(code: string, locale: Locale): string {
+  if (!isApprovalErrorCode(code)) return GENERIC_ERROR_MESSAGE[locale];
+  return APPROVAL_ERROR_MESSAGES[locale][code];
 }
 
 // Notices: approval succeeded, but not every bonus email went out. Same rule as errors: the URL
-// carries a code, the page shows fixed catalog text, and an unknown code shows nothing.
-const APPROVAL_NOTICE_MESSAGES = {
-  email_partial: "Some bonus emails could not be sent. Use “Re-send unsent emails” to try again.",
-  email_failed: "The bonus emails could not be sent. Use “Re-send unsent emails” to try again.",
+// carries a code, the page shows fixed catalog text, and an unknown code shows nothing. The text
+// quotes the "Emails sent" label and the re-send button by name, so {emailsSent} and {resend} are
+// filled from the same dictionary entries (t.milestones) the approval card renders.
+const APPROVAL_NOTICE_MESSAGES_EN = {
+  email_partial: "Some bonus emails could not be sent. Use “{resend}” to try again.",
+  email_failed: "The bonus emails could not be sent. Use “{resend}” to try again.",
   email_pending:
-    "Bonus emails are still being sent by another request. Check “Emails sent” in a few minutes; if it does not change, use “Re-send unsent emails”.",
+    "Bonus emails are still being sent by another request. Check “{emailsSent}” in a few minutes; if it does not change, use “{resend}”.",
 } as const;
 
-export type ApprovalNoticeCode = keyof typeof APPROVAL_NOTICE_MESSAGES;
+export type ApprovalNoticeCode = keyof typeof APPROVAL_NOTICE_MESSAGES_EN;
+
+const APPROVAL_NOTICE_MESSAGES: Record<Locale, Record<ApprovalNoticeCode, string>> = {
+  en: APPROVAL_NOTICE_MESSAGES_EN,
+  pl: {
+    email_partial: "Nie udało się wysłać części e-maili o premiach. Użyj przycisku „{resend}”, aby spróbować ponownie.",
+    email_failed: "Nie udało się wysłać e-maili o premiach. Użyj przycisku „{resend}”, aby spróbować ponownie.",
+    email_pending:
+      "E-maile o premiach są wciąż wysyłane przez inne żądanie. Sprawdź „{emailsSent}” za kilka minut; jeśli wartość się nie zmieni, użyj przycisku „{resend}”.",
+  },
+};
 
 const isApprovalNoticeCode = (value: string): value is ApprovalNoticeCode =>
-  Object.hasOwn(APPROVAL_NOTICE_MESSAGES, value);
+  Object.hasOwn(APPROVAL_NOTICE_MESSAGES_EN, value);
 
 /** Message for a notice code taken from the URL; null for an unknown code. */
-export function approvalNoticeMessage(code: string): string | null {
+export function approvalNoticeMessage(code: string, locale: Locale): string | null {
   if (!isApprovalNoticeCode(code)) return null;
-  return APPROVAL_NOTICE_MESSAGES[code];
+  const t = getMessages(locale).milestones;
+  return format(APPROVAL_NOTICE_MESSAGES[locale][code], {
+    resend: t.resendUnsentEmails,
+    emailsSent: t.emailsSent,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +172,7 @@ export function approvalUrl(projectId: string, milestoneId: string, flash: Appro
 
 export interface ServiceResult<T = undefined> {
   data?: T;
-  error?: string;
+  error?: LoadErrorCode;
 }
 
 export interface WriteResult<T = undefined> {
@@ -153,10 +198,10 @@ function mapPostgrestError(error: PostgrestError, context: string): ApprovalErro
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): string {
+function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
   // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
   console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "Could not load bonuses. Please try again.";
+  return "load_failed";
 }
 
 type Numeric = number | string;

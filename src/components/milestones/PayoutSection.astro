@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatMultiplier, formatPercent, formatPln, formatShare } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { MilestonePayoutLine, MilestonePayoutSummary } from "@/types";
 
@@ -15,19 +16,20 @@ interface Props {
 
 const { summary, lines, approvedAt = null } = Astro.props;
 
-// Amounts arrive already computed and floored in SQL; this view only formats them.
-const UNSCORED = "Enter KPI scores";
-const money = (value: number | null) => (value === null ? UNSCORED : formatPln(value));
+// Amounts arrive already computed and floored in SQL; this view only formats them. A null figure
+// needs all four KPI scores: it renders the "unscored" hint, styled by the null check, not the text.
+const unscored = getMessages(Astro.locals.locale).milestones.unscored;
+const money = (value: number | null) => (value === null ? null : formatPln(value));
 
-const figures = [
+const figures: { label: string; value: string | null }[] = [
   { label: "Target pool (max)", value: formatPln(summary.target_pool) },
   {
     label: "KPI multiplier",
-    value: summary.multiplier === null ? UNSCORED : formatMultiplier(summary.multiplier),
+    value: summary.multiplier === null ? null : formatMultiplier(summary.multiplier),
   },
   {
     label: "Share of target pool",
-    value: summary.budget_share === null ? UNSCORED : formatShare(summary.budget_share),
+    value: summary.budget_share === null ? null : formatShare(summary.budget_share),
   },
   { label: "Payout pool", value: money(summary.payout_pool) },
   { label: "Payout total", value: money(summary.payout_total) },
@@ -73,10 +75,10 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             <dd
               class:list={cn(
                 "mt-1 font-semibold tabular-nums",
-                figure.value === UNSCORED ? "text-muted-foreground text-sm" : "text-lg",
+                figure.value === null ? "text-muted-foreground text-sm" : "text-lg",
               )}
             >
-              {figure.value}
+              {figure.value ?? unscored}
             </dd>
           </div>
         ))}
@@ -146,7 +148,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                     line.bonus === null ? "text-muted-foreground" : "font-semibold",
                   )}
                 >
-                  {money(line.bonus)}
+                  {money(line.bonus) ?? unscored}
                 </TableCell>
               </TableRow>
             ))}

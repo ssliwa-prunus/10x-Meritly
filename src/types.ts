@@ -13,6 +13,12 @@ export interface Profile {
   locale: Locale | null;
 }
 
+/**
+ * Error code of a failed service read. Services never return text; the page shows its own
+ * localized message for it (t.<area>.loadFailed).
+ */
+export type LoadErrorCode = "load_failed";
+
 /** Row of `public.job_roles` as exposed to the app (audit columns omitted). `archived_at` null = active. */
 export interface JobRole {
   id: string;

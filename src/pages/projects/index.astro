@@ -4,16 +4,19 @@ import Topbar from "@/components/Topbar.astro";
 import ProjectForm from "@/components/projects/ProjectForm.astro";
 import { createClient } from "@/lib/supabase";
 import { formatPln } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import { listProjectExposure, listProjects, listSupervisors, projectsErrorMessage } from "@/lib/services/projects";
 
 const isAdmin = Astro.locals.profile?.role === "admin";
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
 
 const errorCode = Astro.url.searchParams.get("error");
 const errorField = Astro.url.searchParams.get("field");
 const section = Astro.url.searchParams.get("section");
 
 // The URL carries only an error code; the displayed text always comes from the fixed catalog.
-const errorMessage = errorCode ? projectsErrorMessage(errorCode, errorField) : null;
+const errorMessage = errorCode ? projectsErrorMessage(errorCode, errorField, locale) : null;
 const newFormError = section === "new" ? errorMessage : null;
 const pageError = section === null ? errorMessage : null;
 
@@ -32,7 +35,8 @@ if (!supabase) {
     listProjectExposure(supabase),
     isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
   ]);
-  loadError = projectsResult.error ?? exposureResult.error ?? supervisorsResult.error ?? null;
+  const failed = projectsResult.error ?? exposureResult.error ?? supervisorsResult.error;
+  loadError = failed ? t.projects.loadFailed : null;
 }
 
 const projects = projectsResult.data;

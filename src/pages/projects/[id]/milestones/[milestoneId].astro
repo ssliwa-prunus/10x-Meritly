@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase";
 import { formatPercent, formatPln } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { approvalErrorMessage, approvalNoticeMessage, getApprovedPayout } from "@/lib/services/approvals";
 import { engagementsErrorMessage, listAssignableEmployees, listEngagements } from "@/lib/services/engagements";
@@ -21,6 +22,8 @@ import type { MilestoneStatus } from "@/types";
 
 const profile = Astro.locals.profile;
 const isAdmin = profile?.role === "admin";
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
 
 const saved = Astro.url.searchParams.get("saved");
 const errorCode = Astro.url.searchParams.get("error");
@@ -34,13 +37,13 @@ const isApprovalError = errorSection === "approval";
 
 // The URL carries only codes; the displayed text always comes from fixed catalogs.
 const errorMessage =
-  errorCode && !isKpiError && !isApprovalError ? engagementsErrorMessage(errorCode, errorField) : null;
-const kpiError = errorCode && isKpiError ? kpiErrorMessage(errorCode, errorField) : null;
-const approvalError = errorCode && isApprovalError ? approvalErrorMessage(errorCode) : null;
+  errorCode && !isKpiError && !isApprovalError ? engagementsErrorMessage(errorCode, errorField, locale) : null;
+const kpiError = errorCode && isKpiError ? kpiErrorMessage(errorCode, errorField, locale) : null;
+const approvalError = errorCode && isApprovalError ? approvalErrorMessage(errorCode, locale) : null;
 const kpiSaved = saved === "kpi";
 const approvalSaved = saved === "approved" || saved === "notified" ? saved : null;
 const noticeCode = Astro.url.searchParams.get("notice");
-const approvalNotice = approvalSaved && noticeCode ? approvalNoticeMessage(noticeCode) : null;
+const approvalNotice = approvalSaved && noticeCode ? approvalNoticeMessage(noticeCode, locale) : null;
 const SAVED_MESSAGES: Record<string, string> = {
   created: "Employee assigned.",
   updated: "Assignment saved.",
@@ -76,7 +79,11 @@ if (!supabase || !profile) {
     getApprovedPayout(supabase, milestoneId.data),
   ]);
   loadError =
-    projectResult.error ?? milestonesResult.error ?? engagementsResult.error ?? assignableResult.error ?? null;
+    projectResult.error || milestonesResult.error
+      ? t.projects.loadFailed
+      : engagementsResult.error || assignableResult.error
+        ? t.milestones.assignmentsLoadFailed
+        : null;
 
   // The payout source depends on the status: an approved milestone renders its frozen snapshot,
   // every other one the live Draft computation (one extra round trip, Draft only).
@@ -98,7 +105,7 @@ if (!supabase || !profile) {
           // eslint-disable-next-line no-console -- intentional: surfaces the broken invariant in Workers observability logs
           console.error("Approved milestone has no snapshot header", { milestoneId: milestoneId.data });
         }
-        payoutResult = { error: approvedResult.error ?? "Could not load bonuses. Please try again." };
+        payoutResult = { error: "load_failed" };
       }
     } else {
       payoutResult = await getMilestonePayout(supabase, milestoneId.data);
@@ -107,7 +114,7 @@ if (!supabase || !profile) {
 }
 
 // A payout failure stays in its own card: the details and assignments (where the data is fixed) still render.
-const payoutError = payoutResult.error ?? null;
+const payoutError = payoutResult.error ? t.milestones.bonusesLoadFailed : null;
 
 // Invalid ids, a missing milestone, one of another project and one hidden by RLS all look the same: not found.
 const project = projectResult.data ?? null;

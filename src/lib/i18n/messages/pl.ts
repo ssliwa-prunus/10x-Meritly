@@ -135,11 +135,56 @@ export const pl = {
       pending: "Zakładanie konta…",
     },
   },
+  // Load errors: services return the code "load_failed" (or "settings_missing"); pages show these.
+  projects: {
+    loadFailed: "Nie udało się wczytać projektów. Spróbuj ponownie.",
+  },
+  milestones: {
+    assignmentsLoadFailed: "Nie udało się wczytać przypisań. Spróbuj ponownie.",
+    bonusesLoadFailed: "Nie udało się wczytać premii. Spróbuj ponownie.",
+    // Shown in place of a figure that needs all four KPI scores.
+    unscored: "Wpisz wyniki KPI",
+    // Button and label text that the approval notices quote by name (approvalNoticeMessage).
+    emailsSent: "Wysłane e-maile",
+    resendUnsentEmails: "Wyślij ponownie niewysłane e-maile",
+  },
+  employees: {
+    loadFailed: "Nie udało się wczytać pracowników. Spróbuj ponownie.",
+  },
+  history: {
+    loadFailed: "Nie udało się wczytać premii. Spróbuj ponownie.",
+  },
+  myBonuses: {
+    loadFailed: "Nie udało się wczytać premii. Spróbuj ponownie.",
+  },
+  admin: {
+    loadFailed: "Nie udało się wczytać konfiguracji. Spróbuj ponownie.",
+    settingsMissing: "Brak ustawień premii.",
+  },
   status: {
     role: {
       admin: "Administrator",
       supervisor: "Przełożony",
       employee: "Pracownik",
+    },
+    // Project and milestone statuses (projekt and kamień milowy are masculine).
+    work: {
+      planned: "Planowany",
+      active: "Aktywny",
+      completed: "Zakończony",
+      cancelled: "Anulowany",
+    },
+    milestone: {
+      planned: "Planowany",
+      active: "Aktywny",
+      completed: "Zakończony",
+      cancelled: "Anulowany",
+      approved: "Zatwierdzony",
+    },
+    invite: {
+      not_invited: "Bez zaproszenia",
+      invited: "Zaproszenie wysłane",
+      active: "Konto aktywne",
     },
   },
 };

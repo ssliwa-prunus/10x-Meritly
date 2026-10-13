@@ -4,6 +4,7 @@ import Topbar from "@/components/Topbar.astro";
 import JobRolesSection from "@/components/admin/JobRolesSection.astro";
 import KpiSettingsSection from "@/components/admin/KpiSettingsSection.astro";
 import RatingFactorsSection from "@/components/admin/RatingFactorsSection.astro";
+import { getMessages } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase";
 import {
   getBonusSettings,
@@ -11,6 +12,9 @@ import {
   settingsErrorMessage,
   type SettingsSection,
 } from "@/lib/services/bonus-config";
+
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
 
 const saved = Astro.url.searchParams.get("saved");
 const errorCode = Astro.url.searchParams.get("error");
@@ -20,7 +24,7 @@ const section = Astro.url.searchParams.get("section");
 // The URL carries only an error code; the displayed text always comes from the fixed catalog.
 const statusFor = (name: SettingsSection) => ({
   saved: saved === name,
-  error: errorCode && section === name ? settingsErrorMessage(errorCode, errorField) : null,
+  error: errorCode && section === name ? settingsErrorMessage(errorCode, errorField, locale) : null,
 });
 
 const supabase = createClient(Astro.request.headers, Astro.cookies);
@@ -33,7 +37,12 @@ if (!supabase) {
   loadError = "Supabase is not configured";
 } else {
   [rolesResult, settingsResult] = await Promise.all([listJobRoles(supabase), getBonusSettings(supabase)]);
-  loadError = rolesResult.error ?? settingsResult.error ?? null;
+  loadError =
+    rolesResult.error || settingsResult.error === "load_failed"
+      ? t.admin.loadFailed
+      : settingsResult.error === "settings_missing"
+        ? t.admin.settingsMissing
+        : null;
 }
 
 const roles = rolesResult.data;

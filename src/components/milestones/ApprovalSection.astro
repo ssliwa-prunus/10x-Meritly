@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { MilestoneStatus } from "@/types";
 
@@ -44,6 +45,10 @@ const {
   notice,
   error,
 } = Astro.props;
+
+// The approval notices quote these two labels by name (approvalNoticeMessage), so both come from
+// the same dictionary entries. The rest of the card is translated with the milestone views.
+const t = getMessages(Astro.locals.locale).milestones;
 
 const isApproved = status === "approved";
 const action = `/api/projects/${projectId}/milestones/${milestoneId}/approve`;
@@ -92,7 +97,7 @@ const focusRing = "focus-visible:outline-none focus-visible:ring-3 focus-visible
           </p>
           {hasEmailCounts && (
             <p class="text-sm">
-              Emails sent:{" "}
+              {t.emailsSent}:{" "}
               <span class="tabular-nums">
                 {notifiedCount} of {lineCount}
               </span>
@@ -101,7 +106,7 @@ const focusRing = "focus-visible:outline-none focus-visible:ring-3 focus-visible
           {canResend && (
             <form method="POST" action={notifyAction}>
               <SubmitButton client:load variant="outline" pendingText="Sending…">
-                Re-send unsent emails
+                {t.resendUnsentEmails}
               </SubmitButton>
             </form>
           )}
