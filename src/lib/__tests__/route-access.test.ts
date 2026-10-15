@@ -22,9 +22,11 @@ describe("decideAccess — signed-out visitor", () => {
     ["/my-bonuses", "", signIn("/auth/signin?next=%2Fmy-bonuses")],
     ["/employees/e1", "", signIn("/auth/signin?next=%2Femployees%2Fe1")],
     ["/dashboard", "", signIn("/auth/signin?next=%2Fdashboard")],
+    ["/reports/bonuses", "?from=2026-01-01", signIn("/auth/signin?next=%2Freports%2Fbonuses%3Ffrom%3D2026-01-01")],
     // API routes are not pages to land on, so no return target.
     ["/api/projects", "", signIn("/auth/signin")],
     ["/api/admin/job-roles", "", signIn("/auth/signin")],
+    ["/api/reports/bonuses.csv", "?from=2026-01-01", signIn("/auth/signin")],
     // Prefix over-match fails closed: a sibling path is gated too.
     ["/projectsX", "", signIn("/auth/signin?next=%2FprojectsX")],
     // Public pages and auth endpoints.
@@ -55,6 +57,8 @@ describe("decideAccess — role × route matrix", () => {
     "/employees/e1",
     "/api/employees/e1/invite",
     "/my-bonuses",
+    "/reports/bonuses",
+    "/api/reports/bonuses.csv",
     "/dashboard",
   ] as const;
 
@@ -69,6 +73,8 @@ describe("decideAccess — role × route matrix", () => {
       "/employees/e1": forbidden,
       "/api/employees/e1/invite": forbidden,
       "/my-bonuses": allow,
+      "/reports/bonuses": forbidden,
+      "/api/reports/bonuses.csv": forbidden,
       "/dashboard": allow,
     },
     supervisor: {
@@ -81,6 +87,8 @@ describe("decideAccess — role × route matrix", () => {
       "/employees/e1": allow,
       "/api/employees/e1/invite": allow,
       "/my-bonuses": forbidden,
+      "/reports/bonuses": allow,
+      "/api/reports/bonuses.csv": allow,
       "/dashboard": allow,
     },
     admin: {
@@ -93,6 +101,8 @@ describe("decideAccess — role × route matrix", () => {
       "/employees/e1": allow,
       "/api/employees/e1/invite": allow,
       "/my-bonuses": forbidden,
+      "/reports/bonuses": allow,
+      "/api/reports/bonuses.csv": allow,
       "/dashboard": allow,
     },
   };
@@ -116,7 +126,7 @@ describe("decideAccess — failing closed", () => {
     expect(decideAccess(route, "", as("superuser"))).toEqual(forbidden);
   });
 
-  it.each(["/admin", "/api/projects", "/employees", "/my-bonuses"])(
+  it.each(["/admin", "/api/projects", "/employees", "/my-bonuses", "/reports/bonuses", "/api/reports/bonuses.csv"])(
     "a failed profile lookup answers 503 on %s",
     (route) => {
       expect(decideAccess(route, "", profileDown)).toEqual(unavailable);

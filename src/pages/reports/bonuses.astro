@@ -1,0 +1,174 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Topbar from "@/components/Topbar.astro";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { parseBonusReportFilter, reportGrandTotal } from "@/lib/bonus-report";
+import { formatPln } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
+import { getBonusReport } from "@/lib/services/reports";
+import { createClient } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
+import type { BonusReportRow } from "@/types";
+
+// Aggregate bonus report. Middleware limits it to Supervisor/Admin; bonus_report is security
+// invoker, so RLS decides the scope: a Supervisor sees only their own approved milestones (an
+// employee who also worked for another Supervisor shows a partial total), an Admin everything.
+// An invalid filter is reported without calling the database.
+const isAdmin = Astro.locals.profile?.role === "admin";
+const t = getMessages(Astro.locals.locale);
+const r = t.reports;
+
+const filter = parseBonusReportFilter(Astro.url.searchParams);
+
+let loadError: string | null = null;
+let rows: BonusReportRow[] = [];
+
+if (filter.data) {
+  const supabase = createClient(Astro.request.headers, Astro.cookies);
+  if (!supabase) {
+    loadError = t.common.supabaseNotConfigured;
+  } else {
+    const result = await getBonusReport(supabase, filter.data);
+    if (result.error || !result.data) loadError = r.loadFailed;
+    else rows = result.data;
+  }
+}
+
+// Prefill: the parsed values when valid, else what the user typed (so it can be corrected).
+const fromValue = filter.data ? (filter.data.from ?? "") : (Astro.url.searchParams.get("from") ?? "");
+const toValue = filter.data ? (filter.data.to ?? "") : (Astro.url.searchParams.get("to") ?? "");
+const hasRange = filter.data ? filter.data.from !== null || filter.data.to !== null : false;
+
+// The CSV link carries only the validated bounds, rebuilt rather than copied from the raw query.
+let csvHref: string | null = null;
+if (filter.data) {
+  const query = new URLSearchParams();
+  if (filter.data.from !== null) query.set("from", filter.data.from);
+  if (filter.data.to !== null) query.set("to", filter.data.to);
+  const search = query.toString();
+  csvHref = search ? `/api/reports/bonuses.csv?${search}` : "/api/reports/bonuses.csv";
+}
+
+const grandTotal = reportGrandTotal(rows);
+const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+---
+
+<Layout title={r.title}>
+  <div class="bg-cosmic text-foreground min-h-screen p-4">
+    <div class="mx-auto w-full max-w-4xl">
+      <Topbar />
+      <h1 class="text-foreground mb-6 text-3xl font-bold">{r.title}</h1>
+
+      <div class="flex flex-col gap-6">
+        <Card>
+          <CardContent>
+            <form method="GET" action="/reports/bonuses" class="flex flex-col gap-3">
+              <fieldset class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <legend class="mb-3 text-sm font-medium">{r.filter.legend}</legend>
+                <div class="flex flex-col gap-2">
+                  <Label htmlFor="report-from">{r.filter.from}</Label>
+                  <Input id="report-from" type="date" name="from" defaultValue={fromValue} />
+                </div>
+                <div class="flex flex-col gap-2">
+                  <Label htmlFor="report-to">{r.filter.to}</Label>
+                  <Input id="report-to" type="date" name="to" defaultValue={toValue} />
+                </div>
+              </fieldset>
+              <p class="text-muted-foreground text-sm">{r.filter.hint}</p>
+              <div class="flex flex-wrap items-center gap-3">
+                <Button type="submit">{r.filter.submit}</Button>
+                <a href="/reports/bonuses" class:list={buttonVariants({ variant: "outline" })}>
+                  {r.filter.clear}
+                </a>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {filter.error ? (
+          <Alert variant="destructive">
+            <AlertTitle>{r.invalidTitle}</AlertTitle>
+            <AlertDescription>{r.filterErrors[filter.error]}</AlertDescription>
+          </Alert>
+        ) : loadError ? (
+          <Alert variant="destructive">
+            <AlertTitle>{r.loadFailedTitle}</AlertTitle>
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        ) : (
+          <section aria-labelledby="report-heading">
+            <Card>
+              <CardHeader>
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 id="report-heading" class="text-xl leading-none font-semibold">
+                    {r.resultsHeading}
+                  </h2>
+                  {csvHref && (
+                    <a href={csvHref} class:list={buttonVariants({ variant: "outline", size: "sm" })}>
+                      {r.downloadCsv}
+                    </a>
+                  )}
+                </div>
+                <CardDescription>{isAdmin ? r.scopeAll : r.scopeOwn}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {rows.length === 0 ? (
+                  <p class="text-muted-foreground text-sm">{hasRange ? r.emptyInRange : r.empty}</p>
+                ) : (
+                  <Table className="text-left">
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead scope="col" className="text-muted-foreground">
+                          {r.columns.employee}
+                        </TableHead>
+                        <TableHead scope="col" className="text-muted-foreground text-right">
+                          {r.columns.milestones}
+                        </TableHead>
+                        <TableHead scope="col" className="text-muted-foreground text-right">
+                          {r.columns.total}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rows.map((row) => (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell className="break-words whitespace-normal">
+                            <a
+                              href={`/employees/${row.employee_id}`}
+                              class:list={cn("text-primary hover:underline", focusRing)}
+                            >
+                              {row.employee_name}
+                            </a>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{row.milestone_count}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap tabular-nums">
+                            {formatPln(row.total_bonus)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead scope="row" colSpan={2}>
+                          {r.grandTotal}
+                        </TableHead>
+                        <TableCell className="text-right font-semibold whitespace-nowrap tabular-nums">
+                          {formatPln(grandTotal)}
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+        )}
+      </div>
+    </div>
+  </div>
+</Layout>

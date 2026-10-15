@@ -323,26 +323,26 @@ Additive: one new function, no table or policy changes, no data backfill. Rollba
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Type check passes: `npx astro check`
-- [x] 2.4 Mutation score for the helper is reviewed: `npm run test:mutation -- --mutate src/lib/bonus-report.ts`
+- [x] 2.1 Unit tests pass: `npm test` — 7c421d8
+- [x] 2.2 Lint passes: `npm run lint` — 7c421d8
+- [x] 2.3 Type check passes: `npx astro check` — 7c421d8
+- [x] 2.4 Mutation score for the helper is reviewed: `npm run test:mutation -- --mutate src/lib/bonus-report.ts` — 7c421d8
 
 ### Phase 3: Page, CSV endpoint and routing
 
 #### Automated
 
-- [ ] 3.1 Unit tests pass (route matrix, classification, i18n): `npm test`
-- [ ] 3.2 Lint and UI literal check pass: `npm run lint` and `npm run lint:ui`
-- [ ] 3.3 Type check and build pass: `npx astro check` and `npm run build`
+- [x] 3.1 Unit tests pass (route matrix, classification, i18n): `npm test`
+- [x] 3.2 Lint and UI literal check pass: `npm run lint` and `npm run lint:ui`
+- [x] 3.3 Type check and build pass: `npx astro check` and `npm run build`
 
 #### Manual
 
-- [ ] 3.4 As the seeded supervisor: Topbar shows "Raporty", the report lists both seeded employees with counts and totals, the grand total equals their sum, names open `/employees/[id]`
-- [ ] 3.5 A date range excluding today shows the empty state; a reversed range shows the validation Alert
-- [ ] 3.6 The downloaded CSV opens in Polish Excel with three separate columns and correct `,` decimals
-- [ ] 3.7 As the seeded employee: `/reports/bonuses` and the CSV URL return 403; the Topbar has no Reports link
-- [ ] 3.8 The page is usable at phone width
+- [x] 3.4 As the seeded supervisor: Topbar shows "Raporty", the report lists both seeded employees with counts and totals, the grand total equals their sum, names open `/employees/[id]`
+- [x] 3.5 A date range excluding today shows the empty state; a reversed range shows the validation Alert
+- [x] 3.6 The downloaded CSV opens in Polish Excel with three separate columns and correct `,` decimals
+- [x] 3.7 As the seeded employee: `/reports/bonuses` and the CSV URL return 403; the Topbar has no Reports link
+- [x] 3.8 The page is usable at phone width
 
 ### Phase 4: Smoke, e2e and docs
 

@@ -35,12 +35,21 @@ export const PROTECTED_ROUTES = [
   "/employees",
   "/api/employees",
   "/my-bonuses",
+  "/reports",
+  "/api/reports",
   "/auth/set-password",
   "/api/auth/set-password",
 ];
 export const ADMIN_ROUTES = ["/admin", "/api/admin"];
-/** Supervisor/Admin pages (projects, employees); RLS decides which rows each role sees. */
-export const PROJECT_ROUTES = ["/projects", "/api/projects", "/employees", "/api/employees"];
+/** Supervisor/Admin pages (projects, employees, reports); RLS decides which rows each role sees. */
+export const PROJECT_ROUTES = [
+  "/projects",
+  "/api/projects",
+  "/employees",
+  "/api/employees",
+  "/reports",
+  "/api/reports",
+];
 /** Employee-only pages: a Supervisor must not use them as an unfiltered view of the team lines RLS lets them read. */
 export const EMPLOYEE_ROUTES = ["/my-bonuses"];
 /** Any signed-in role, deliberately. */

@@ -23,6 +23,9 @@ const canSeeMyBonuses = profile?.role === "employee";
             <a href="/employees" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
               {t.layout.nav.employees}
             </a>
+            <a href="/reports/bonuses" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+              {t.layout.nav.reports}
+            </a>
           </>
         )}
         {canSeeMyBonuses && (

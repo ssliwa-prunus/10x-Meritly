@@ -387,7 +387,7 @@ supabase/snippets/
 
 # Vitest / Stryker
 coverage/
-reports/
+/reports/
 .stryker-tmp/
 
 # Playwright
