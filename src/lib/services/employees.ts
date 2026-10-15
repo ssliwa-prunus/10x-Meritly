@@ -2,24 +2,27 @@ import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@s
 import { z } from "zod";
 import { toOpenAssignments, type AssignmentRow } from "@/lib/assignments";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
+import type { Locale } from "@/lib/i18n";
 import type {
   Employee,
   EmployeeDetail,
   EmployeeListItem,
   EmployeeTimeShare,
   InviteStatus,
+  LoadErrorCode,
   OpenAssignment,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Validation, save and invite failures travel to /employees as a fixed code (plus
 // an optional field name) in the redirect URL, never as free text, so a crafted link cannot put
-// arbitrary text on the page. The page resolves codes with employeesErrorMessage(); unknown codes
-// fall back to a generic message. A duplicate or rejected email gets the generic
+// arbitrary text on the page. The page resolves codes with employeesErrorMessage() in the request's
+// locale; unknown codes fall back to a generic message. The EN catalog defines the codes and the PL
+// catalog is typed against them, so a missing translation fails the type check. A duplicate or rejected email gets the generic
 // registration_failed text: it neither reveals another Supervisor's employee nor echoes the email.
 // ---------------------------------------------------------------------------
 
-const EMPLOYEES_ERROR_MESSAGES = {
+const EMPLOYEES_ERROR_MESSAGES_EN = {
   invalid_form: "Invalid form submission",
   invalid_id: "Invalid id",
   required: "{field} is required",
@@ -38,16 +41,55 @@ const EMPLOYEES_ERROR_MESSAGES = {
   invite_failed: "Could not send the invite. Please try again.",
 } as const;
 
-export type EmployeesErrorCode = keyof typeof EMPLOYEES_ERROR_MESSAGES;
+export type EmployeesErrorCode = keyof typeof EMPLOYEES_ERROR_MESSAGES_EN;
 
-const FIELD_LABELS: Record<string, string> = {
+const EMPLOYEES_ERROR_MESSAGES: Record<Locale, Record<EmployeesErrorCode, string>> = {
+  en: EMPLOYEES_ERROR_MESSAGES_EN,
+  pl: {
+    invalid_form: "Nieprawidłowe dane formularza",
+    invalid_id: "Nieprawidłowy identyfikator",
+    required: "Pole „{field}” jest wymagane",
+    too_long: "Pole „{field}” jest za długie",
+    invalid_email: "Podaj prawidłowy adres e-mail",
+    not_found: "Nie znaleziono",
+    save_failed: "Nie udało się zapisać zmian. Spróbuj ponownie.",
+    not_configured: "Supabase nie jest skonfigurowany",
+    owner_not_supervisor: "Właścicielem musi być przełożony",
+    employee_has_open_engagements:
+      "Ten pracownik jest przypisany do otwartych kamieni milowych innego przełożonego; usuń te przypisania przed zmianą właściciela",
+    email_locked: "Adresu e-mail nie można zmienić po wysłaniu pierwszego zaproszenia",
+    job_role_archived: "To stanowisko jest zarchiwizowane; wybierz aktywne stanowisko",
+    registration_failed:
+      "Nie udało się zarejestrować tego pracownika. Sprawdź adres e-mail lub skontaktuj się z administratorem.",
+    already_active: "Ten pracownik już przyjął zaproszenie",
+    invite_failed: "Nie udało się wysłać zaproszenia. Spróbuj ponownie.",
+  },
+};
+
+const FIELD_LABELS_EN = {
   full_name: "Name",
   email: "Email",
   job_role_id: "Job role",
   supervisor_id: "Owner",
 };
 
-const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+const FIELD_LABELS: Record<Locale, Record<keyof typeof FIELD_LABELS_EN, string>> = {
+  en: FIELD_LABELS_EN,
+  pl: {
+    full_name: "Imię i nazwisko",
+    email: "E-mail",
+    job_role_id: "Stanowisko",
+    supervisor_id: "Właściciel",
+  },
+};
+
+/** Label for a field outside FIELD_LABELS (or no field at all). */
+const FALLBACK_FIELD_LABEL: Record<Locale, string> = { en: "Value", pl: "Wartość" };
+
+const GENERIC_ERROR_MESSAGE: Record<Locale, string> = {
+  en: "Something went wrong. Please try again.",
+  pl: "Coś poszło nie tak. Spróbuj ponownie.",
+};
 
 export interface EmployeesError {
   code: EmployeesErrorCode;
@@ -55,13 +97,14 @@ export interface EmployeesError {
 }
 
 const isEmployeesErrorCode = (value: string): value is EmployeesErrorCode =>
-  Object.hasOwn(EMPLOYEES_ERROR_MESSAGES, value);
+  Object.hasOwn(EMPLOYEES_ERROR_MESSAGES_EN, value);
 
 /** Message for an error code taken from the URL. Only fixed catalog text is ever returned. */
-export function employeesErrorMessage(code: string, field: string | null): string {
-  if (!isEmployeesErrorCode(code)) return GENERIC_ERROR_MESSAGE;
-  const label = (field !== null && Object.hasOwn(FIELD_LABELS, field) ? FIELD_LABELS[field] : undefined) ?? "Value";
-  return EMPLOYEES_ERROR_MESSAGES[code].replace("{field}", label);
+export function employeesErrorMessage(code: string, field: string | null, locale: Locale): string {
+  if (!isEmployeesErrorCode(code)) return GENERIC_ERROR_MESSAGE[locale];
+  const labels: Record<string, string> = FIELD_LABELS[locale];
+  const label = field !== null && Object.hasOwn(labels, field) ? labels[field] : FALLBACK_FIELD_LABEL[locale];
+  return EMPLOYEES_ERROR_MESSAGES[locale][code].replace("{field}", label);
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +197,7 @@ export function employeesUrl(flash: EmployeesFlash, employeeId?: string): string
 
 export interface ServiceResult<T = undefined> {
   data?: T;
-  error?: string;
+  error?: LoadErrorCode;
 }
 
 export interface WriteResult<T = undefined> {
@@ -183,10 +226,10 @@ function mapPostgrestError(error: PostgrestError, context: string): EmployeesErr
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): string {
+function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
   // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
   console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "Could not load employees. Please try again.";
+  return "load_failed";
 }
 
 interface EmployeeRow extends Employee {

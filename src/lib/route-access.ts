@@ -19,6 +19,8 @@ export const PUBLIC_ROUTES = [
   "/api/auth/signin",
   "/api/auth/signup",
   "/api/auth/signout",
+  // Language switch: anyone may change the language, signed in or not.
+  "/api/locale",
   // Dev-only fixture page; it answers 404 in production.
   "/dev/projects-kitchen-sink",
 ];

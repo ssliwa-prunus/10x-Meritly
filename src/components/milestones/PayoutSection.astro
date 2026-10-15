@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatMultiplier, formatPercent, formatPln, formatShare } from "@/lib/format";
+import { format, getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { MilestonePayoutLine, MilestonePayoutSummary } from "@/types";
 
@@ -15,23 +16,27 @@ interface Props {
 
 const { summary, lines, approvedAt = null } = Astro.props;
 
-// Amounts arrive already computed and floored in SQL; this view only formats them.
-const UNSCORED = "Enter KPI scores";
-const money = (value: number | null) => (value === null ? UNSCORED : formatPln(value));
+// Amounts arrive already computed and floored in SQL; this view only formats them. A null figure
+// needs all four KPI scores: it renders the "unscored" hint, styled by the null check, not the text.
+const t = getMessages(Astro.locals.locale);
+const f = t.common.fields;
+const labels = t.milestones.payout;
+const unscored = t.milestones.unscored;
+const money = (value: number | null) => (value === null ? null : formatPln(value));
 
-const figures = [
-  { label: "Target pool (max)", value: formatPln(summary.target_pool) },
+const figures: { label: string; value: string | null }[] = [
+  { label: labels.figures.targetPoolMax, value: formatPln(summary.target_pool) },
   {
-    label: "KPI multiplier",
-    value: summary.multiplier === null ? UNSCORED : formatMultiplier(summary.multiplier),
+    label: labels.figures.kpiMultiplier,
+    value: summary.multiplier === null ? null : formatMultiplier(summary.multiplier),
   },
   {
-    label: "Share of target pool",
-    value: summary.budget_share === null ? UNSCORED : formatShare(summary.budget_share),
+    label: labels.figures.shareOfTargetPool,
+    value: summary.budget_share === null ? null : formatShare(summary.budget_share),
   },
-  { label: "Payout pool", value: money(summary.payout_pool) },
-  { label: "Payout total", value: money(summary.payout_total) },
-  { label: "Rounding residual", value: money(summary.residual) },
+  { label: labels.figures.payoutPool, value: money(summary.payout_pool) },
+  { label: labels.figures.payoutTotal, value: money(summary.payout_total) },
+  { label: labels.figures.residual, value: money(summary.residual) },
 ];
 
 const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -42,26 +47,22 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
     <CardHeader>
       <div class="flex flex-wrap items-center gap-2">
         <h2 id="bonuses-heading" class="text-xl leading-none font-semibold">
-          Computed bonuses
+          {labels.heading}
         </h2>
         {approvedAt !== null ? (
-          <Badge className="bg-success text-success-foreground">Approved</Badge>
+          <Badge className="bg-success text-success-foreground">{t.status.milestone.approved}</Badge>
         ) : (
           <>
             {summary.within_pool === true && (
-              <Badge className="bg-success text-success-foreground">Within payout pool</Badge>
+              <Badge className="bg-success text-success-foreground">{labels.withinPool}</Badge>
             )}
-            {summary.within_pool === false && <Badge variant="destructive">Exceeds payout pool</Badge>}
+            {summary.within_pool === false && <Badge variant="destructive">{labels.exceedsPool}</Badge>}
           </>
         )}
       </div>
       <CardDescription>
-        {approvedAt !== null
-          ? `Approved on ${formatDate(approvedAt)} — frozen; each employee sees their own bonus.`
-          : "Draft figures; employees do not see them until the milestone is approved."}{" "}
-        The target pool is the approved maximum: the payout pool is the target pool × KPI multiplier ÷ maximum
-        multiplier, so only the maximum score pays out the whole target pool. It is split by time share × role weight ×
-        rating factor and each bonus is rounded down to the grosz.
+        {approvedAt !== null ? format(labels.approvedOn, { date: formatDate(approvedAt) }) : labels.draft}{" "}
+        {labels.formula}
       </CardDescription>
     </CardHeader>
 
@@ -73,10 +74,10 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             <dd
               class:list={cn(
                 "mt-1 font-semibold tabular-nums",
-                figure.value === UNSCORED ? "text-muted-foreground text-sm" : "text-lg",
+                figure.value === null ? "text-muted-foreground text-sm" : "text-lg",
               )}
             >
-              {figure.value}
+              {figure.value ?? unscored}
             </dd>
           </div>
         ))}
@@ -84,39 +85,38 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
 
       {lines.length === 0 ? (
         <p class="text-muted-foreground text-sm">
-          No employees assigned yet. Assign them in the{" "}
-          <a href="#assignments" class:list={cn("text-primary hover:underline", focusRing)}>
-            Assignments
-          </a>{" "}
-          section to split the pool.
+          {labels.noLinesBefore}
+          {/* The link and the text after it must touch: a line break between them renders as a space. */}
+          <!-- prettier-ignore -->
+          <span><a href="#assignments" class:list={cn("text-primary hover:underline", focusRing)}>{labels.noLinesLink}</a>{labels.noLinesAfter}</span>
         </p>
       ) : (
         <Table className="min-w-3xl text-left">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead scope="col" className="text-muted-foreground">
-                Employee
+                {f.employee}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground">
-                Job role
+                {f.jobRole}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground text-right">
-                Time share
+                {f.timeShare}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground text-right">
-                Role weight
+                {f.roleWeight}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground text-right">
-                Rating → factor
+                {f.ratingFactor}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground text-right">
-                Weighted contribution
+                {labels.weightedContribution}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground text-right">
-                Share
+                {labels.share}
               </TableHead>
               <TableHead scope="col" className="text-muted-foreground text-right">
-                Bonus
+                {f.bonus}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -146,7 +146,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                     line.bonus === null ? "text-muted-foreground" : "font-semibold",
                   )}
                 >
-                  {money(line.bonus)}
+                  {money(line.bonus) ?? unscored}
                 </TableCell>
               </TableRow>
             ))}

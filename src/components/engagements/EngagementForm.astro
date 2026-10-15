@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { getMessages } from "@/lib/i18n";
 import type { AssignableEmployee, Engagement } from "@/types";
 
 interface Props {
@@ -17,6 +18,8 @@ interface Props {
 }
 
 const { projectId, milestoneId, engagement, employees = [], error } = Astro.props;
+const t = getMessages(Astro.locals.locale);
+const labels = t.milestones.engagementForm;
 
 const basePath = `/api/projects/${projectId}/milestones/${milestoneId}/engagements`;
 const action = engagement ? `${basePath}/${engagement.id}` : basePath;
@@ -34,10 +37,10 @@ const fieldId = (field: string) => `engagement-${engagement?.id ?? "new"}-${fiel
   <form method="POST" action={action} class="grid grid-cols-1 gap-3 sm:grid-cols-3">
     {!engagement && (
       <div class="flex flex-col gap-2 [&>[data-slot=native-select-wrapper]]:w-full">
-        <Label htmlFor={fieldId("employee")}>Employee</Label>
+        <Label htmlFor={fieldId("employee")}>{t.common.fields.employee}</Label>
         <NativeSelect id={fieldId("employee")} name="employee_id" required>
           <option value="" selected>
-            Choose an employee
+            {labels.chooseEmployee}
           </option>
           {employees.map((employee) => (
             <option value={employee.id}>{employee.full_name}</option>
@@ -46,7 +49,7 @@ const fieldId = (field: string) => `engagement-${engagement?.id ?? "new"}-${fiel
       </div>
     )}
     <div class="flex flex-col gap-2">
-      <Label htmlFor={fieldId("time-share")}>Time share (0.01–1.00)</Label>
+      <Label htmlFor={fieldId("time-share")}>{labels.timeShare}</Label>
       <Input
         id={fieldId("time-share")}
         type="text"
@@ -59,7 +62,7 @@ const fieldId = (field: string) => `engagement-${engagement?.id ?? "new"}-${fiel
       />
     </div>
     <div class="flex flex-col gap-2 [&>[data-slot=native-select-wrapper]]:w-full">
-      <Label htmlFor={fieldId("rating")}>Rating (1–5)</Label>
+      <Label htmlFor={fieldId("rating")}>{labels.rating}</Label>
       <NativeSelect id={fieldId("rating")} name="rating" required>
         {[1, 2, 3, 4, 5].map((rating) => (
           <option value={String(rating)} selected={rating === currentRating}>
@@ -71,12 +74,12 @@ const fieldId = (field: string) => `engagement-${engagement?.id ?? "new"}-${fiel
     <div class="sm:col-span-3">
       {/* Edit forms sit inside a closed <details>; hydrate when the row is opened. */}
       {engagement ? (
-        <SubmitButton client:visible pendingText="Saving…">
-          Save assignment
+        <SubmitButton client:visible pendingText={t.common.saving}>
+          {labels.save}
         </SubmitButton>
       ) : (
-        <SubmitButton client:load pendingText="Assigning…">
-          Assign employee
+        <SubmitButton client:load pendingText={labels.assigning}>
+          {labels.assign}
         </SubmitButton>
       )}
     </div>

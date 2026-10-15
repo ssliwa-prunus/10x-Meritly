@@ -229,7 +229,7 @@ otp_expiry = 3600
 # Invite email (S-03): the link goes to the app's /auth/confirm, which exchanges the token_hash
 # for a session server-side. Production uses the same link in the dashboard template.
 [auth.email.template.invite]
-subject = "You're invited to Meritly"
+subject = "Zaproszenie do Meritly"
 content_path = "./supabase/templates/invite.html"
 
 # Uncomment to customize notification email template

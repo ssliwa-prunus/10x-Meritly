@@ -7,6 +7,7 @@ import ProjectForm from "@/components/projects/ProjectForm.astro";
 import { createClient } from "@/lib/supabase";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getMessages } from "@/lib/i18n";
 import {
   getProject,
   getProjectExposure,
@@ -18,6 +19,8 @@ import {
 } from "@/lib/services/projects";
 
 const isAdmin = Astro.locals.profile?.role === "admin";
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
 
 const saved = Astro.url.searchParams.get("saved");
 const errorCode = Astro.url.searchParams.get("error");
@@ -26,7 +29,7 @@ const section = Astro.url.searchParams.get("section");
 const errorMilestoneId = Astro.url.searchParams.get("milestone");
 
 // The URL carries only an error code; the displayed text always comes from the fixed catalog.
-const errorMessage = errorCode ? projectsErrorMessage(errorCode, errorField) : null;
+const errorMessage = errorCode ? projectsErrorMessage(errorCode, errorField, locale) : null;
 const statusFor = (name: ProjectSection) => ({
   saved: saved === name,
   error: section === name ? errorMessage : null,
@@ -43,7 +46,7 @@ let exposureResult: Awaited<ReturnType<typeof getProjectExposure>> = {};
 let supervisorsResult: Awaited<ReturnType<typeof listSupervisors>> = {};
 
 if (!supabase) {
-  loadError = "Supabase is not configured";
+  loadError = t.common.supabaseNotConfigured;
 } else if (id.success) {
   [projectResult, milestonesResult, exposureResult, supervisorsResult] = await Promise.all([
     getProject(supabase, id.data),
@@ -51,7 +54,8 @@ if (!supabase) {
     getProjectExposure(supabase, id.data),
     isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
   ]);
-  loadError = projectResult.error ?? milestonesResult.error ?? exposureResult.error ?? supervisorsResult.error ?? null;
+  const failed = projectResult.error ?? milestonesResult.error ?? exposureResult.error ?? supervisorsResult.error;
+  loadError = failed ? t.projects.loadFailed : null;
 }
 
 // An invalid id, a missing project and one hidden by RLS all look the same: not found.
@@ -72,17 +76,19 @@ const addFormError = canEditMilestones && errorMilestoneId === null ? milestones
 const sectionError = rowErrorId || addFormError ? null : milestonesStatus.error;
 ---
 
-<Layout title={project ? project.name : "Project"}>
+<Layout title={project ? project.name : t.projects.detail.fallbackTitle}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
       <Topbar />
       <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">{project ? project.name : "Project"}</h1>
+        <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">
+          {project ? project.name : t.projects.detail.fallbackTitle}
+        </h1>
         <a
           href="/projects"
           class="text-primary focus-visible:ring-ring/50 rounded-sm text-sm hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
-          Back to projects
+          {t.projects.detail.backToProjects}
         </a>
       </div>
 
@@ -94,14 +100,14 @@ const sectionError = rowErrorId || addFormError ? null : milestonesStatus.error;
 
       {loadError ? (
         <Alert variant="destructive">
-          <AlertTitle>Could not load the project.</AlertTitle>
+          <AlertTitle>{t.projects.detail.loadFailedTitle}</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       ) : !project ? (
         <Card>
           <CardHeader>
-            <CardTitle>Project not found.</CardTitle>
-            <CardDescription>It does not exist or you do not have access to it.</CardDescription>
+            <CardTitle>{t.projects.detail.notFound}</CardTitle>
+            <CardDescription>{t.projects.detail.notFoundDescription}</CardDescription>
           </CardHeader>
         </Card>
       ) : (

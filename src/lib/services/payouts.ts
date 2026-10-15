@@ -1,17 +1,19 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
+import type { Locale } from "@/lib/i18n";
 import { PROJECTS_PATH } from "@/lib/services/projects";
-import type { MilestonePayoutLine, MilestonePayoutSummary } from "@/types";
+import type { LoadErrorCode, MilestonePayoutLine, MilestonePayoutSummary } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Validation and save failures of the KPI form travel to the milestone page as a
 // fixed code (plus an optional field name) in the redirect URL, never as free text, so a crafted
-// link cannot put arbitrary text on the page. The page resolves codes with kpiErrorMessage();
-// unknown codes fall back to a generic message.
+// link cannot put arbitrary text on the page. The page resolves codes with kpiErrorMessage() in
+// the request's locale; unknown codes fall back to a generic message. The EN catalog defines the
+// codes and the PL catalog is typed against them, so a missing translation fails the type check.
 // ---------------------------------------------------------------------------
 
-const KPI_ERROR_MESSAGES = {
+const KPI_ERROR_MESSAGES_EN = {
   invalid_form: "Invalid form submission",
   invalid_id: "Invalid id",
   required: "{field} is required",
@@ -25,29 +27,59 @@ const KPI_ERROR_MESSAGES = {
   milestone_approved: "This milestone is approved and frozen",
 } as const;
 
-export type KpiErrorCode = keyof typeof KPI_ERROR_MESSAGES;
+export type KpiErrorCode = keyof typeof KPI_ERROR_MESSAGES_EN;
 
-const FIELD_LABELS: Record<string, string> = {
+const KPI_ERROR_MESSAGES: Record<Locale, Record<KpiErrorCode, string>> = {
+  en: KPI_ERROR_MESSAGES_EN,
+  pl: {
+    invalid_form: "Nieprawidłowe dane formularza",
+    invalid_id: "Nieprawidłowy identyfikator",
+    required: "Pole „{field}” jest wymagane",
+    kpi_range: "Pole „{field}” musi być liczbą całkowitą od 0 do 100",
+    not_found: "Nie znaleziono",
+    save_failed: "Nie udało się zapisać zmian. Spróbuj ponownie.",
+    not_configured: "Supabase nie jest skonfigurowany",
+    admin_read_only: "Administratorzy mogą przeglądać wyniki KPI, ale nie mogą ich zmieniać",
+    milestone_cancelled: "Kamień milowy jest anulowany; jego wyników KPI nie można zmienić",
+    project_closed: "Projekt jest zakończony lub anulowany; wznów go przed zmianą jego kamieni milowych",
+    milestone_approved: "Ten kamień milowy jest zatwierdzony i zamrożony",
+  },
+};
+
+// The KPI names are product terms (prd.md) and read the same in both languages.
+const KPI_FIELD_LABELS = {
   kpi_schedule: "Termin",
   kpi_budget: "Budżet",
   kpi_quality: "Jakość",
   kpi_risk: "Ryzyko",
 };
 
-const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+const FIELD_LABELS: Record<Locale, Record<keyof typeof KPI_FIELD_LABELS, string>> = {
+  en: KPI_FIELD_LABELS,
+  pl: KPI_FIELD_LABELS,
+};
+
+/** Label for a field outside FIELD_LABELS (or no field at all). */
+const FALLBACK_FIELD_LABEL: Record<Locale, string> = { en: "Value", pl: "Wartość" };
+
+const GENERIC_ERROR_MESSAGE: Record<Locale, string> = {
+  en: "Something went wrong. Please try again.",
+  pl: "Coś poszło nie tak. Spróbuj ponownie.",
+};
 
 export interface KpiError {
   code: KpiErrorCode;
   field?: string;
 }
 
-const isKpiErrorCode = (value: string): value is KpiErrorCode => Object.hasOwn(KPI_ERROR_MESSAGES, value);
+const isKpiErrorCode = (value: string): value is KpiErrorCode => Object.hasOwn(KPI_ERROR_MESSAGES_EN, value);
 
 /** Message for an error code taken from the URL. Only fixed catalog text is ever returned. */
-export function kpiErrorMessage(code: string, field: string | null): string {
-  if (!isKpiErrorCode(code)) return GENERIC_ERROR_MESSAGE;
-  const label = (field !== null && Object.hasOwn(FIELD_LABELS, field) ? FIELD_LABELS[field] : undefined) ?? "Value";
-  return KPI_ERROR_MESSAGES[code].replace("{field}", label);
+export function kpiErrorMessage(code: string, field: string | null, locale: Locale): string {
+  if (!isKpiErrorCode(code)) return GENERIC_ERROR_MESSAGE[locale];
+  const labels: Record<string, string> = FIELD_LABELS[locale];
+  const label = field !== null && Object.hasOwn(labels, field) ? labels[field] : FALLBACK_FIELD_LABEL[locale];
+  return KPI_ERROR_MESSAGES[locale][code].replace("{field}", label);
 }
 
 // ---------------------------------------------------------------------------
@@ -116,7 +148,7 @@ export function kpiUrl(projectId: string, milestoneId: string, flash: KpiFlash):
 
 export interface ServiceResult<T = undefined> {
   data?: T;
-  error?: string;
+  error?: LoadErrorCode;
 }
 
 export interface WriteResult<T = undefined> {
@@ -142,10 +174,10 @@ function mapPostgrestError(error: PostgrestError, context: string): KpiError {
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): string {
+function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
   // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
   console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "Could not load bonuses. Please try again.";
+  return "load_failed";
 }
 
 type Numeric = number | string;

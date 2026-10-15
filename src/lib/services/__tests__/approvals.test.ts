@@ -5,7 +5,15 @@ import {
   type SupabaseClient,
 } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { approvalNoticeMessage, emailNotice, notifyMilestoneApproved } from "@/lib/services/approvals";
+import {
+  approvalErrorMessage,
+  approvalNoticeMessage,
+  emailNotice,
+  getApprovedPayout,
+  listEmployeeHistory,
+  listMyBonuses,
+  notifyMilestoneApproved,
+} from "@/lib/services/approvals";
 
 // Oracle: the notify-milestone-approved contract (supabase/functions/notify-milestone-approved/index.ts
 // header) and the plan's notice rule — failed call → email_failed, unconfirmed emails → email_partial,
@@ -20,6 +28,23 @@ function fakeClient(result: { data: unknown; error: unknown }) {
 }
 
 const ok = (body: unknown) => fakeClient({ data: body, error: null });
+
+/** A client whose every query (any chain of builder calls, then awaited) fails with a database error. */
+function failingClient(): SupabaseClient {
+  const result = { data: null, error: { code: "XX000", message: "boom" } };
+  const builder: object = new Proxy(
+    {},
+    {
+      get: (_target, prop) =>
+        prop === "then"
+          ? (resolve: (value: typeof result) => void) => {
+              resolve(result);
+            }
+          : () => builder,
+    },
+  );
+  return { from: () => builder, rpc: () => builder } as unknown as SupabaseClient;
+}
 
 const httpError = (status: number, body: string) =>
   fakeClient({
@@ -137,12 +162,66 @@ describe("emailNotice", () => {
 
 describe("approvalNoticeMessage", () => {
   it("resolves email_pending to the fixed pending text", () => {
-    expect(approvalNoticeMessage("email_pending")).toBe(
+    expect(approvalNoticeMessage("email_pending", "en")).toBe(
       "Bonus emails are still being sent by another request. Check “Emails sent” in a few minutes; if it does not change, use “Re-send unsent emails”.",
     );
   });
 
+  it("resolves email_pending to the Polish text, quoting the Polish label and button", () => {
+    expect(approvalNoticeMessage("email_pending", "pl")).toBe(
+      "E-maile o premiach są wciąż wysyłane przez inne żądanie. Sprawdź „Wysłane e-maile” za kilka minut; jeśli wartość się nie zmieni, użyj przycisku „Wyślij ponownie niewysłane e-maile”.",
+    );
+  });
+
+  // Oracle: the notice must name the button exactly as the dictionary labels it, in each language.
+  it.each([
+    ["en", "email_partial", "Some bonus emails could not be sent. Use “Re-send unsent emails” to try again."],
+    ["en", "email_failed", "The bonus emails could not be sent. Use “Re-send unsent emails” to try again."],
+    [
+      "pl",
+      "email_partial",
+      "Nie udało się wysłać części e-maili o premiach. Użyj przycisku „Wyślij ponownie niewysłane e-maile”, aby spróbować ponownie.",
+    ],
+    [
+      "pl",
+      "email_failed",
+      "Nie udało się wysłać e-maili o premiach. Użyj przycisku „Wyślij ponownie niewysłane e-maile”, aby spróbować ponownie.",
+    ],
+  ] as const)("resolves %s %s", (locale, code, expected) => {
+    expect(approvalNoticeMessage(code, locale)).toBe(expected);
+  });
+
   it.each(["email_unknown", "", "toString", "__proto__"])("gives nothing for unknown notice code %j", (code) => {
-    expect(approvalNoticeMessage(code)).toBeNull();
+    expect(approvalNoticeMessage(code, "en")).toBeNull();
+    expect(approvalNoticeMessage(code, "pl")).toBeNull();
+  });
+});
+
+describe("approvalErrorMessage", () => {
+  it.each([
+    ["en", "already_approved", "This milestone is already approved"],
+    ["pl", "already_approved", "Ten kamień milowy jest już zatwierdzony"],
+  ] as const)("resolves %s %s from the catalog", (locale, code, expected) => {
+    expect(approvalErrorMessage(code, locale)).toBe(expected);
+  });
+
+  it.each(["boom", "toString", "__proto__"])("falls back to the localized generic message for %j", (code) => {
+    expect(approvalErrorMessage(code, "en")).toBe("Something went wrong. Please try again.");
+    expect(approvalErrorMessage(code, "pl")).toBe("Coś poszło nie tak. Spróbuj ponownie.");
+  });
+});
+
+describe("load errors", () => {
+  it("listMyBonuses returns the load_failed code, never text", async () => {
+    expect(await listMyBonuses(failingClient())).toEqual({ error: "load_failed" });
+    expect(consoleError).toHaveBeenCalledWith("listMyBonusesEmployee failed", expect.any(Object));
+  });
+
+  it("listEmployeeHistory returns the load_failed code", async () => {
+    expect(await listEmployeeHistory(failingClient(), MILESTONE_ID)).toEqual({ error: "load_failed" });
+  });
+
+  it("getApprovedPayout returns the load_failed code", async () => {
+    expect(await getApprovedPayout(failingClient(), MILESTONE_ID)).toEqual({ error: "load_failed" });
   });
 });

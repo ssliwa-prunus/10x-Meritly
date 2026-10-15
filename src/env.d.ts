@@ -5,5 +5,7 @@ declare namespace App {
     profile: import("@/types").Profile | null;
     /** True only when the profile query itself failed, so "no role" and "lookup failed" stay distinct. */
     profileError: boolean;
+    /** Interface language for this request: `lang` cookie, else profiles.locale, else "pl". */
+    locale: import("@/lib/i18n").Locale;
   }
 }

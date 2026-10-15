@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/format";
+import { format, getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { MilestoneStatus } from "@/types";
 
@@ -45,6 +46,12 @@ const {
   error,
 } = Astro.props;
 
+// The approval notices quote t.emailsSent and t.resendUnsentEmails by name (approvalNoticeMessage),
+// so both come from the same dictionary entries.
+const messages = getMessages(Astro.locals.locale);
+const t = messages.milestones;
+const labels = t.approval;
+
 const isApproved = status === "approved";
 const action = `/api/projects/${projectId}/milestones/${milestoneId}/approve`;
 const notifyAction = `/api/projects/${projectId}/milestones/${milestoneId}/notify`;
@@ -58,19 +65,19 @@ const focusRing = "focus-visible:outline-none focus-visible:ring-3 focus-visible
     <CardHeader>
       <div class="flex flex-wrap items-center gap-2">
         <h2 id="approval-heading" class="text-xl leading-none font-semibold">
-          Approval
+          {labels.heading}
         </h2>
-        {isApproved && <Badge className="bg-success text-success-foreground">Approved</Badge>}
+        {isApproved && (
+          <Badge className="bg-success text-success-foreground">{messages.status.milestone.approved}</Badge>
+        )}
       </div>
-      <CardDescription>
-        Approval is final: the computed bonuses are frozen, and only then does each employee see their own bonus.
-      </CardDescription>
+      <CardDescription>{labels.description}</CardDescription>
     </CardHeader>
 
     <CardContent className="flex flex-col gap-4">
       {saved && (
         <Alert variant="success" role="status">
-          <AlertDescription>{saved === "approved" ? "Milestone approved." : "Unsent emails re-sent."}</AlertDescription>
+          <AlertDescription>{saved === "approved" ? labels.approvedFlash : labels.resentFlash}</AlertDescription>
         </Alert>
       )}
       {notice && (
@@ -87,21 +94,19 @@ const focusRing = "focus-visible:outline-none focus-visible:ring-3 focus-visible
       {isApproved ? (
         <>
           <p class="text-sm">
-            {approvedAt ? `Approved on ${formatDate(approvedAt)}.` : "Approved."} The figures are frozen and each
-            employee sees their own bonus.
+            {approvedAt ? format(labels.approvedOn, { date: formatDate(approvedAt) }) : labels.approvedNoDate}{" "}
+            {labels.frozenNote}
           </p>
           {hasEmailCounts && (
             <p class="text-sm">
-              Emails sent:{" "}
-              <span class="tabular-nums">
-                {notifiedCount} of {lineCount}
-              </span>
+              {t.emailsSent}:{" "}
+              <span class="tabular-nums">{format(labels.countOf, { sent: notifiedCount, total: lineCount })}</span>
             </p>
           )}
           {canResend && (
             <form method="POST" action={notifyAction}>
-              <SubmitButton client:load variant="outline" pendingText="Sending…">
-                Re-send unsent emails
+              <SubmitButton client:load variant="outline" pendingText={labels.sending}>
+                {t.resendUnsentEmails}
               </SubmitButton>
             </form>
           )}
@@ -118,12 +123,12 @@ const focusRing = "focus-visible:outline-none focus-visible:ring-3 focus-visible
               class:list={cn("accent-primary mt-0.5 size-4 shrink-0 rounded-sm", focusRing)}
             />
             <Label htmlFor="approval-confirm" className="leading-snug font-normal">
-              I understand this is final; figures are frozen and employees are notified
+              {labels.confirm}
             </Label>
           </div>
           <div>
-            <SubmitButton client:load pendingText="Approving…">
-              Approve milestone
+            <SubmitButton client:load pendingText={labels.approving}>
+              {labels.approve}
             </SubmitButton>
           </div>
         </form>

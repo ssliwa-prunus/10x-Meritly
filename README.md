@@ -218,10 +218,10 @@ Employee invites need Resend as Supabase Auth's SMTP provider, the invite templa
 
 1. **[HUMAN]** Create a Resend account and add a domain you control. Publish its SPF/DKIM DNS records until Resend shows the domain as verified, then create an API key.
 2. **[HUMAN]** Supabase dashboard → **Authentication → SMTP Settings**: enable custom SMTP with host `smtp.resend.com`, port `465`, user `resend`, the Resend API key as the password, and a sender address on the verified domain.
-3. **[HUMAN]** Supabase dashboard → **Authentication → Email Templates → Invite user**: use the same link as `supabase/templates/invite.html`:
+3. **[HUMAN]** Supabase dashboard → **Authentication → Email Templates → Invite user**: set the subject to `Zaproszenie do Meritly` and paste the whole body of `supabase/templates/invite.html` (Polish). Its link must stay exactly:
 
    ```html
-   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">Accept the invite</a>
+   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">Przyjmij zaproszenie</a>
    ```
 
    In **Authentication → URL Configuration**, confirm the Site URL is `https://meritly.meritly.workers.dev` and that it is in Redirect URLs.

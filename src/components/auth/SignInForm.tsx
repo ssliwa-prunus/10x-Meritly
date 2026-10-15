@@ -4,14 +4,17 @@ import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ServerError } from "@/components/auth/ServerError";
+import type { Messages } from "@/lib/i18n";
 
 interface Props {
   serverError?: string | null;
   /** Same-origin path to return to after sign-in, already validated by the page. */
   next?: string | null;
+  /** Plain-string labels from t.auth.signInForm (island props must be serialisable). */
+  labels: Messages["auth"]["signInForm"];
 }
 
-export default function SignInForm({ serverError, next }: Props) {
+export default function SignInForm({ serverError, next, labels }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,12 +23,12 @@ export default function SignInForm({ serverError, next }: Props) {
   function validate() {
     const found: typeof errors = {};
     if (!email.trim()) {
-      found.email = "Email is required";
+      found.email = labels.emailRequired;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      found.email = "Enter a valid email address";
+      found.email = labels.emailInvalid;
     }
     if (!password) {
-      found.password = "Password is required";
+      found.password = labels.passwordRequired;
     }
     setErrors(found);
     return Object.keys(found).length === 0;
@@ -47,32 +50,34 @@ export default function SignInForm({ serverError, next }: Props) {
       <FormField
         id="email"
         type="email"
-        label="Email"
+        label={labels.emailLabel}
         value={email}
         onChange={(v) => {
           setEmail(v);
           clearError("email");
         }}
-        placeholder="you@example.com"
+        placeholder={labels.emailPlaceholder}
         error={errors.email}
         icon={<Mail className="size-4" />}
       />
 
       <FormField
         id="password"
-        label="Password"
+        label={labels.passwordLabel}
         type={showPassword ? "text" : "password"}
         value={password}
         onChange={(v) => {
           setPassword(v);
           clearError("password");
         }}
-        placeholder="Your password"
+        placeholder={labels.passwordPlaceholder}
         error={errors.password}
         icon={<Lock className="size-4" />}
         endContent={
           <PasswordToggle
             visible={showPassword}
+            showLabel={labels.showPassword}
+            hideLabel={labels.hidePassword}
             onToggle={() => {
               setShowPassword(!showPassword);
             }}
@@ -82,8 +87,8 @@ export default function SignInForm({ serverError, next }: Props) {
 
       <ServerError message={serverError} />
 
-      <SubmitButton className="w-full" pendingText="Signing in..." icon={<LogIn className="size-4" />}>
-        Sign in
+      <SubmitButton className="w-full" pendingText={labels.pending} icon={<LogIn className="size-4" />}>
+        {labels.submit}
       </SubmitButton>
     </form>
   );

@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase";
 import { formatPercent, formatPln } from "@/lib/format";
+import { format, getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { approvalErrorMessage, approvalNoticeMessage, getApprovedPayout } from "@/lib/services/approvals";
 import { engagementsErrorMessage, listAssignableEmployees, listEngagements } from "@/lib/services/engagements";
@@ -21,6 +22,10 @@ import type { MilestoneStatus } from "@/types";
 
 const profile = Astro.locals.profile;
 const isAdmin = profile?.role === "admin";
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
+const f = t.common.fields;
+const m = t.milestones;
 
 const saved = Astro.url.searchParams.get("saved");
 const errorCode = Astro.url.searchParams.get("error");
@@ -34,19 +39,14 @@ const isApprovalError = errorSection === "approval";
 
 // The URL carries only codes; the displayed text always comes from fixed catalogs.
 const errorMessage =
-  errorCode && !isKpiError && !isApprovalError ? engagementsErrorMessage(errorCode, errorField) : null;
-const kpiError = errorCode && isKpiError ? kpiErrorMessage(errorCode, errorField) : null;
-const approvalError = errorCode && isApprovalError ? approvalErrorMessage(errorCode) : null;
+  errorCode && !isKpiError && !isApprovalError ? engagementsErrorMessage(errorCode, errorField, locale) : null;
+const kpiError = errorCode && isKpiError ? kpiErrorMessage(errorCode, errorField, locale) : null;
+const approvalError = errorCode && isApprovalError ? approvalErrorMessage(errorCode, locale) : null;
 const kpiSaved = saved === "kpi";
 const approvalSaved = saved === "approved" || saved === "notified" ? saved : null;
 const noticeCode = Astro.url.searchParams.get("notice");
-const approvalNotice = approvalSaved && noticeCode ? approvalNoticeMessage(noticeCode) : null;
-const SAVED_MESSAGES: Record<string, string> = {
-  created: "Employee assigned.",
-  updated: "Assignment saved.",
-  deleted: "Assignment removed.",
-};
-const savedMessage = saved !== null && Object.hasOwn(SAVED_MESSAGES, saved) ? SAVED_MESSAGES[saved] : null;
+const approvalNotice = approvalSaved && noticeCode ? approvalNoticeMessage(noticeCode, locale) : null;
+const savedMessage = saved !== null && Object.hasOwn(m.saved, saved) ? m.saved[saved as keyof typeof m.saved] : null;
 
 const projectId = projectIdSchema.safeParse(Astro.params.id);
 const milestoneId = projectIdSchema.safeParse(Astro.params.milestoneId);
@@ -63,7 +63,7 @@ let notifiedCount: number | null = null;
 let lineCount: number | null = null;
 
 if (!supabase || !profile) {
-  loadError = supabase ? "Your profile could not be loaded" : "Supabase is not configured";
+  loadError = supabase ? t.common.profileLoadFailed : t.common.supabaseNotConfigured;
 } else if (projectId.success && milestoneId.success) {
   let approvedResult: Awaited<ReturnType<typeof getApprovedPayout>>;
   [projectResult, milestonesResult, engagementsResult, assignableResult, approvedResult] = await Promise.all([
@@ -76,7 +76,11 @@ if (!supabase || !profile) {
     getApprovedPayout(supabase, milestoneId.data),
   ]);
   loadError =
-    projectResult.error ?? milestonesResult.error ?? engagementsResult.error ?? assignableResult.error ?? null;
+    projectResult.error || milestonesResult.error
+      ? t.projects.loadFailed
+      : engagementsResult.error || assignableResult.error
+        ? t.milestones.assignmentsLoadFailed
+        : null;
 
   // The payout source depends on the status: an approved milestone renders its frozen snapshot,
   // every other one the live Draft computation (one extra round trip, Draft only).
@@ -98,7 +102,7 @@ if (!supabase || !profile) {
           // eslint-disable-next-line no-console -- intentional: surfaces the broken invariant in Workers observability logs
           console.error("Approved milestone has no snapshot header", { milestoneId: milestoneId.data });
         }
-        payoutResult = { error: approvedResult.error ?? "Could not load bonuses. Please try again." };
+        payoutResult = { error: "load_failed" };
       }
     } else {
       payoutResult = await getMilestonePayout(supabase, milestoneId.data);
@@ -107,7 +111,7 @@ if (!supabase || !profile) {
 }
 
 // A payout failure stays in its own card: the details and assignments (where the data is fixed) still render.
-const payoutError = payoutResult.error ?? null;
+const payoutError = payoutResult.error ? t.milestones.bonusesLoadFailed : null;
 
 // Invalid ids, a missing milestone, one of another project and one hidden by RLS all look the same: not found.
 const project = projectResult.data ?? null;
@@ -120,6 +124,8 @@ const payoutLines = payoutResult.data?.lines ?? [];
 
 const isClosedStatus = (status: MilestoneStatus) =>
   status === "completed" || status === "cancelled" || status === "approved";
+// Status labels embedded mid-sentence ("This project is completed.").
+const inSentence = (label: string) => label.toLocaleLowerCase(locale);
 const isApproved = milestone?.status === "approved";
 const isClosed =
   project !== null && milestone !== null && (isClosedStatus(milestone.status) || isClosedStatus(project.status));
@@ -128,13 +134,13 @@ const canEdit = !isAdmin && !isClosed;
 // KPI scores: a completed milestone can still be scored (only its assignments freeze); an approved
 // or cancelled milestone or a closed project cannot. Admins are read-only.
 const kpiReadOnlyReason = isApproved
-  ? "Approved milestones are frozen; their KPI scores can't be changed."
+  ? m.kpiReadOnly.approved
   : isAdmin
-    ? "Admins can view KPI scores but not change them."
+    ? m.kpiReadOnly.admin
     : milestone?.status === "cancelled"
-      ? "This milestone is cancelled; its scores can't be changed."
+      ? m.kpiReadOnly.cancelled
       : project && isClosedStatus(project.status)
-        ? `This project is ${project.status}. Reopen it before changing KPI scores.`
+        ? format(m.kpiReadOnly.projectClosed, { status: inSentence(t.status.work[project.status]) })
         : null;
 const canEditKpi = project !== null && milestone !== null && kpiReadOnlyReason === null;
 
@@ -145,17 +151,17 @@ const approvalBlockedReason =
   !project || !milestone || isApproved
     ? null
     : isAdmin
-      ? "Admins can view approvals but not approve milestones."
+      ? m.approvalBlocked.admin
       : milestone.status === "cancelled"
-        ? "This milestone is cancelled; it cannot be approved."
+        ? m.approvalBlocked.cancelled
         : project.status === "completed" || project.status === "cancelled"
-          ? `This project is ${project.status}. Reopen it before approving its milestones.`
+          ? format(m.approvalBlocked.projectClosed, { status: inSentence(t.status.work[project.status]) })
           : !payoutSummary
-            ? "The computed bonuses could not be loaded; reload the page before approving."
+            ? m.approvalBlocked.payoutMissing
             : !payoutSummary.scored
-              ? "Enter all four KPI scores before approving."
+              ? m.approvalBlocked.unscored
               : payoutSummary.engagement_count === 0
-                ? "Assign at least one employee before approving."
+                ? m.approvalBlocked.noEngagements
                 : null;
 const canApprove = project !== null && milestone !== null && !isApproved && approvalBlockedReason === null;
 
@@ -171,19 +177,19 @@ const columnCount = canEdit ? 6 : 5;
 const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 ---
 
-<Layout title={milestone ? milestone.name : "Milestone"}>
+<Layout title={milestone ? milestone.name : m.page.fallbackTitle}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
       <Topbar />
       <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
         <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">
-          {milestone ? milestone.name : "Milestone"}
+          {milestone ? milestone.name : m.page.fallbackTitle}
         </h1>
         <a
           href={project ? `/projects/${project.id}` : "/projects"}
           class:list={cn("text-primary text-sm hover:underline", focusRing)}
         >
-          {project ? `Back to ${project.name}` : "Back to projects"}
+          {project ? format(m.page.backTo, { name: project.name }) : m.page.backToProjects}
         </a>
       </div>
 
@@ -200,14 +206,14 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
 
       {loadError ? (
         <Alert variant="destructive">
-          <AlertTitle>Could not load the milestone.</AlertTitle>
+          <AlertTitle>{m.page.loadFailedTitle}</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       ) : !project || !milestone ? (
         <Card>
           <CardHeader>
-            <CardTitle>Milestone not found.</CardTitle>
-            <CardDescription>It does not exist or you do not have access to it.</CardDescription>
+            <CardTitle>{m.page.notFound}</CardTitle>
+            <CardDescription>{m.page.notFoundDescription}</CardDescription>
           </CardHeader>
         </Card>
       ) : (
@@ -216,30 +222,28 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             <Card>
               <CardContent>
                 <h2 id="details-heading" class="sr-only">
-                  Milestone details
+                  {m.page.detailsHeading}
                 </h2>
                 <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                   <div>
-                    <dt class="text-muted-foreground">Period</dt>
+                    <dt class="text-muted-foreground">{f.period}</dt>
                     <dd class="mt-1">
                       <span class="whitespace-nowrap">{milestone.start_date}</span> –{" "}
                       <span class="whitespace-nowrap">{milestone.end_date}</span>
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-muted-foreground">Status</dt>
+                    <dt class="text-muted-foreground">{f.status}</dt>
                     <dd class="mt-1">
                       {isApproved ? (
-                        <Badge className="bg-success text-success-foreground">Approved</Badge>
+                        <Badge className="bg-success text-success-foreground">{t.status.milestone.approved}</Badge>
                       ) : (
-                        <Badge variant="secondary" className="capitalize">
-                          {milestone.status}
-                        </Badge>
+                        <Badge variant="secondary">{t.status.milestone[milestone.status]}</Badge>
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-muted-foreground">Target pool</dt>
+                    <dt class="text-muted-foreground">{f.targetPool}</dt>
                     <dd class="mt-1 tabular-nums">{formatPln(milestone.target_pool)}</dd>
                   </div>
                 </dl>
@@ -267,7 +271,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
               <Card>
                 <CardHeader>
                   <h2 id="bonuses-heading" class="text-xl leading-none font-semibold">
-                    Computed bonuses
+                    {m.payout.heading}
                   </h2>
                 </CardHeader>
                 <CardContent>
@@ -298,65 +302,64 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             <Card>
               <CardHeader>
                 <h2 id="assignments-heading" class="text-xl leading-none font-semibold">
-                  Assignments
+                  {m.assignments.heading}
                 </h2>
-                <CardDescription>
-                  The open total is the employee's time share across milestones that are not completed, cancelled or
-                  approved, in projects that are still open. Above 100% is a warning only.
-                </CardDescription>
+                <CardDescription>{t.common.openTotalNote}</CardDescription>
               </CardHeader>
 
               <CardContent className="flex flex-col gap-4">
                 {isAdmin ? (
                   <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
-                    Admins can view assignments but not change them.
+                    {m.assignments.adminReadOnly}
                   </p>
                 ) : (
                   isClosed &&
                   (isApproved ? (
                     <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
-                      Approved milestones are frozen; assignments can no longer change.
+                      {m.assignments.approvedFrozen}
                     </p>
                   ) : (
                     <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
                       {isClosedStatus(milestone.status)
-                        ? `This milestone is ${milestone.status}.`
-                        : `This project is ${project.status}.`}{" "}
-                      Reopen it (set it to planned or active) before changing its assignments.
+                        ? format(m.assignments.milestoneIs, {
+                            status: inSentence(t.status.milestone[milestone.status]),
+                          })
+                        : format(m.assignments.projectIs, { status: inSentence(t.status.work[project.status]) })}{" "}
+                      {m.assignments.reopen}
                     </p>
                   ))
                 )}
 
                 {engagements.length === 0 ? (
-                  <p class="text-muted-foreground text-sm">No employees assigned yet.</p>
+                  <p class="text-muted-foreground text-sm">{m.assignments.empty}</p>
                 ) : (
                   <Table className="min-w-xl text-left">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead scope="col" className="text-muted-foreground">
-                          Employee
+                          {f.employee}
                         </TableHead>
                         <TableHead scope="col" className="text-muted-foreground">
-                          Job role
+                          {f.jobRole}
                         </TableHead>
                         <TableHead scope="col" className="text-muted-foreground text-right">
-                          Time share
+                          {f.timeShare}
                         </TableHead>
                         <TableHead scope="col" className="text-muted-foreground text-right">
-                          Rating
+                          {f.rating}
                         </TableHead>
                         <TableHead scope="col" className="text-muted-foreground text-right">
-                          {isAdmin ? "Open total (all milestones)" : "Open total (your milestones)"}
+                          {isAdmin ? f.openTotalAll : f.openTotalOwn}
                         </TableHead>
                         {canEdit && (
                           <TableHead scope="col" className="text-muted-foreground">
-                            <span class="sr-only">Delete</span>
+                            <span class="sr-only">{t.common.delete}</span>
                           </TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
                     {engagements.map((engagement) => {
-                      const name = engagement.employee_name ?? "Former team member";
+                      const name = engagement.employee_name ?? m.assignments.formerMember;
                       return (
                         <TableBody className="border-b">
                           <TableRow className="border-0 align-top hover:bg-transparent">
@@ -378,7 +381,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                             <TableCell className="text-right align-top tabular-nums">
                               <span class="inline-flex items-center gap-2">
                                 {formatPercent(engagement.open_total)}
-                                {engagement.over_allocated && <Badge variant="destructive">Over 100%</Badge>}
+                                {engagement.over_allocated && <Badge variant="destructive">{t.common.over100}</Badge>}
                               </span>
                             </TableCell>
                             {canEdit && (
@@ -391,9 +394,9 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                                     type="submit"
                                     variant="outline"
                                     size="sm"
-                                    aria-label={`Delete assignment of ${name}`}
+                                    aria-label={format(m.assignments.deleteAssignmentOf, { name })}
                                   >
-                                    Delete
+                                    {t.common.delete}
                                   </Button>
                                 </form>
                               </TableCell>
@@ -406,7 +409,7 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                                   <summary
                                     class:list={cn("text-primary cursor-pointer text-sm hover:underline", focusRing)}
                                   >
-                                    Edit {name}
+                                    {format(t.common.editName, { name })}
                                   </summary>
                                   <div class="mt-3">
                                     <EngagementForm
@@ -429,15 +432,14 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
                 {canEdit && (
                   <div class="mt-2 border-t pt-5">
                     <h3 class="text-muted-foreground mb-2 text-sm font-medium tracking-wide uppercase">
-                      Assign employee
+                      {m.assignments.assignHeading}
                     </h3>
                     {assignable.length === 0 && !addFormError ? (
                       <p class="text-muted-foreground text-sm">
-                        None of your employees is left to assign to this milestone. Register employees on the{" "}
-                        <a href="/employees" class:list={cn("text-primary hover:underline", focusRing)}>
-                          Employees
-                        </a>{" "}
-                        page.
+                        {m.assignments.noneLeftBefore}
+                        {/* The link and the text after it must touch: a line break between them renders as a space. */}
+                        <!-- prettier-ignore -->
+                        <span><a href="/employees" class:list={cn("text-primary hover:underline", focusRing)}>{m.assignments.noneLeftLink}</a>{m.assignments.noneLeftAfter}</span>
                       </p>
                     ) : (
                       <EngagementForm

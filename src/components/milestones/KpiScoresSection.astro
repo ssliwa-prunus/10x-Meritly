@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getMessages } from "@/lib/i18n";
 
 /** The four KPI scores; all null while the milestone is unscored. */
 export interface KpiScores {
@@ -25,8 +26,11 @@ interface Props {
 }
 
 const { projectId, milestoneId, scores, canEdit, readOnlyReason, saved, error } = Astro.props;
+const t = getMessages(Astro.locals.locale);
+const labels = t.milestones.kpi;
 
 // Field names match kpiScoresInputSchema. 100 is the best score for every field, Ryzyko included.
+// The KPI names are product terms and stay the same in every language.
 const fields = [
   { name: "kpi_schedule", label: "Termin", id: "kpi-schedule" },
   { name: "kpi_budget", label: "Budżet", id: "kpi-budget" },
@@ -42,18 +46,15 @@ const scored = fields.every((field) => scores[field.name] !== null);
   <Card>
     <CardHeader>
       <h2 id="kpi-heading" class="text-xl leading-none font-semibold">
-        KPI scores
+        {labels.heading}
       </h2>
-      <CardDescription>
-        Whole numbers from 0 to 100; higher is better for every score, Ryzyko included. Enter all four to compute the
-        bonuses.
-      </CardDescription>
+      <CardDescription>{labels.description}</CardDescription>
     </CardHeader>
 
     <CardContent className="flex flex-col gap-4">
       {saved && (
         <Alert variant="success" role="status">
-          <AlertDescription>KPI scores saved.</AlertDescription>
+          <AlertDescription>{labels.saved}</AlertDescription>
         </Alert>
       )}
       {error && (
@@ -84,13 +85,13 @@ const scored = fields.every((field) => scores[field.name] !== null);
                 required
               />
               <p id={`${field.id}-hint`} class="text-muted-foreground text-xs">
-                0–100, higher is better
+                {labels.hint}
               </p>
             </div>
           ))}
           <div class="sm:col-span-2 lg:col-span-4">
-            <SubmitButton client:load pendingText="Saving…">
-              Save KPI scores
+            <SubmitButton client:load pendingText={t.common.saving}>
+              {labels.save}
             </SubmitButton>
           </div>
         </form>
@@ -104,7 +105,7 @@ const scored = fields.every((field) => scores[field.name] !== null);
           ))}
         </dl>
       ) : (
-        <p class="text-muted-foreground text-sm">No KPI scores entered yet.</p>
+        <p class="text-muted-foreground text-sm">{labels.none}</p>
       )}
     </CardContent>
   </Card>

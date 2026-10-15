@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { getMessages } from "@/lib/i18n";
 import { WORK_STATUSES } from "@/lib/services/projects";
 import type { Milestone } from "@/types";
 
@@ -16,6 +17,8 @@ interface Props {
 }
 
 const { projectId, milestone, error } = Astro.props;
+const t = getMessages(Astro.locals.locale);
+const f = t.common.fields;
 
 const action = milestone
   ? `/api/projects/${projectId}/milestones/${milestone.id}`
@@ -33,29 +36,29 @@ const fieldId = (field: string) => `milestone-${milestone?.id ?? "new"}-${field}
   )}
   <form method="POST" action={action} class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
     <div class="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
-      <Label htmlFor={fieldId("name")}>Name</Label>
+      <Label htmlFor={fieldId("name")}>{f.name}</Label>
       <Input id={fieldId("name")} type="text" name="name" defaultValue={milestone?.name} maxLength={100} required />
     </div>
     <div class="flex flex-col gap-2">
-      <Label htmlFor={fieldId("start-date")}>Start date</Label>
+      <Label htmlFor={fieldId("start-date")}>{f.startDate}</Label>
       <Input id={fieldId("start-date")} type="date" name="start_date" defaultValue={milestone?.start_date} required />
     </div>
     <div class="flex flex-col gap-2">
-      <Label htmlFor={fieldId("end-date")}>End date</Label>
+      <Label htmlFor={fieldId("end-date")}>{f.endDate}</Label>
       <Input id={fieldId("end-date")} type="date" name="end_date" defaultValue={milestone?.end_date} required />
     </div>
     <div class="flex flex-col gap-2 [&>[data-slot=native-select-wrapper]]:w-full">
-      <Label htmlFor={fieldId("status")}>Status</Label>
+      <Label htmlFor={fieldId("status")}>{f.status}</Label>
       <NativeSelect id={fieldId("status")} name="status" required>
         {WORK_STATUSES.map((status) => (
           <option value={status} selected={status === currentStatus}>
-            {status}
+            {t.status.work[status]}
           </option>
         ))}
       </NativeSelect>
     </div>
     <div class="flex flex-col gap-2">
-      <Label htmlFor={fieldId("target-pool")}>Target pool (PLN)</Label>
+      <Label htmlFor={fieldId("target-pool")}>{t.milestones.form.targetPool}</Label>
       <Input
         id={fieldId("target-pool")}
         type="text"
@@ -67,18 +70,18 @@ const fieldId = (field: string) => `milestone-${milestone?.id ?? "new"}-${field}
       />
     </div>
     <div class="flex flex-col gap-2 sm:col-span-2">
-      <Label htmlFor={fieldId("notes")}>Notes</Label>
+      <Label htmlFor={fieldId("notes")}>{f.notes}</Label>
       <Textarea id={fieldId("notes")} name="notes" maxLength={2000} rows={2} defaultValue={milestone?.notes ?? ""} />
     </div>
     <div class="sm:col-span-2 lg:col-span-3">
       {/* Edit forms sit inside a closed <details>; hydrate when the row is opened. */}
       {milestone ? (
-        <SubmitButton client:visible pendingText="Saving…">
-          Save milestone
+        <SubmitButton client:visible pendingText={t.common.saving}>
+          {t.milestones.form.save}
         </SubmitButton>
       ) : (
-        <SubmitButton client:load pendingText="Adding…">
-          Add milestone
+        <SubmitButton client:load pendingText={t.milestones.form.adding}>
+          {t.milestones.form.add}
         </SubmitButton>
       )}
     </div>

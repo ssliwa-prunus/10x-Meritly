@@ -1,16 +1,18 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
-import type { Milestone, Profile, Project, ProjectExposure, WorkStatus } from "@/types";
+import type { Locale } from "@/lib/i18n";
+import type { LoadErrorCode, Milestone, Profile, Project, ProjectExposure, WorkStatus } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Validation and save failures travel to the project pages as a fixed code (plus
 // an optional field name) in the redirect URL, never as free text, so a crafted link cannot put
-// arbitrary text on the page. Pages resolve codes with projectsErrorMessage(); unknown codes
-// fall back to a generic message.
+// arbitrary text on the page. Pages resolve codes with projectsErrorMessage() in the request's
+// locale; unknown codes fall back to a generic message. The EN catalog defines the codes and the
+// PL catalog is typed against them, so a missing translation fails the type check.
 // ---------------------------------------------------------------------------
 
-const PROJECTS_ERROR_MESSAGES = {
+const PROJECTS_ERROR_MESSAGES_EN = {
   required: "{field} is required",
   name_too_long: "Name must be at most 100 characters",
   notes_too_long: "Notes must be at most 2000 characters",
@@ -36,9 +38,38 @@ const PROJECTS_ERROR_MESSAGES = {
   not_configured: "Supabase is not configured",
 } as const;
 
-export type ProjectsErrorCode = keyof typeof PROJECTS_ERROR_MESSAGES;
+export type ProjectsErrorCode = keyof typeof PROJECTS_ERROR_MESSAGES_EN;
 
-const FIELD_LABELS: Record<string, string> = {
+const PROJECTS_ERROR_MESSAGES: Record<Locale, Record<ProjectsErrorCode, string>> = {
+  en: PROJECTS_ERROR_MESSAGES_EN,
+  pl: {
+    required: "Pole „{field}” jest wymagane",
+    name_too_long: "Nazwa może mieć najwyżej 100 znaków",
+    notes_too_long: "Notatki mogą mieć najwyżej 2000 znaków",
+    invalid_money: "Pole „{field}” musi zawierać kwotę większą od 0 z najwyżej 2 miejscami po przecinku",
+    invalid_date: "Pole „{field}” musi zawierać prawidłową datę",
+    period_order: "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia",
+    invalid_status: "Wybierz prawidłowy status",
+    invalid_id: "Nieprawidłowy identyfikator",
+    invalid_owner: "Wybierz przełożonego jako właściciela",
+    invalid_form: "Nieprawidłowe dane formularza",
+    duplicate_name: "Ta nazwa jest już zajęta",
+    rule_violation: "Wartości naruszają reguły projektu",
+    owner_not_supervisor: "Właścicielem musi być przełożony",
+    milestone_outside_project: "Okres kamienia milowego musi mieścić się w okresie projektu",
+    project_closed: "Projekt jest zakończony lub anulowany; wznów go przed zmianą jego kamieni milowych",
+    project_period_excludes_milestones: "Nowy okres projektu pozostawiłby niektóre kamienie milowe poza nim",
+    project_has_foreign_engagements:
+      "Pracownicy obecnego właściciela są przypisani do otwartych kamieni milowych; najpierw usuń te przypisania",
+    admin_read_only: "Administratorzy mogą przeglądać kamienie milowe, ale nie mogą ich zmieniać",
+    milestone_approved: "Ten kamień milowy jest zatwierdzony i zamrożony",
+    not_found: "Nie znaleziono",
+    save_failed: "Nie udało się zapisać zmian. Spróbuj ponownie.",
+    not_configured: "Supabase nie jest skonfigurowany",
+  },
+};
+
+const FIELD_LABELS_EN = {
   name: "Name",
   start_date: "Start date",
   end_date: "End date",
@@ -49,7 +80,27 @@ const FIELD_LABELS: Record<string, string> = {
   supervisor_id: "Owner",
 };
 
-const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+const FIELD_LABELS: Record<Locale, Record<keyof typeof FIELD_LABELS_EN, string>> = {
+  en: FIELD_LABELS_EN,
+  pl: {
+    name: "Nazwa",
+    start_date: "Data rozpoczęcia",
+    end_date: "Data zakończenia",
+    status: "Status",
+    total_budget: "Budżet całkowity",
+    target_pool: "Pula docelowa",
+    notes: "Notatki",
+    supervisor_id: "Właściciel",
+  },
+};
+
+/** Label for a field outside FIELD_LABELS (or no field at all). */
+const FALLBACK_FIELD_LABEL: Record<Locale, string> = { en: "Value", pl: "Wartość" };
+
+const GENERIC_ERROR_MESSAGE: Record<Locale, string> = {
+  en: "Something went wrong. Please try again.",
+  pl: "Coś poszło nie tak. Spróbuj ponownie.",
+};
 
 export interface ProjectsError {
   code: ProjectsErrorCode;
@@ -57,13 +108,14 @@ export interface ProjectsError {
 }
 
 const isProjectsErrorCode = (value: string): value is ProjectsErrorCode =>
-  Object.hasOwn(PROJECTS_ERROR_MESSAGES, value);
+  Object.hasOwn(PROJECTS_ERROR_MESSAGES_EN, value);
 
 /** Message for an error code taken from the URL. Only fixed catalog text is ever returned. */
-export function projectsErrorMessage(code: string, field: string | null): string {
-  if (!isProjectsErrorCode(code)) return GENERIC_ERROR_MESSAGE;
-  const label = (field !== null && Object.hasOwn(FIELD_LABELS, field) ? FIELD_LABELS[field] : undefined) ?? "Value";
-  return PROJECTS_ERROR_MESSAGES[code].replace("{field}", label);
+export function projectsErrorMessage(code: string, field: string | null, locale: Locale): string {
+  if (!isProjectsErrorCode(code)) return GENERIC_ERROR_MESSAGE[locale];
+  const labels: Record<string, string> = FIELD_LABELS[locale];
+  const label = field !== null && Object.hasOwn(labels, field) ? labels[field] : FALLBACK_FIELD_LABEL[locale];
+  return PROJECTS_ERROR_MESSAGES[locale][code].replace("{field}", label);
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +265,7 @@ export const projectUrl = (id: string, section: ProjectSection, flash: ProjectsF
 
 export interface ServiceResult<T = undefined> {
   data?: T;
-  error?: string;
+  error?: LoadErrorCode;
 }
 
 export interface WriteResult<T = undefined> {
@@ -249,10 +301,10 @@ function mapPostgrestError(error: PostgrestError, context: string): ProjectsErro
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): string {
+function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
   // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
   console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "Could not load projects. Please try again.";
+  return "load_failed";
 }
 
 interface ProjectRow extends Omit<Project, "total_budget"> {
@@ -357,7 +409,7 @@ export async function getProjectExposure(
 export async function listSupervisors(supabase: SupabaseClient): Promise<ServiceResult<Profile[]>> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, display_name, role")
+    .select("id, email, display_name, role, locale")
     .eq("role", "supervisor")
     .order("email", { ascending: true })
     .overrideTypes<Profile[], { merge: false }>();

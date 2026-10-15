@@ -4,16 +4,20 @@ import Topbar from "@/components/Topbar.astro";
 import ProjectForm from "@/components/projects/ProjectForm.astro";
 import { createClient } from "@/lib/supabase";
 import { formatPln } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import { listProjectExposure, listProjects, listSupervisors, projectsErrorMessage } from "@/lib/services/projects";
 
 const isAdmin = Astro.locals.profile?.role === "admin";
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
+const f = t.common.fields;
 
 const errorCode = Astro.url.searchParams.get("error");
 const errorField = Astro.url.searchParams.get("field");
 const section = Astro.url.searchParams.get("section");
 
 // The URL carries only an error code; the displayed text always comes from the fixed catalog.
-const errorMessage = errorCode ? projectsErrorMessage(errorCode, errorField) : null;
+const errorMessage = errorCode ? projectsErrorMessage(errorCode, errorField, locale) : null;
 const newFormError = section === "new" ? errorMessage : null;
 const pageError = section === null ? errorMessage : null;
 
@@ -25,14 +29,15 @@ let exposureResult: Awaited<ReturnType<typeof listProjectExposure>> = {};
 let supervisorsResult: Awaited<ReturnType<typeof listSupervisors>> = {};
 
 if (!supabase) {
-  loadError = "Supabase is not configured";
+  loadError = t.common.supabaseNotConfigured;
 } else {
   [projectsResult, exposureResult, supervisorsResult] = await Promise.all([
     listProjects(supabase),
     listProjectExposure(supabase),
     isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
   ]);
-  loadError = projectsResult.error ?? exposureResult.error ?? supervisorsResult.error ?? null;
+  const failed = projectsResult.error ?? exposureResult.error ?? supervisorsResult.error;
+  loadError = failed ? t.projects.loadFailed : null;
 }
 
 const projects = projectsResult.data;
@@ -43,16 +48,14 @@ const ownerById = new Map((supervisors ?? []).map((profile) => [profile.id, prof
 const loaded = !loadError && projects && exposureResult.data && (!isAdmin || supervisors);
 ---
 
-<Layout title="Projects">
+<Layout title={t.projects.title}>
   <div class="bg-cosmic min-h-screen p-4 text-white">
     <div class="mx-auto w-full max-w-5xl">
       <Topbar />
       <h1 class="mb-2 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
-        Projects
+        {t.projects.title}
       </h1>
-      <p class="mb-6 text-sm text-blue-100/60">
-        Reserved is the worst case: every non-cancelled milestone at its target pool. Over budget is a warning only.
-      </p>
+      <p class="mb-6 text-sm text-blue-100/60">{t.projects.intro}</p>
 
       {pageError && (
         <p role="alert" class="mb-6 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
@@ -62,8 +65,8 @@ const loaded = !loadError && projects && exposureResult.data && (!isAdmin || sup
 
       {!loaded ? (
         <div role="alert" class="rounded-2xl border border-red-400/40 bg-red-500/15 p-6 text-red-100">
-          <p class="font-semibold">Could not load projects.</p>
-          <p class="mt-1 text-sm text-red-100/80">{loadError ?? "Unknown error"}</p>
+          <p class="font-semibold">{t.projects.listLoadFailedTitle}</p>
+          <p class="mt-1 text-sm text-red-100/80">{loadError ?? t.common.unknownError}</p>
         </div>
       ) : (
         <div class="flex flex-col gap-6">
@@ -73,40 +76,40 @@ const loaded = !loadError && projects && exposureResult.data && (!isAdmin || sup
             class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-6"
           >
             <h2 id="list-heading" class="text-xl font-semibold">
-              {isAdmin ? "All projects" : "Your projects"}
+              {isAdmin ? t.projects.allProjects : t.projects.yourProjects}
             </h2>
             {projects.length === 0 ? (
-              <p class="mt-3 text-sm text-blue-100/60">No projects yet. Create one below.</p>
+              <p class="mt-3 text-sm text-blue-100/60">{t.projects.empty}</p>
             ) : (
               <div class="mt-4 overflow-x-auto">
                 <table class="w-full min-w-[40rem] text-left text-sm">
                   <thead class="text-blue-100/70">
                     <tr class="border-b border-white/10">
                       <th scope="col" class="py-2 pr-3 font-medium">
-                        Name
+                        {f.name}
                       </th>
                       <th scope="col" class="py-2 pr-3 font-medium">
-                        Period
+                        {f.period}
                       </th>
                       <th scope="col" class="py-2 pr-3 font-medium">
-                        Status
+                        {f.status}
                       </th>
                       {isAdmin && (
                         <th scope="col" class="py-2 pr-3 font-medium">
-                          Owner
+                          {f.owner}
                         </th>
                       )}
                       <th scope="col" class="py-2 pr-3 text-right font-medium">
-                        Budget
+                        {t.projects.columns.budget}
                       </th>
                       <th scope="col" class="py-2 pr-3 text-right font-medium">
-                        Reserved
+                        {t.projects.columns.reserved}
                       </th>
                       <th scope="col" class="py-2 pr-3 text-right font-medium">
-                        Remaining
+                        {t.projects.columns.remaining}
                       </th>
                       <th scope="col" class="py-2 font-medium">
-                        <span class="sr-only">Budget flag</span>
+                        <span class="sr-only">{t.projects.columns.budgetFlag}</span>
                       </th>
                     </tr>
                   </thead>
@@ -126,7 +129,7 @@ const loaded = !loadError && projects && exposureResult.data && (!isAdmin || sup
                           <td class="py-2 pr-3 whitespace-nowrap text-blue-100/80">
                             {project.start_date} – {project.end_date}
                           </td>
-                          <td class="py-2 pr-3 capitalize">{project.status}</td>
+                          <td class="py-2 pr-3">{t.status.work[project.status]}</td>
                           {isAdmin && (
                             <td class="py-2 pr-3 text-blue-100/80">{ownerById.get(project.supervisor_id) ?? "—"}</td>
                           )}
@@ -142,7 +145,7 @@ const loaded = !loadError && projects && exposureResult.data && (!isAdmin || sup
                           <td class="py-2">
                             {exposure?.over_budget && (
                               <span class="rounded-full border border-red-400/40 bg-red-500/20 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-red-100">
-                                Over budget
+                                {t.projects.overBudget}
                               </span>
                             )}
                           </td>

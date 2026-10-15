@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatPln } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import type { ProjectExposure } from "@/types";
 
 interface Props {
@@ -12,12 +13,15 @@ interface Props {
 }
 
 const { exposure } = Astro.props;
+const messages = getMessages(Astro.locals.locale).projects;
+const t = messages.exposure;
 
+// `key` drives styling (over budget marks every figure except the budget itself red); the label is display text only.
 const figures = exposure
   ? [
-      { label: "Budget", value: exposure.total_budget },
-      { label: "Reserved (worst case)", value: exposure.reserved_total },
-      { label: "Remaining", value: exposure.remaining },
+      { key: "budget", label: t.budget, value: exposure.total_budget },
+      { key: "reserved", label: t.reserved, value: exposure.reserved_total },
+      { key: "remaining", label: t.remaining, value: exposure.remaining },
     ]
   : [];
 ---
@@ -27,14 +31,11 @@ const figures = exposure
     <CardHeader>
       <div class="flex flex-wrap items-center gap-2">
         <h2 id="exposure-heading" class="text-xl leading-none font-semibold">
-          Budget exposure
+          {t.heading}
         </h2>
-        {exposure?.over_budget && <Badge variant="destructive">Over budget</Badge>}
+        {exposure?.over_budget && <Badge variant="destructive">{messages.overBudget}</Badge>}
       </div>
-      <CardDescription>
-        Worst case: every non-cancelled milestone is reserved at its target pool, the most it can pay out. Informational
-        only; nothing is blocked.
-      </CardDescription>
+      <CardDescription>{t.description}</CardDescription>
     </CardHeader>
 
     <CardContent>
@@ -46,7 +47,7 @@ const figures = exposure
               <dd
                 class:list={cn(
                   "mt-1 text-lg font-semibold tabular-nums",
-                  exposure.over_budget && figure.label !== "Budget" && "text-destructive",
+                  exposure.over_budget && figure.key !== "budget" && "text-destructive",
                 )}
               >
                 {formatPln(figure.value)}
@@ -56,7 +57,7 @@ const figures = exposure
         </dl>
       ) : (
         <Alert variant="destructive">
-          <AlertDescription>Budget exposure is not available for this project.</AlertDescription>
+          <AlertDescription>{t.unavailable}</AlertDescription>
         </Alert>
       )}
     </CardContent>

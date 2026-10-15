@@ -1,0 +1,47 @@
+---
+import { getMessages, type Locale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+
+// PL | EN switch on every page (rendered by Layout). A plain form POST to /api/locale, so it works
+// without JavaScript; `next` brings the visitor back to the same path and query. Fixed bottom-right
+// so it never collides with the Topbar's right-hand sign-out.
+const locale = Astro.locals.locale;
+const t = getMessages(locale);
+const next = Astro.url.pathname + Astro.url.search;
+
+const options: { value: Locale; label: string; ariaLabel: string }[] = [
+  { value: "pl", label: "PL", ariaLabel: t.layout.switchToPl },
+  { value: "en", label: "EN", ariaLabel: t.layout.switchToEn },
+];
+---
+
+<form
+  method="POST"
+  action="/api/locale"
+  aria-label={t.layout.languageSwitch}
+  class="border-border bg-card text-card-foreground fixed right-4 bottom-4 z-50 flex items-center gap-1 rounded-full border p-1 text-xs shadow-sm backdrop-blur"
+>
+  <input type="hidden" name="next" value={next} />
+  {options.map((option) => {
+    const active = option.value === locale;
+    return (
+      <button
+        type="submit"
+        name="locale"
+        value={option.value}
+        lang={option.value}
+        aria-label={option.ariaLabel}
+        aria-pressed={active ? "true" : "false"}
+        class:list={cn(
+          "rounded-full px-2 py-1 font-medium transition-colors",
+          "focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none",
+          active
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+        )}
+      >
+        {option.label}
+      </button>
+    );
+  })}
+</form>

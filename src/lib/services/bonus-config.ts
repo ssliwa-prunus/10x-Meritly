@@ -6,16 +6,19 @@ import {
   parseForm as parseFormWith,
   toHundredths,
 } from "@/lib/forms";
-import type { BonusSettings, JobRole } from "@/types";
+import type { Locale } from "@/lib/i18n";
+import type { BonusSettings, JobRole, LoadErrorCode } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Error codes. Validation and save failures travel to the settings page as a fixed code
 // (plus an optional field name) in the redirect URL, never as free text, so a crafted link
 // cannot put arbitrary text on the admin page. The page resolves codes with
-// settingsErrorMessage(); unknown codes fall back to a generic message.
+// settingsErrorMessage() in the request's locale; unknown codes fall back to a generic message.
+// The EN catalog defines the codes and the PL catalog is typed against them, so a missing
+// translation fails the type check.
 // ---------------------------------------------------------------------------
 
-const SETTINGS_ERROR_MESSAGES = {
+const SETTINGS_ERROR_MESSAGES_EN = {
   required: "{field} is required",
   not_a_number: "{field} must be a number",
   too_many_decimals: "{field} must have at most 2 decimal places",
@@ -35,9 +38,32 @@ const SETTINGS_ERROR_MESSAGES = {
   not_configured: "Supabase is not configured",
 } as const;
 
-export type SettingsErrorCode = keyof typeof SETTINGS_ERROR_MESSAGES;
+export type SettingsErrorCode = keyof typeof SETTINGS_ERROR_MESSAGES_EN;
 
-const FIELD_LABELS: Record<string, string> = {
+const SETTINGS_ERROR_MESSAGES: Record<Locale, Record<SettingsErrorCode, string>> = {
+  en: SETTINGS_ERROR_MESSAGES_EN,
+  pl: {
+    required: "Pole „{field}” jest wymagane",
+    not_a_number: "Pole „{field}” musi być liczbą",
+    too_many_decimals: "Pole „{field}” może mieć najwyżej 2 miejsca po przecinku",
+    positive_up_to_three: "Pole „{field}” musi być większe od 0 i nie większe niż 3",
+    kpi_weight_range: "Pole „{field}” musi mieścić się w przedziale od 0 do 1",
+    name_too_long: "Nazwa może mieć najwyżej 100 znaków",
+    kpi_sum: "Wagi KPI muszą sumować się do 1.00",
+    multiplier_order: "Minimalny mnożnik musi być mniejszy niż maksymalny mnożnik",
+    factors_order: "Współczynniki ocen nie mogą maleć od oceny 1 do oceny 5",
+    invalid_id: "Nieprawidłowy identyfikator stanowiska",
+    invalid_action: "Nieprawidłowa akcja archiwizacji",
+    invalid_form: "Nieprawidłowe dane formularza",
+    duplicate_name: "Stanowisko o tej nazwie już istnieje",
+    rule_violation: "Wartości naruszają reguły konfiguracji",
+    save_failed: "Nie udało się zapisać zmian. Spróbuj ponownie.",
+    not_found: "Nie znaleziono",
+    not_configured: "Supabase nie jest skonfigurowany",
+  },
+};
+
+const FIELD_LABELS_EN = {
   name: "Name",
   weight: "Weight",
   description: "Description",
@@ -54,7 +80,33 @@ const FIELD_LABELS: Record<string, string> = {
   rating_factor_5: "Factor for rating 5",
 };
 
-const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
+const FIELD_LABELS: Record<Locale, Record<keyof typeof FIELD_LABELS_EN, string>> = {
+  en: FIELD_LABELS_EN,
+  pl: {
+    name: "Nazwa",
+    weight: "Waga",
+    description: "Opis",
+    kpi_weight_schedule: "Waga KPI Termin",
+    kpi_weight_budget: "Waga KPI Budżet",
+    kpi_weight_quality: "Waga KPI Jakość",
+    kpi_weight_risk: "Waga KPI Ryzyko",
+    multiplier_min: "Minimalny mnożnik",
+    multiplier_max: "Maksymalny mnożnik",
+    rating_factor_1: "Współczynnik dla oceny 1",
+    rating_factor_2: "Współczynnik dla oceny 2",
+    rating_factor_3: "Współczynnik dla oceny 3",
+    rating_factor_4: "Współczynnik dla oceny 4",
+    rating_factor_5: "Współczynnik dla oceny 5",
+  },
+};
+
+/** Label for a field outside FIELD_LABELS (or no field at all). */
+const FALLBACK_FIELD_LABEL: Record<Locale, string> = { en: "Value", pl: "Wartość" };
+
+const GENERIC_ERROR_MESSAGE: Record<Locale, string> = {
+  en: "Something went wrong. Please try again.",
+  pl: "Coś poszło nie tak. Spróbuj ponownie.",
+};
 
 export interface SettingsError {
   code: SettingsErrorCode;
@@ -62,13 +114,14 @@ export interface SettingsError {
 }
 
 const isSettingsErrorCode = (value: string): value is SettingsErrorCode =>
-  Object.hasOwn(SETTINGS_ERROR_MESSAGES, value);
+  Object.hasOwn(SETTINGS_ERROR_MESSAGES_EN, value);
 
 /** Message for an error code taken from the URL. Only fixed catalog text is ever returned. */
-export function settingsErrorMessage(code: string, field: string | null): string {
-  if (!isSettingsErrorCode(code)) return GENERIC_ERROR_MESSAGE;
-  const label = (field !== null && Object.hasOwn(FIELD_LABELS, field) ? FIELD_LABELS[field] : undefined) ?? "Value";
-  return SETTINGS_ERROR_MESSAGES[code].replace("{field}", label);
+export function settingsErrorMessage(code: string, field: string | null, locale: Locale): string {
+  if (!isSettingsErrorCode(code)) return GENERIC_ERROR_MESSAGE[locale];
+  const labels: Record<string, string> = FIELD_LABELS[locale];
+  const label = field !== null && Object.hasOwn(labels, field) ? labels[field] : FALLBACK_FIELD_LABEL[locale];
+  return SETTINGS_ERROR_MESSAGES[locale][code].replace("{field}", label);
 }
 
 // ---------------------------------------------------------------------------
@@ -187,9 +240,12 @@ export const settingsErrorUrl = (section: SettingsSection, error: SettingsError)
 // never the service role, so RLS applies on top of the middleware admin guard.
 // ---------------------------------------------------------------------------
 
-export interface ServiceResult<T = undefined> {
+/** "settings_missing": the singleton bonus_settings row is absent (only getBonusSettings returns it). */
+export type ConfigLoadErrorCode = LoadErrorCode | "settings_missing";
+
+export interface ServiceResult<T = undefined, E extends ConfigLoadErrorCode = LoadErrorCode> {
   data?: T;
-  error?: string;
+  error?: E;
 }
 
 export interface WriteResult {
@@ -206,10 +262,10 @@ function mapPostgrestError(error: PostgrestError, context: string): SettingsErro
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): string {
+function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
   // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
   console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "Could not load configuration. Please try again.";
+  return "load_failed";
 }
 
 interface JobRoleRow {
@@ -243,14 +299,16 @@ export async function listJobRoles(supabase: SupabaseClient): Promise<ServiceRes
   return { data: [...active, ...archived] };
 }
 
-export async function getBonusSettings(supabase: SupabaseClient): Promise<ServiceResult<BonusSettings>> {
+export async function getBonusSettings(
+  supabase: SupabaseClient,
+): Promise<ServiceResult<BonusSettings, ConfigLoadErrorCode>> {
   const { data, error } = await supabase
     .from("bonus_settings")
     .select(BONUS_SETTINGS_COLUMNS)
     .maybeSingle<BonusSettingsRow>();
 
   if (error) return { error: mapLoadError(error, "getBonusSettings") };
-  if (!data) return { error: "Bonus settings are missing" };
+  if (!data) return { error: "settings_missing" };
 
   return {
     data: {

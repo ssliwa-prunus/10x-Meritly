@@ -8,16 +8,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase";
 import { formatPercent } from "@/lib/format";
+import { getMessages } from "@/lib/i18n";
 import { groupHistory } from "@/lib/history";
 import { cn } from "@/lib/utils";
 import { listEmployeeHistory } from "@/lib/services/approvals";
 import { employeeIdSchema, getEmployeeDetail, inviteStatus, listOpenAssignments } from "@/lib/services/employees";
-import type { InviteStatus } from "@/types";
 
 // S-06 employee detail. Middleware limits it to Supervisor/Admin; RLS decides what each sees: a
 // Supervisor only their own milestones (history and assignments), an Admin everything. Draft
 // figures are never shown here; history comes from the frozen approval snapshot.
 const isAdmin = Astro.locals.profile?.role === "admin";
+const t = getMessages(Astro.locals.locale);
+const f = t.common.fields;
+const d = t.employees.detail;
 const id = employeeIdSchema.safeParse(Astro.params.id);
 const supabase = createClient(Astro.request.headers, Astro.cookies);
 
@@ -27,14 +30,19 @@ let assignmentsResult: Awaited<ReturnType<typeof listOpenAssignments>> = {};
 let historyResult: Awaited<ReturnType<typeof listEmployeeHistory>> = {};
 
 if (!supabase) {
-  loadError = "Supabase is not configured";
+  loadError = t.common.supabaseNotConfigured;
 } else if (id.success) {
   [detailResult, assignmentsResult, historyResult] = await Promise.all([
     getEmployeeDetail(supabase, id.data),
     listOpenAssignments(supabase, id.data),
     listEmployeeHistory(supabase, id.data),
   ]);
-  loadError = detailResult.error ?? assignmentsResult.error ?? historyResult.error ?? null;
+  loadError =
+    detailResult.error || assignmentsResult.error
+      ? t.employees.loadFailed
+      : historyResult.error
+        ? t.history.loadFailed
+        : null;
 }
 
 // An invalid id, a missing employee and one hidden by RLS all look the same: not found.
@@ -42,37 +50,32 @@ const employee = id.success ? (detailResult.data ?? null) : null;
 const assignments = assignmentsResult.data ?? [];
 const history = groupHistory(historyResult.data ?? []);
 
-const STATUS_LABELS: Record<InviteStatus, string> = {
-  not_invited: "Not invited",
-  invited: "Invited",
-  active: "Active",
-};
 const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 ---
 
-<Layout title={employee ? employee.full_name : "Employee"}>
+<Layout title={employee ? employee.full_name : d.fallbackTitle}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
       <Topbar />
       <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
         <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">
-          {employee ? employee.full_name : "Employee"}
+          {employee ? employee.full_name : d.fallbackTitle}
         </h1>
         <a href="/employees" class:list={cn("text-primary text-sm hover:underline", focusRing)}>
-          Back to employees
+          {d.backToEmployees}
         </a>
       </div>
 
       {loadError ? (
         <Alert variant="destructive">
-          <AlertTitle>Could not load the employee.</AlertTitle>
+          <AlertTitle>{d.loadFailedTitle}</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       ) : !employee ? (
         <Card>
           <CardHeader>
-            <CardTitle>Employee not found.</CardTitle>
-            <CardDescription>They do not exist or you do not have access to them.</CardDescription>
+            <CardTitle>{d.notFound}</CardTitle>
+            <CardDescription>{d.notFoundDescription}</CardDescription>
           </CardHeader>
         </Card>
       ) : (
@@ -81,24 +84,22 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             <CardContent>
               <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                 <div>
-                  <dt class="text-muted-foreground">Email</dt>
+                  <dt class="text-muted-foreground">{f.email}</dt>
                   <dd class="mt-1 break-all">{employee.email}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted-foreground">Job role</dt>
+                  <dt class="text-muted-foreground">{f.jobRole}</dt>
                   <dd class="mt-1">{employee.job_role_name}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted-foreground">Account</dt>
-                  <dd class="mt-1">{STATUS_LABELS[inviteStatus(employee)]}</dd>
+                  <dt class="text-muted-foreground">{d.account}</dt>
+                  <dd class="mt-1">{t.status.invite[inviteStatus(employee)]}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted-foreground">
-                    {isAdmin ? "Open total (all milestones)" : "Open total (your milestones)"}
-                  </dt>
+                  <dt class="text-muted-foreground">{isAdmin ? f.openTotalAll : f.openTotalOwn}</dt>
                   <dd class="mt-1 flex items-center gap-2 tabular-nums">
                     {formatPercent(employee.open_total)}
-                    {employee.over_allocated && <Badge variant="destructive">Over 100%</Badge>}
+                    {employee.over_allocated && <Badge variant="destructive">{t.common.over100}</Badge>}
                   </dd>
                 </div>
               </dl>
@@ -109,31 +110,28 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             <Card>
               <CardHeader>
                 <h2 id="assignments-heading" class="text-xl leading-none font-semibold">
-                  Current assignments
+                  {d.currentAssignments}
                 </h2>
-                <CardDescription>
-                  {isAdmin ? "Open milestones" : "Open milestones on your projects"}: not completed, cancelled or
-                  approved, in projects that are still open. Bonuses appear below once a milestone is approved.
-                </CardDescription>
+                <CardDescription>{isAdmin ? d.assignmentsDescriptionAll : d.assignmentsDescriptionOwn}</CardDescription>
               </CardHeader>
               <CardContent>
                 {assignments.length === 0 ? (
-                  <p class="text-muted-foreground text-sm">No open assignments.</p>
+                  <p class="text-muted-foreground text-sm">{d.noOpenAssignments}</p>
                 ) : (
                   <Table className="min-w-xl text-left">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead scope="col" className="text-muted-foreground">
-                          Project
+                          {f.project}
                         </TableHead>
                         <TableHead scope="col" className="text-muted-foreground">
-                          Milestone
+                          {f.milestone}
                         </TableHead>
                         <TableHead scope="col" className="text-muted-foreground">
-                          Period
+                          {f.period}
                         </TableHead>
                         <TableHead scope="col" className="text-muted-foreground text-right">
-                          Time share
+                          {f.timeShare}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -171,14 +169,12 @@ const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 fo
             <Card>
               <CardHeader>
                 <h2 id="history-heading" class="text-xl leading-none font-semibold">
-                  {isAdmin ? "All approved bonuses" : "Approved bonuses on your projects"}
+                  {isAdmin ? d.historyAll : d.historyOwn}
                 </h2>
-                <CardDescription>
-                  Frozen at approval, grouped by project with a subtotal per project and a total.
-                </CardDescription>
+                <CardDescription>{d.historyDescription}</CardDescription>
               </CardHeader>
               <CardContent>
-                <EmployeeHistory history={history} emptyText="No approved bonuses yet." />
+                <EmployeeHistory history={history} emptyText={t.history.empty} />
               </CardContent>
             </Card>
           </section>

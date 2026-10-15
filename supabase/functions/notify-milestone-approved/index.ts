@@ -40,7 +40,7 @@ const RESEND_BATCH_LIMIT = 100;
 const CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
 const LOCAL_FROM = "Meritly <no-reply@meritly.local>";
 const NO_ACCOUNT_LINE =
-  "You don't have a Meritly account yet — ask your supervisor to send you an invite to see this in the app.";
+  "Nie masz jeszcze konta w Meritly — poproś przełożonego o zaproszenie, aby zobaczyć to w aplikacji.";
 
 interface MilestoneRow {
   id: string;
@@ -113,33 +113,33 @@ function buildMessage(line: LineRow, appUrl: string): Message | null {
   const period = `${line.start_date} – ${line.end_date}`;
   const bonus = pln.format(Number(line.bonus));
   const hasAccount = employee.profile_id !== null && employee.activated_at !== null;
-  const subject = `Your bonus for ${line.milestone_name} — ${line.project_name}`;
+  const subject = `Twoja premia za ${line.milestone_name} — ${line.project_name}`;
 
   const text = [
-    `Hello ${employee.full_name},`,
+    `Cześć ${employee.full_name},`,
     "",
-    `Your bonus for this milestone has been approved.`,
+    `Twoja premia za ten kamień milowy została zatwierdzona.`,
     "",
-    `Project: ${line.project_name}`,
-    `Milestone: ${line.milestone_name}`,
-    `Period: ${period}`,
-    `Bonus: ${bonus}`,
+    `Projekt: ${line.project_name}`,
+    `Kamień milowy: ${line.milestone_name}`,
+    `Okres: ${period}`,
+    `Premia: ${bonus}`,
     "",
-    `See it in Meritly: ${link}`,
+    `Zobacz w Meritly: ${link}`,
     ...(hasAccount ? [] : ["", NO_ACCOUNT_LINE]),
   ].join("\n");
 
   const e = escapeHtml;
   const html = [
-    `<p>Hello ${e(employee.full_name)},</p>`,
-    `<p>Your bonus for this milestone has been approved.</p>`,
+    `<p>Cześć ${e(employee.full_name)},</p>`,
+    `<p>Twoja premia za ten kamień milowy została zatwierdzona.</p>`,
     "<ul>",
-    `<li>Project: ${e(line.project_name)}</li>`,
-    `<li>Milestone: ${e(line.milestone_name)}</li>`,
-    `<li>Period: ${e(period)}</li>`,
-    `<li>Bonus: <strong>${e(bonus)}</strong></li>`,
+    `<li>Projekt: ${e(line.project_name)}</li>`,
+    `<li>Kamień milowy: ${e(line.milestone_name)}</li>`,
+    `<li>Okres: ${e(period)}</li>`,
+    `<li>Premia: <strong>${e(bonus)}</strong></li>`,
     "</ul>",
-    `<p><a href="${e(link)}">See it in Meritly</a></p>`,
+    `<p><a href="${e(link)}">Zobacz w Meritly</a></p>`,
     ...(hasAccount ? [] : [`<p>${e(NO_ACCOUNT_LINE)}</p>`]),
   ].join("\n");
 
