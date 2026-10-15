@@ -397,3 +397,5 @@ playwright-report/
 blob-report/
 playwright/.cache/
 .playwright-cli/
+# Sentry build-time auth token (source map upload)
+.env.sentry-build-plugin
