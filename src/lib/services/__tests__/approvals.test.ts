@@ -208,15 +208,29 @@ describe("notifyMilestoneApproved", () => {
     });
   });
 
-  it("warns on an unknown function code (contract drift), with its status and code", async () => {
-    await notifyMilestoneApproved(httpError(500, JSON.stringify({ code: "boom" })).client, MILESTONE_ID);
+  it("warns on an unknown code from a 4xx (contract drift), with its status and code", async () => {
+    await notifyMilestoneApproved(httpError(409, JSON.stringify({ code: "boom" })).client, MILESTONE_ID);
     expect(consoleWarn).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
       name: "FunctionsHttpError",
-      status: 500,
+      status: 409,
       code: "boom",
       milestoneId: MILESTONE_ID,
     });
     expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["an unknown code from a 5xx", 500, "boom"],
+    ["the gateway's NOT_FOUND for an undeployed function", 404, "NOT_FOUND"],
+  ])("logs %s at error level (outage)", async (_label, status, code) => {
+    await notifyMilestoneApproved(httpError(status, JSON.stringify({ code })).client, MILESTONE_ID);
+    expect(consoleError).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
+      name: "FunctionsHttpError",
+      status,
+      code,
+      milestoneId: MILESTONE_ID,
+    });
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 
   it("logs a network error with its cause", async () => {

@@ -1,6 +1,7 @@
 import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import {
+  functionFallbackLevel,
   logError,
   logFunctionError,
   mapLoadError,
@@ -440,10 +441,7 @@ export async function notifyMilestoneApproved(
     return { error: { code: mappedTo } };
   }
 
-  // A code the function sent but this table does not know means the two sides drifted: warn. No code
-  // at all (crash, gateway page, relay or network failure) is an unexpected failure: error.
-  const level = error instanceof FunctionsHttpError && code !== undefined ? "warn" : "error";
-  logFunctionError(level, "notifyMilestoneApproved", info, meta);
+  logFunctionError(functionFallbackLevel(error, info), "notifyMilestoneApproved", info, meta);
   return { error: { code: "notify_failed" } };
 }
 

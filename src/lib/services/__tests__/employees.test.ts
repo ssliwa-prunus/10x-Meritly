@@ -275,15 +275,28 @@ describe("inviteEmployee", () => {
     expect(consoleWarn).not.toHaveBeenCalled();
   });
 
-  it("falls back to invite_failed for an unknown code, warned with the code (contract drift)", async () => {
-    expect(await inviteEmployee(httpError(500, JSON.stringify({ code: "toString" })), EMPLOYEE_ID)).toEqual({
+  it("falls back to invite_failed for an unknown 4xx code, warned with the code (contract drift)", async () => {
+    expect(await inviteEmployee(httpError(400, JSON.stringify({ code: "toString" })), EMPLOYEE_ID)).toEqual({
       error: { code: "invite_failed" },
     });
     expect(consoleError).not.toHaveBeenCalled();
     expect(consoleWarn).toHaveBeenCalledWith("inviteEmployee failed", {
       name: "FunctionsHttpError",
-      status: 500,
+      status: 400,
       code: "toString",
+      employeeId: EMPLOYEE_ID,
+    });
+  });
+
+  it("falls back to invite_failed for an undeployed function (gateway 404 NOT_FOUND), logged at error", async () => {
+    expect(await inviteEmployee(httpError(404, JSON.stringify({ code: "NOT_FOUND" })), EMPLOYEE_ID)).toEqual({
+      error: { code: "invite_failed" },
+    });
+    expect(consoleWarn).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith("inviteEmployee failed", {
+      name: "FunctionsHttpError",
+      status: 404,
+      code: "NOT_FOUND",
       employeeId: EMPLOYEE_ID,
     });
   });

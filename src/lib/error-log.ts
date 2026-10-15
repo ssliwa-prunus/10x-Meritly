@@ -101,7 +101,11 @@ function functionInfo(error: FunctionsError): FunctionErrorInfo {
 function postgrestFields(error: object, status: number | undefined): Fields {
   const code = stringField(error, "code");
   const message = stringField(error, "message");
-  if (code === undefined) return compact({ status, message: message?.slice(0, RAW_BODY_LIMIT) });
+  if (code === undefined) {
+    // A 2xx body that failed to parse is the payload itself (rows, names, amounts): log its size only.
+    if (status !== undefined && status >= 200 && status < 300) return compact({ status, bodyLength: message?.length });
+    return compact({ status, message: message?.slice(0, RAW_BODY_LIMIT) });
+  }
   const safe = detailsAreSafe(code, status);
   return {
     code,
@@ -152,19 +156,22 @@ export function mapLoadError(operation: string, error: unknown, meta?: LogMeta):
   return "load_failed";
 }
 
+/** Longest `cf-ray` kept: Cloudflare's ids are ~20 chars; off Cloudflare the header is client-controlled. */
+const REQUEST_ID_LIMIT = 64;
+
 /** Request context for logs: the signed-in user's id and Cloudflare's `cf-ray` (absent locally). */
 export function logContextFrom(locals: { user: { id: string } | null }, request: Request): LogContext {
   const context: LogContext = {};
   const userId = locals.user?.id;
   if (userId) context.userId = userId;
-  const requestId = request.headers.get("cf-ray");
+  const requestId = request.headers.get("cf-ray")?.slice(0, REQUEST_ID_LIMIT);
   if (requestId) context.requestId = requestId;
   return context;
 }
 
 /**
- * Reads an Edge Function error once: the response status and its `{ code }` body, from a clone so
- * the original `Response` stays readable. A body that is not JSON leaves `code` undefined.
+ * Reads an Edge Function error once: the response status and its `{ code }` body. The body is
+ * consumed here (no other reader exists), so nothing is left unread. Not JSON leaves `code` undefined.
  */
 export async function readFunctionError(error: unknown): Promise<FunctionErrorInfo> {
   if (!(error instanceof FunctionsError)) return { name: error instanceof Error ? error.name : typeName(error) };
@@ -172,13 +179,31 @@ export async function readFunctionError(error: unknown): Promise<FunctionErrorIn
   const response = responseOf(error);
   if (!response) return info;
   try {
-    const body: unknown = await response.clone().json();
+    const body: unknown = await response.json();
     const code = typeof body === "object" && body !== null ? stringField(body, "code") : undefined;
     return code === undefined ? info : { ...info, code };
   } catch {
     // Not JSON (e.g. an HTML gateway page) or an already-read body: the status alone is logged.
     return info;
   }
+}
+
+/**
+ * Level for a function failure the caller could not map. An unknown `code` on a 4xx other than 404
+ * means the Worker and the function drifted apart: warn. Everything else is an outage: error — a
+ * 5xx, a 404 (an undeployed function answers the gateway's own `NOT_FOUND`), no code at all, or a
+ * relay/network failure.
+ */
+export function functionFallbackLevel(error: unknown, info: FunctionErrorInfo): "warn" | "error" {
+  const status = info.status;
+  const drift =
+    error instanceof FunctionsHttpError &&
+    info.code !== undefined &&
+    status !== undefined &&
+    status >= 400 &&
+    status < 500 &&
+    status !== 404;
+  return drift ? "warn" : "error";
 }
 
 /** Writes a function failure read by `readFunctionError`; `status` comes from `info`, not `meta`. */

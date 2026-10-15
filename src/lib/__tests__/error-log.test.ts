@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import {
   errorFields,
+  functionFallbackLevel,
   logContextFrom,
   logError,
   logFunctionError,
@@ -131,6 +132,17 @@ describe("errorFields: PostgREST errors", () => {
     const body = `<html>${"x".repeat(494)}`;
     expect(body).toHaveLength(500);
     expect(errorFields({ message: body }, 502)).toStrictEqual({ status: 502, message: body.slice(0, 200) });
+  });
+
+  it("logs only the length of a 2xx body that failed to parse, never its rows", () => {
+    const body = '[{"employee_id":"e-1","full_name":"Jan Kowalski","bonus":1234.5';
+    const fields = errorFields({ message: body }, 200);
+    expect(fields).toStrictEqual({ status: 200, bodyLength: body.length });
+    expect(JSON.stringify(fields)).not.toMatch(/Kowalski|1234/);
+  });
+
+  it.each([199, 300])("still logs a raw-body excerpt at status %i (outside 2xx)", (status) => {
+    expect(errorFields({ message: "<html>x</html>" }, status)).toStrictEqual({ status, message: "<html>x</html>" });
   });
 
   it("keeps a short raw body whole and treats a non-string code as a raw body", () => {
@@ -277,6 +289,11 @@ describe("logContextFrom", () => {
     expect(logContextFrom({ user: null }, request())).toStrictEqual({});
   });
 
+  it("caps a client-supplied cf-ray at 64 characters", () => {
+    const long = "a".repeat(65);
+    expect(logContextFrom({ user: null }, request({ "cf-ray": long }))).toStrictEqual({ requestId: long.slice(0, 64) });
+  });
+
   it("omits each one independently", () => {
     expect(logContextFrom({ user: null }, request({ "cf-ray": "8f-WAW" }))).toStrictEqual({ requestId: "8f-WAW" });
     expect(logContextFrom({ user: { id: "u-1" } }, request())).toStrictEqual({ userId: "u-1" });
@@ -293,11 +310,10 @@ describe("readFunctionError", () => {
     });
   });
 
-  it("leaves the original Response readable (reads a clone)", async () => {
+  it("consumes the Response body itself, leaving no unread stream behind", async () => {
     const response = jsonResponse(404, JSON.stringify({ code: "not_found" }));
     await readFunctionError(new FunctionsHttpError(response));
-    expect(response.bodyUsed).toBe(false);
-    await expect(response.json()).resolves.toStrictEqual({ code: "not_found" });
+    expect(response.bodyUsed).toBe(true);
   });
 
   it("keeps the status of an HTML body and does not throw", async () => {
@@ -363,6 +379,31 @@ describe("readFunctionError", () => {
     await expect(readFunctionError(new TypeError("x"))).resolves.toStrictEqual({ name: "TypeError" });
     await expect(readFunctionError({ code: "XX000" })).resolves.toStrictEqual({ name: "object" });
     await expect(readFunctionError(null)).resolves.toStrictEqual({ name: "null" });
+  });
+});
+
+describe("functionFallbackLevel", () => {
+  const http = (status: number) => new FunctionsHttpError(new Response("{}", { status }));
+
+  it.each([400, 403, 409, 499])("warns on an unknown code from a %i (contract drift)", (status) => {
+    expect(functionFallbackLevel(http(status), { name: "FunctionsHttpError", status, code: "boom" })).toBe("warn");
+  });
+
+  it.each([404, 500, 502, 399])("is an error for an unknown code at %i", (status) => {
+    expect(functionFallbackLevel(http(status), { name: "FunctionsHttpError", status, code: "boom" })).toBe("error");
+  });
+
+  it("is an error for a 4xx without a code", () => {
+    expect(functionFallbackLevel(http(409), { name: "FunctionsHttpError", status: 409 })).toBe("error");
+  });
+
+  it("is an error for a 4xx code without a known status", () => {
+    expect(functionFallbackLevel(http(409), { name: "FunctionsHttpError", code: "boom" })).toBe("error");
+  });
+
+  it("is an error for a relay error, even with a 4xx code", () => {
+    const relay = new FunctionsRelayError(new Response("{}", { status: 409 }));
+    expect(functionFallbackLevel(relay, { name: "FunctionsRelayError", status: 409, code: "boom" })).toBe("error");
   });
 });
 

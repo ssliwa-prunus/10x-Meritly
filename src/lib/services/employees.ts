@@ -2,6 +2,7 @@ import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@s
 import { z } from "zod";
 import { toOpenAssignments, type AssignmentRow } from "@/lib/assignments";
 import {
+  functionFallbackLevel,
   logError,
   logFunctionError,
   mapLoadError,
@@ -440,9 +441,6 @@ export async function inviteEmployee(supabase: SupabaseClient, id: string, log?:
     return { error: { code: mappedTo } };
   }
 
-  // A code the function sent but this table does not know means the two sides drifted: warn. No code
-  // at all (crash, gateway page, relay or network failure) is an unexpected failure: error.
-  const level = error instanceof FunctionsHttpError && code !== undefined ? "warn" : "error";
-  logFunctionError(level, "inviteEmployee", info, meta);
+  logFunctionError(functionFallbackLevel(error, info), "inviteEmployee", info, meta);
   return { error: { code: "invite_failed" } };
 }
