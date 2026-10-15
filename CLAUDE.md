@@ -71,7 +71,7 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All pages a
 ### Auth flow
 
 - `src/lib/supabase.ts` — creates a Supabase SSR client using `@supabase/ssr` with cookie-based sessions. Uses `astro:env/server` for `SUPABASE_URL` and `SUPABASE_KEY` (server-only secrets declared in astro.config.mjs `env.schema`).
-- `src/middleware.ts` — runs on every request, resolves the current user, attaches to `context.locals.user`. Redirects unauthenticated users away from routes listed in `PROTECTED_ROUTES` to `/auth/signin?next=<page>` (pages only, validated by `safeNext`), so sign-in returns them there. `ADMIN_ROUTES` (`/admin`, `/api/admin`) require the `admin` role and `PROJECT_ROUTES` (`/projects`, `/api/projects`, `/employees`, `/api/employees`) require `supervisor` or `admin`, and `EMPLOYEE_ROUTES` (`/my-bonuses`) require `employee` (403 otherwise, 503 when the profile lookup failed); RLS still decides which projects and employees each role sees.
+- `src/middleware.ts` — runs on every request, resolves the current user, attaches to `context.locals.user`. Redirects unauthenticated users away from routes listed in `PROTECTED_ROUTES` to `/auth/signin?next=<page>` (pages only, validated by `safeNext`), so sign-in returns them there. `ADMIN_ROUTES` (`/admin`, `/api/admin`) require the `admin` role and `PROJECT_ROUTES` (`/projects`, `/api/projects`, `/employees`, `/api/employees`, `/reports`, `/api/reports`) require `supervisor` or `admin`, and `EMPLOYEE_ROUTES` (`/my-bonuses`) require `employee` (403 otherwise, 503 when the profile lookup failed); RLS still decides which projects and employees each role sees.
 - API endpoints: `src/pages/api/auth/{signin,signup,signout,set-password}.ts`
 - Language: the `lang` cookie (default `pl`) decides `locals.locale`. `POST /api/locale` (public form, `LanguageSwitch.astro` in Layout) sets it and, when signed in, saves it to `profiles.locale` via the `set_my_locale` RPC; sign-in saves the cookie's language the same way, and the middleware restores a missing cookie from the profile.
 - Auth pages: `src/pages/auth/{signin,signup,confirm-email,set-password}.astro`
@@ -81,7 +81,7 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All pages a
 
 ### Environment
 
-- Node.js 22.22.3+ (see `.nvmrc`); older 22.x releases trigger `EBADENGINE` warnings from `eslint-plugin-astro` and `astro-eslint-parser`
+- Node.js 24.22.0 LTS (see `.nvmrc`, which every CI job reads); Astro 7.4 needs at least 22.22.0, and older 22.x releases trigger `EBADENGINE` warnings from `eslint-plugin-astro` and `astro-eslint-parser`
 - Env vars: `SUPABASE_URL`, `SUPABASE_KEY` (copy `.env.example` to `.env` for Node, or `.dev.vars` for Cloudflare local dev)
 - Local Supabase: `npx supabase start` (requires Docker). Use it for development: `.env.example` points at a real hosted Supabase project, so overwrite its values with the `supabase start` output and don't sign up test users there.
 - Cloudflare local dev: secrets go in `.dev.vars` (gitignored)
@@ -92,38 +92,34 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All pages a
 Two GitHub Actions workflows. `PR` (@.github/workflows/pr.yml) runs on pull requests into `master` or `develop`, with no secrets, in four jobs: `checks` (astro sync, lint, `lint:ui`, `astro check`, `npm test`, build), `smoke` (local Supabase, `supabase test db`, production preview, `npm run smoke`), `integration` (local Supabase with Mailpit and edge runtime, `supabase functions serve`, `npm run test:integration`) and `e2e` (local Supabase, Chromium, `npm run test:e2e` with the seed accounts; report uploaded on failure). `CI` (@.github/workflows/ci.yml) runs on push to `master`: a `ci` job (the `checks` steps; build needs the `SUPABASE_URL` and `SUPABASE_KEY` repository secrets) and the same `smoke` job. The Supabase CLI is the lockfile-pinned `npx supabase`. Branch protection on `master` requires all four PR checks `checks`, `smoke`, `integration` and `e2e`.
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
-## 10xDevs AI Toolkit - Module 3, Lesson 4 (E2E Tests)
+## 10xDevs AI Toolkit - Module 3, Lesson 5 (Debugging)
 
-**For E2E tests, use the two M3L4 skills in this order:**
+Turn a failure into a fix the agent can defend: evidence first, then a failing test, then the fix.
 
-1. **`/10x-e2e-setup`** — one-time setup: Playwright config (`webServer`,
-   auth `setup` project, `storageState`), a green seed test, and `context/foundation/test-stack.md`.
-2. **`/10x-e2e`** — the per-risk loop: risk → explore the running app with
-   `playwright-cli` → generate → review against the five anti-patterns →
-   re-prompt by name → verify with a deliberate break.
+```
+signal (monitoring | log | flaky E2E | stack trace) -> gather evidence -> reproduce -> failing test -> fix -> verify
+```
 
-The skills' `references/` carry the full rules, anti-patterns, seed pattern, and
-prompt-template.
+### Task Router - Where to start
 
-A few hard rules that hold even before you invoke the skill:
+| Skill                                                            | Use it when                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/10x-frame`                                                     | The report arrives as "bug + proposed fix". Check that the observed symptom and the stated cause actually match before anyone fixes anything.                                                                                                                    |
+| `/10x-new` -> `/10x-research` -> `/10x-plan` -> `/10x-implement` | The fix is more than a one-liner. Research collects the evidence; the plan starts with the failing regression test.                                                                                                                                              |
+| `/10x-tdd`                                                       | Writing the regression test that reproduces the bug before the fix.                                                                                                                                                                                              |
+| `/10x-e2e`                                                       | The bug only shows up in the running app. Reproduce it in the browser and keep that test.                                                                                                                                                                        |
+| `/10x-observability-audit`                                       | Errors are missing, noisy or impossible to diagnose in production. It audits the critical flows for code that hides failures and writes a dated report under `context/audits/observability/`. Use `--verify <report>` to re-check an earlier report after fixes. |
 
-- **Locators:** `getByRole` / `getByLabel` / `getByText` first; `getByTestId`
-  only when accessibility attributes are ambiguous. Never CSS selectors, XPath,
-  or DOM structure.
-- **Never `page.waitForTimeout()`.** Wait for state: `toBeVisible()`,
-  `waitForURL()`, `waitForResponse()`.
-- **Test independence + cleanup.** Each test runs standalone — its own setup,
-  action, assertion, and cleanup; unique ids (timestamp suffix) so parallel runs
-  and re-runs don't collide.
+### Hard rules
 
-Two boundaries to keep straight:
+- **Evidence before a hypothesis.** Use what the error tracker, the logs, a reproduction and the code each show. Never guess a cause from the stack trace alone.
+- **The bug becomes a failing test first.** The fix is done when that test goes from red to green and stays in the suite.
+- **Never hide the evidence.** No empty `catch`, no ignored promise rejections, no failures turned into redirects or `200`s, no dropped error causes. If the fix needs a `catch`, it logs or reports the error with its cause.
+- **Fix the cause, not the test.** Don't edit an assertion to match the new behaviour unless the requirement itself changed.
 
-- **DOM (snapshot) is the default.** Vision (`--caps=vision`) is a supplement for
-  visual-only risks (layout, z-index, animation); for pixel regression prefer
-  deterministic tools (`toHaveScreenshot`, Argos, Lost Pixel). VLM model
-  selection/cost is a debugging topic (Lesson 5), not testing.
-- **A red test is a signal, not a chore.** A changed selector → update the
-  locator in a reviewed diff. A changed business behavior → the test caught a
-  bug; never edit the assertion to match it. Fixing failing tests is Lesson 5.
+### Lesson boundaries
+
+- `/10x-observability-audit` reads code and writes a report. It never changes the audited code. Fixing what it finds goes through the change chain.
+- Choosing a monitoring vendor is `/10x-infra-research`, not this lesson.
 
 <!-- END @przeprogramowani/10x-cli -->

@@ -113,7 +113,7 @@ Collect the following warnings, then present them all at once with a single conf
 
 5. **SHA history check**: follow [SHA diagnosis and repointing](references/archive-sha.md) for completed rows with existing SHA suffixes. Collect its diagnostics with the warnings above. Finish all read-only diagnosis and candidate confirmation before making any file edits.
 
-If at least one warning was queued, print:
+If at least one warning was queued, write this as plain assistant text in the same response, before any question tool call (a response that opens with the question tool call here is wrong). This is required, not optional: the user decides on these warnings, so every unmet condition must be on screen first. Name each unmet condition with its concrete state (which rows, which phases, which status), and every commit by short SHA and subject (`git log -1 --format='%h %s' <sha>`; say "object missing" when it cannot be resolved):
 
 ```
 ⚠ /10x-archive warnings for <change-id>:
@@ -121,13 +121,18 @@ If at least one warning was queued, print:
   - <warning 1>
   - <warning 2>
   - <warning 3>
+
+Archiving creates commit: chore(archive): close <change-id>
+  (git mv context/changes/<change-id>/ → context/archive/<created>-<change-id>/, stamps change.md; omit both lines without git)
 ```
 
-If a verified repoint mapping is ready, show the problem, target branch, old → new SHA mapping, commit title/change scope, affected row IDs and total row count, together with all warnings. Ask once: **Update and archive / Archive without repointing / Cancel** (Polish: **Zaktualizuj i archiwizuj / Archiwizuj bez podmiany / Anuluj**). Explicit approval is required even when the PR proves the mapping. Update and archive → carry only that approved mapping into “Move and stamp”; Archive without repointing → leave Progress unchanged; Cancel → STOP with no file changes. This replaces the ordinary warning prompt below; never treat candidate confirmation as edit approval. With incomplete diagnostics or no verified mapping, do not offer or recommend an update; use the ordinary warning prompt.
+If a verified repoint mapping is ready, show the problem, target branch, old → new SHA mapping with both subjects (`<old sha> "<old subject>" → <new sha> "<new subject>"`), change scope, affected row IDs and total row count, together with all warnings. Ask once: **Update and archive / Archive without repointing / Cancel** (Polish: **Zaktualizuj i archiwizuj / Archiwizuj bez podmiany / Anuluj**). Explicit approval is required even when the PR proves the mapping. Update and archive → carry only that approved mapping into “Move and stamp”; Archive without repointing → leave Progress unchanged; Cancel → STOP with no file changes. This replaces the ordinary warning prompt below; never treat candidate confirmation as edit approval. With incomplete diagnostics or no verified mapping, do not offer or recommend an update; use the ordinary warning prompt.
 
 Otherwise use `AskUserQuestion`. **Manual-only nudge**: if the Pending Progress check above queued a warning whose breakdown was exactly `0 automated, <Y> manual` with `<Y> ≥ 1`, append ` (Recommended)` to the `Continue archiving` label so the prompt visibly nudges toward archive — manual checks are often deferred-by-design, and archiving is the expected path. In all other cases (mixed pending, automated-only, legacy-fallback warning, or no Progress warning), present the labels verbatim.
 
-- question: `Archive "<change-id>" anyway?`
+Repeat the warnings in the question text (one short line each), so they are visible even where the host shows only the dialog. Without a native question tool, ask the same question as plain text after the warnings message and wait for the answer.
+
+- question: `Archive "<change-id>" anyway? Unmet: <warning 1>; <warning 2>; … Commit: chore(archive): close <change-id>`
   header: `Archive`
   options:
   - label: `Continue archiving`

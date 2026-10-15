@@ -24,6 +24,7 @@ const CLEAN_PATHS = [
   "src/pages/dev/projects-kitchen-sink.astro",
   "src/pages/employees/[id].astro",
   "src/pages/my-bonuses.astro",
+  "src/pages/reports/bonuses.astro",
 ];
 
 const LITERAL =

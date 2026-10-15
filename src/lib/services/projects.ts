@@ -1,5 +1,6 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { logError, mapLoadError, type LogContext, type LogMeta } from "@/lib/error-log";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import type { Locale } from "@/lib/i18n";
 import type { LoadErrorCode, Milestone, Profile, Project, ProjectExposure, WorkStatus } from "@/types";
@@ -290,21 +291,34 @@ const GUARD_ERROR_CODES: Record<string, ProjectsErrorCode> = {
   MR015: "milestone_approved",
 };
 
-function mapPostgrestError(error: PostgrestError, context: string): ProjectsError {
+/**
+ * Domain rejections (23505, the guard codes) return silently. 23514, 42501 and MR014 are warned:
+ * zod or RLS should have stopped them, so they can also mean a deploy regression or id tampering.
+ */
+function mapPostgrestError(error: PostgrestError, operation: string, meta: Omit<LogMeta, "mappedTo">): ProjectsError {
   if (error.code === "23505") return { code: "duplicate_name" };
-  if (error.code === "23514") return { code: "rule_violation" };
+  if (error.code === "23514") {
+    logError("warn", operation, error, { ...meta, mappedTo: "rule_violation" });
+    return { code: "rule_violation" };
+  }
   // RLS rejected the row: to the caller the project does not exist.
-  if (error.code === "42501") return NOT_FOUND;
-  if (Object.hasOwn(GUARD_ERROR_CODES, error.code)) return { code: GUARD_ERROR_CODES[error.code] };
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
+  if (error.code === "42501") {
+    logError("warn", operation, error, { ...meta, mappedTo: NOT_FOUND.code });
+    return NOT_FOUND;
+  }
+  if (Object.hasOwn(GUARD_ERROR_CODES, error.code)) {
+    const code = GUARD_ERROR_CODES[error.code];
+    if (error.code === "MR014") logError("warn", operation, error, { ...meta, mappedTo: code });
+    return { code };
+  }
+  logError("error", operation, error, meta);
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "load_failed";
+/** An update or insert that matched no row: id tampering or an RLS regression, so it is warned. */
+function notFound(operation: string, meta: Omit<LogMeta, "status" | "mappedTo">): ProjectsError {
+  logError("warn", operation, { code: "no_rows" }, { ...meta, mappedTo: NOT_FOUND.code });
+  return NOT_FOUND;
 }
 
 interface ProjectRow extends Omit<Project, "total_budget"> {
@@ -342,32 +356,40 @@ const toExposure = (row: ProjectExposureRow): ProjectExposure => ({
 });
 
 /** Visible projects (own for a Supervisor, all for an Admin), ordered by name. */
-export async function listProjects(supabase: SupabaseClient): Promise<ServiceResult<Project[]>> {
-  const { data, error } = await supabase
+export async function listProjects(supabase: SupabaseClient, log?: LogContext): Promise<ServiceResult<Project[]>> {
+  const { data, error, status } = await supabase
     .from("projects")
     .select(PROJECT_COLUMNS)
     .order("name", { ascending: true })
     .overrideTypes<ProjectRow[], { merge: false }>();
 
-  if (error) return { error: mapLoadError(error, "listProjects") };
+  if (error) return { error: mapLoadError("listProjects", error, { status, log }) };
   return { data: data.map(toProject) };
 }
 
 /** One project, or data null when it does not exist or is not visible to the caller. */
-export async function getProject(supabase: SupabaseClient, id: string): Promise<ServiceResult<Project | null>> {
-  const { data, error } = await supabase
+export async function getProject(
+  supabase: SupabaseClient,
+  id: string,
+  log?: LogContext,
+): Promise<ServiceResult<Project | null>> {
+  const { data, error, status } = await supabase
     .from("projects")
     .select(PROJECT_COLUMNS)
     .eq("id", id)
     .maybeSingle<ProjectRow>();
 
-  if (error) return { error: mapLoadError(error, "getProject") };
+  if (error) return { error: mapLoadError("getProject", error, { status, ids: { projectId: id }, log }) };
   return { data: data ? toProject(data) : null };
 }
 
 /** A project's milestones in period order. */
-export async function listMilestones(supabase: SupabaseClient, projectId: string): Promise<ServiceResult<Milestone[]>> {
-  const { data, error } = await supabase
+export async function listMilestones(
+  supabase: SupabaseClient,
+  projectId: string,
+  log?: LogContext,
+): Promise<ServiceResult<Milestone[]>> {
+  const { data, error, status } = await supabase
     .from("milestones")
     .select(MILESTONE_COLUMNS)
     .eq("project_id", projectId)
@@ -375,18 +397,21 @@ export async function listMilestones(supabase: SupabaseClient, projectId: string
     .order("name", { ascending: true })
     .overrideTypes<MilestoneRow[], { merge: false }>();
 
-  if (error) return { error: mapLoadError(error, "listMilestones") };
+  if (error) return { error: mapLoadError("listMilestones", error, { status, ids: { projectId }, log }) };
   return { data: data.map(toMilestone) };
 }
 
 /** Budget exposure for every visible project (FR-017). */
-export async function listProjectExposure(supabase: SupabaseClient): Promise<ServiceResult<ProjectExposure[]>> {
-  const { data, error } = await supabase
+export async function listProjectExposure(
+  supabase: SupabaseClient,
+  log?: LogContext,
+): Promise<ServiceResult<ProjectExposure[]>> {
+  const { data, error, status } = await supabase
     .from("project_budget_exposure")
     .select(EXPOSURE_COLUMNS)
     .overrideTypes<ProjectExposureRow[], { merge: false }>();
 
-  if (error) return { error: mapLoadError(error, "listProjectExposure") };
+  if (error) return { error: mapLoadError("listProjectExposure", error, { status, log }) };
   return { data: data.map(toExposure) };
 }
 
@@ -394,43 +419,51 @@ export async function listProjectExposure(supabase: SupabaseClient): Promise<Ser
 export async function getProjectExposure(
   supabase: SupabaseClient,
   id: string,
+  log?: LogContext,
 ): Promise<ServiceResult<ProjectExposure | null>> {
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from("project_budget_exposure")
     .select(EXPOSURE_COLUMNS)
     .eq("project_id", id)
     .maybeSingle<ProjectExposureRow>();
 
-  if (error) return { error: mapLoadError(error, "getProjectExposure") };
+  if (error) return { error: mapLoadError("getProjectExposure", error, { status, ids: { projectId: id }, log }) };
   return { data: data ? toExposure(data) : null };
 }
 
 /** Supervisors, for the Admin owner select. */
-export async function listSupervisors(supabase: SupabaseClient): Promise<ServiceResult<Profile[]>> {
-  const { data, error } = await supabase
+export async function listSupervisors(supabase: SupabaseClient, log?: LogContext): Promise<ServiceResult<Profile[]>> {
+  const { data, error, status } = await supabase
     .from("profiles")
     .select("id, email, display_name, role, locale")
     .eq("role", "supervisor")
     .order("email", { ascending: true })
     .overrideTypes<Profile[], { merge: false }>();
 
-  if (error) return { error: mapLoadError(error, "listSupervisors") };
+  if (error) return { error: mapLoadError("listSupervisors", error, { status, log }) };
   return { data };
 }
 
 export async function createProject(
   supabase: SupabaseClient,
   input: ProjectInput,
+  log?: LogContext,
 ): Promise<WriteResult<{ id: string }>> {
-  const { data, error } = await supabase.from("projects").insert(input).select("id").single<{ id: string }>();
-  if (error) return { error: mapPostgrestError(error, "createProject") };
+  const { data, error, status } = await supabase.from("projects").insert(input).select("id").single<{ id: string }>();
+  if (error) return { error: mapPostgrestError(error, "createProject", { status, log }) };
   return { data };
 }
 
-export async function updateProject(supabase: SupabaseClient, id: string, input: ProjectInput): Promise<WriteResult> {
-  const { data, error } = await supabase.from("projects").update(input).eq("id", id).select("id");
-  if (error) return { error: mapPostgrestError(error, "updateProject") };
-  if (data.length === 0) return { error: NOT_FOUND };
+export async function updateProject(
+  supabase: SupabaseClient,
+  id: string,
+  input: ProjectInput,
+  log?: LogContext,
+): Promise<WriteResult> {
+  const ids = { projectId: id };
+  const { data, error, status } = await supabase.from("projects").update(input).eq("id", id).select("id");
+  if (error) return { error: mapPostgrestError(error, "updateProject", { status, ids, log }) };
+  if (data.length === 0) return { error: notFound("updateProject", { ids, log }) };
   return {};
 }
 
@@ -438,13 +471,15 @@ export async function createMilestone(
   supabase: SupabaseClient,
   projectId: string,
   input: MilestoneInput,
+  log?: LogContext,
 ): Promise<WriteResult> {
-  const { data, error } = await supabase
+  const ids = { projectId };
+  const { data, error, status } = await supabase
     .from("milestones")
     .insert({ ...input, project_id: projectId })
     .select("id");
-  if (error) return { error: mapPostgrestError(error, "createMilestone") };
-  if (data.length === 0) return { error: NOT_FOUND };
+  if (error) return { error: mapPostgrestError(error, "createMilestone", { status, ids, log }) };
+  if (data.length === 0) return { error: notFound("createMilestone", { ids, log }) };
   return {};
 }
 
@@ -453,14 +488,16 @@ export async function updateMilestone(
   projectId: string,
   id: string,
   input: MilestoneInput,
+  log?: LogContext,
 ): Promise<WriteResult> {
-  const { data, error } = await supabase
+  const ids = { projectId, milestoneId: id };
+  const { data, error, status } = await supabase
     .from("milestones")
     .update(input)
     .eq("id", id)
     .eq("project_id", projectId)
     .select("id");
-  if (error) return { error: mapPostgrestError(error, "updateMilestone") };
-  if (data.length === 0) return { error: NOT_FOUND };
+  if (error) return { error: mapPostgrestError(error, "updateMilestone", { status, ids, log }) };
+  if (data.length === 0) return { error: notFound("updateMilestone", { ids, log }) };
   return {};
 }

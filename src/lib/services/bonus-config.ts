@@ -1,5 +1,6 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { logError, mapLoadError, type LogContext, type LogMeta } from "@/lib/error-log";
 import {
   decimalField,
   firstIssueError as firstFormIssueError,
@@ -254,18 +255,24 @@ export interface WriteResult {
 
 const NOT_FOUND: SettingsError = { code: "not_found" };
 
-function mapPostgrestError(error: PostgrestError, context: string): SettingsError {
+/**
+ * A duplicate name returns silently. 23514 is warned: zod already enforces those rules, so a CHECK
+ * violation means the two have drifted. 42501 is not mapped here and falls through as an error.
+ */
+function mapPostgrestError(error: PostgrestError, operation: string, meta: Omit<LogMeta, "mappedTo">): SettingsError {
   if (error.code === "23505") return { code: "duplicate_name" };
-  if (error.code === "23514") return { code: "rule_violation" };
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
+  if (error.code === "23514") {
+    logError("warn", operation, error, { ...meta, mappedTo: "rule_violation" });
+    return { code: "rule_violation" };
+  }
+  logError("error", operation, error, meta);
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "load_failed";
+/** An update that matched no row: id tampering or an RLS regression, so it is warned. */
+function notFound(operation: string, meta: Omit<LogMeta, "status" | "mappedTo">): SettingsError {
+  logError("warn", operation, { code: "no_rows" }, { ...meta, mappedTo: NOT_FOUND.code });
+  return NOT_FOUND;
 }
 
 interface JobRoleRow {
@@ -284,14 +291,14 @@ const BONUS_SETTINGS_COLUMNS =
   "kpi_weight_schedule, kpi_weight_budget, kpi_weight_quality, kpi_weight_risk, multiplier_min, multiplier_max, rating_factor_1, rating_factor_2, rating_factor_3, rating_factor_4, rating_factor_5";
 
 /** Active roles first, then archived ones; each group ordered by name. */
-export async function listJobRoles(supabase: SupabaseClient): Promise<ServiceResult<JobRole[]>> {
-  const { data, error } = await supabase
+export async function listJobRoles(supabase: SupabaseClient, log?: LogContext): Promise<ServiceResult<JobRole[]>> {
+  const { data, error, status } = await supabase
     .from("job_roles")
     .select(JOB_ROLE_COLUMNS)
     .order("name", { ascending: true })
     .overrideTypes<JobRoleRow[], { merge: false }>();
 
-  if (error) return { error: mapLoadError(error, "listJobRoles") };
+  if (error) return { error: mapLoadError("listJobRoles", error, { status, log }) };
 
   const roles = data.map((row) => ({ ...row, weight: Number(row.weight) }));
   const active = roles.filter((role) => role.archived_at === null);
@@ -301,13 +308,14 @@ export async function listJobRoles(supabase: SupabaseClient): Promise<ServiceRes
 
 export async function getBonusSettings(
   supabase: SupabaseClient,
+  log?: LogContext,
 ): Promise<ServiceResult<BonusSettings, ConfigLoadErrorCode>> {
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from("bonus_settings")
     .select(BONUS_SETTINGS_COLUMNS)
     .maybeSingle<BonusSettingsRow>();
 
-  if (error) return { error: mapLoadError(error, "getBonusSettings") };
+  if (error) return { error: mapLoadError("getBonusSettings", error, { status, log }) };
   if (!data) return { error: "settings_missing" };
 
   return {
@@ -327,16 +335,26 @@ export async function getBonusSettings(
   };
 }
 
-export async function createJobRole(supabase: SupabaseClient, input: JobRoleInput): Promise<WriteResult> {
-  const { error } = await supabase.from("job_roles").insert(input);
-  if (error) return { error: mapPostgrestError(error, "createJobRole") };
+export async function createJobRole(
+  supabase: SupabaseClient,
+  input: JobRoleInput,
+  log?: LogContext,
+): Promise<WriteResult> {
+  const { error, status } = await supabase.from("job_roles").insert(input);
+  if (error) return { error: mapPostgrestError(error, "createJobRole", { status, log }) };
   return {};
 }
 
-export async function updateJobRole(supabase: SupabaseClient, id: string, input: JobRoleInput): Promise<WriteResult> {
-  const { data, error } = await supabase.from("job_roles").update(input).eq("id", id).select("id");
-  if (error) return { error: mapPostgrestError(error, "updateJobRole") };
-  if (data.length === 0) return { error: NOT_FOUND };
+export async function updateJobRole(
+  supabase: SupabaseClient,
+  id: string,
+  input: JobRoleInput,
+  log?: LogContext,
+): Promise<WriteResult> {
+  const ids = { jobRoleId: id };
+  const { data, error, status } = await supabase.from("job_roles").update(input).eq("id", id).select("id");
+  if (error) return { error: mapPostgrestError(error, "updateJobRole", { status, ids, log }) };
+  if (data.length === 0) return { error: notFound("updateJobRole", { ids, log }) };
   return {};
 }
 
@@ -344,27 +362,37 @@ export async function setJobRoleArchived(
   supabase: SupabaseClient,
   id: string,
   archived: boolean,
+  log?: LogContext,
 ): Promise<WriteResult> {
-  const { data, error } = await supabase
+  const ids = { jobRoleId: id };
+  const { data, error, status } = await supabase
     .from("job_roles")
     .update({ archived_at: archived ? new Date().toISOString() : null })
     .eq("id", id)
     .select("id");
-  if (error) return { error: mapPostgrestError(error, "setJobRoleArchived") };
-  if (data.length === 0) return { error: NOT_FOUND };
+  if (error) return { error: mapPostgrestError(error, "setJobRoleArchived", { status, ids, log }) };
+  if (data.length === 0) return { error: notFound("setJobRoleArchived", { ids, log }) };
   return {};
 }
 
-export async function updateKpiSettings(supabase: SupabaseClient, input: KpiSettingsInput): Promise<WriteResult> {
-  const { data, error } = await supabase.from("bonus_settings").update(input).eq("id", true).select("id");
-  if (error) return { error: mapPostgrestError(error, "updateKpiSettings") };
-  if (data.length === 0) return { error: NOT_FOUND };
+export async function updateKpiSettings(
+  supabase: SupabaseClient,
+  input: KpiSettingsInput,
+  log?: LogContext,
+): Promise<WriteResult> {
+  const { data, error, status } = await supabase.from("bonus_settings").update(input).eq("id", true).select("id");
+  if (error) return { error: mapPostgrestError(error, "updateKpiSettings", { status, log }) };
+  if (data.length === 0) return { error: notFound("updateKpiSettings", { log }) };
   return {};
 }
 
-export async function updateRatingFactors(supabase: SupabaseClient, input: RatingFactorsInput): Promise<WriteResult> {
-  const { data, error } = await supabase.from("bonus_settings").update(input).eq("id", true).select("id");
-  if (error) return { error: mapPostgrestError(error, "updateRatingFactors") };
-  if (data.length === 0) return { error: NOT_FOUND };
+export async function updateRatingFactors(
+  supabase: SupabaseClient,
+  input: RatingFactorsInput,
+  log?: LogContext,
+): Promise<WriteResult> {
+  const { data, error, status } = await supabase.from("bonus_settings").update(input).eq("id", true).select("id");
+  if (error) return { error: mapPostgrestError(error, "updateRatingFactors", { status, log }) };
+  if (data.length === 0) return { error: notFound("updateRatingFactors", { log }) };
   return {};
 }

@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import {
   adminEmployeeInputSchema,
@@ -10,6 +11,7 @@ import {
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
+  const log = logContextFrom(context.locals, context.request);
   if (!supabase) {
     return context.redirect(employeesUrl({ error: { code: "not_configured" } }));
   }
@@ -22,7 +24,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   // Registering never sends email; the invite is a separate action.
-  const { error } = await createEmployee(supabase, parsed.data);
+  const { error } = await createEmployee(supabase, parsed.data, log);
   if (error) {
     return context.redirect(employeesUrl({ error }));
   }

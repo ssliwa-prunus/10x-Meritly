@@ -5,6 +5,7 @@ import JobRolesSection from "@/components/admin/JobRolesSection.astro";
 import KpiSettingsSection from "@/components/admin/KpiSettingsSection.astro";
 import RatingFactorsSection from "@/components/admin/RatingFactorsSection.astro";
 import { getMessages } from "@/lib/i18n";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import {
   getBonusSettings,
@@ -28,6 +29,7 @@ const statusFor = (name: SettingsSection) => ({
 });
 
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const log = logContextFrom(Astro.locals, Astro.request);
 
 let loadError: string | null;
 let rolesResult: Awaited<ReturnType<typeof listJobRoles>> = {};
@@ -36,7 +38,7 @@ let settingsResult: Awaited<ReturnType<typeof getBonusSettings>> = {};
 if (!supabase) {
   loadError = t.common.supabaseNotConfigured;
 } else {
-  [rolesResult, settingsResult] = await Promise.all([listJobRoles(supabase), getBonusSettings(supabase)]);
+  [rolesResult, settingsResult] = await Promise.all([listJobRoles(supabase, log), getBonusSettings(supabase, log)]);
   loadError =
     rolesResult.error || settingsResult.error === "load_failed"
       ? t.admin.loadFailed

@@ -1,5 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
 import { LOCALE_COOKIE, localeCookieOptions, resolveLocale } from "@/lib/i18n";
+import { discardUnreadBody } from "@/lib/request-body";
 import { decideAccess, matchesRoute, SET_PASSWORD_ROUTES } from "@/lib/route-access";
 import { isInviteSession } from "@/lib/set-password";
 import { createClient } from "@/lib/supabase";
@@ -55,6 +56,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     profileError: context.locals.profileError,
   });
 
+  // Early answers never reach a handler, so the request body they leave unread is released first.
+  if (decision.kind !== "allow") await discardUnreadBody(context.request);
   switch (decision.kind) {
     case "redirect":
       return context.redirect(decision.location);
@@ -69,6 +72,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Invite acceptance only: a session from a regular password sign-in cannot set a password here.
   if (matchesRoute(pathname, SET_PASSWORD_ROUTES)) {
     if (!supabase || !(await isInviteSession(supabase))) {
+      await discardUnreadBody(context.request);
       return context.redirect("/dashboard");
     }
   }

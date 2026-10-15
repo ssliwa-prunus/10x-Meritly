@@ -3,6 +3,7 @@ import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
 import EmployeeForm from "@/components/employees/EmployeeForm.astro";
 import { buttonClass } from "@/components/form-classes";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { formatPercent } from "@/lib/format";
 import { format, getMessages } from "@/lib/i18n";
@@ -30,6 +31,7 @@ const savedMessage =
   saved !== null && Object.hasOwn(savedMessages, saved) ? savedMessages[saved as keyof typeof savedMessages] : null;
 
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const log = logContextFrom(Astro.locals, Astro.request);
 
 let loadError: string | null;
 let employeesResult: Awaited<ReturnType<typeof listEmployees>> = {};
@@ -41,9 +43,9 @@ if (!supabase || !profile) {
 } else {
   [employeesResult, jobRolesResult, supervisorsResult] = await Promise.all([
     // A Supervisor lists only the employees they own, not ones they merely see through an assignment.
-    listEmployees(supabase, isAdmin ? {} : { ownerId: profile.id }),
-    listJobRoles(supabase),
-    isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
+    listEmployees(supabase, isAdmin ? {} : { ownerId: profile.id }, log),
+    listJobRoles(supabase, log),
+    isAdmin ? listSupervisors(supabase, log) : Promise.resolve({}),
   ]);
   const failed = employeesResult.error ?? jobRolesResult.error ?? supervisorsResult.error;
   loadError = failed ? t.employees.loadFailed : null;

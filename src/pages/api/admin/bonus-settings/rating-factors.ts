@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import {
   parseForm,
@@ -10,6 +11,7 @@ import {
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
+  const log = logContextFrom(context.locals, context.request);
   if (!supabase) {
     return context.redirect(settingsErrorUrl("factors", { code: "not_configured" }));
   }
@@ -19,7 +21,7 @@ export const POST: APIRoute = async (context) => {
     return context.redirect(settingsErrorUrl("factors", parsed.error));
   }
 
-  const { error } = await updateRatingFactors(supabase, parsed.data);
+  const { error } = await updateRatingFactors(supabase, parsed.data, log);
   if (error) {
     return context.redirect(settingsErrorUrl("factors", error));
   }

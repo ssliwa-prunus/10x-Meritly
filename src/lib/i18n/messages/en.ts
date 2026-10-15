@@ -59,6 +59,7 @@ export const en: Messages = {
       projects: "Projects",
       employees: "Employees",
       myBonuses: "My bonuses",
+      reports: "Reports",
     },
   },
   landing: {
@@ -399,6 +400,42 @@ export const en: Messages = {
     description:
       "Your bonus for each approved milestone, grouped by project with a subtotal per project and a total, and the figures each bonus was computed from. Approved results are final.",
     notLinked: "Your account isn't linked to an employee record yet; ask your supervisor to invite you.",
+  },
+  reports: {
+    title: "Bonus report",
+    resultsHeading: "Bonuses by employee",
+    scopeAll: "Bonuses from approved milestones across all projects, summed per employee.",
+    scopeOwn:
+      "Bonuses from approved milestones in your projects, summed per employee. If an employee also worked on another supervisor's projects, their total covers your projects only.",
+    filter: {
+      legend: "Approval period",
+      from: "Approved from",
+      to: "Approved to",
+      hint: "The day the milestone was approved (Polish time), both bounds inclusive. An empty field means no bound.",
+      submit: "Show",
+      clear: "Clear",
+    },
+    columns: {
+      employee: "Employee",
+      milestones: "Approved milestones",
+      total: "Total bonus",
+    },
+    csv: {
+      name: "Employee",
+      milestones: "Approved milestones",
+      total: "Total bonus (PLN)",
+    },
+    grandTotal: "Total",
+    downloadCsv: "Download CSV",
+    empty: "There are no approved bonuses yet.",
+    emptyInRange: "No approved bonuses in the selected period.",
+    invalidTitle: "Invalid date range.",
+    filterErrors: {
+      invalid_date: "Enter valid dates in the YYYY-MM-DD format.",
+      range_reversed: "The “from” date cannot be later than the “to” date.",
+    },
+    loadFailedTitle: "Could not load the report.",
+    loadFailed: "Could not load the bonus report. Please try again.",
   },
   admin: {
     loadFailed: "Could not load configuration. Please try again.",

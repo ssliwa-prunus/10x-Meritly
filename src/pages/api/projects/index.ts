@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import {
   adminProjectInputSchema,
@@ -11,6 +12,7 @@ import {
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
+  const log = logContextFrom(context.locals, context.request);
   if (!supabase) {
     return context.redirect(projectsUrl({ error: { code: "not_configured" } }, "new"));
   }
@@ -22,7 +24,7 @@ export const POST: APIRoute = async (context) => {
     return context.redirect(projectsUrl({ error: parsed.error }, "new"));
   }
 
-  const { data, error } = await createProject(supabase, parsed.data);
+  const { data, error } = await createProject(supabase, parsed.data, log);
   if (error || !data) {
     return context.redirect(projectsUrl({ error: error ?? { code: "save_failed" } }, "new"));
   }

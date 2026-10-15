@@ -445,7 +445,7 @@ milestone_status: open # open | done
 # Roadmap: <Project>
 
 > Derived from <source materials> + auto-researched codebase baseline.
-> Edit-in-place; archive when superseded.
+> Edit-in-place; the next milestone continues this file. Archive only when an independent roadmap replaces it.
 > Slices below are listed in dependency order. The "At a glance" table is the index.
 
 ## Milestone
@@ -646,6 +646,8 @@ Then STOP.
 
 ### Step 9: Collision check
 
+**Skip this step when opening the next milestone after a closed one** (`CLOSED → ACTIVE` in `references/milestone-state.md`): the new milestone continues the roadmap and is written in place. This step covers regeneration — re-decomposing an open milestone or replacing a legacy roadmap — and an independent roadmap the user explicitly asked for.
+
 ```bash
 test -f context/foundation/roadmap.md
 ```
@@ -763,7 +765,7 @@ STOP. Do not chain into another skill automatically — the user picks when to p
 
 9. **Self-review aborts on drift.** Missing required sections, broken dep graph, uncovered must-have FRs, invented slices, oversized slices, Foundation layer-completion, Baseline-vs-Foundations contradictions — all abort the write with a specific error. No silent patch-up.
 
-10. **Foundation-doc convention.** `roadmap.md` is a foundation doc per `context/foundation/README.md`. Default collision handling is archive-then-replace (history goes to `foundation/archive/<today>-roadmap.md`); surgical refinement is out of scope for this skill (edit by hand if you need it).
+10. **Foundation-doc convention.** `roadmap.md` is a foundation doc per `context/foundation/README.md`. Default collision handling is archive-then-replace (history goes to `foundation/archive/<today>-roadmap.md`). A successor milestone is not a collision — it continues the roadmap in place and skips Step 9 (see `references/milestone-state.md`). Surgical refinement is out of scope for this skill (edit by hand if you need it).
 
 11. **Universal language only.** No 10xDevs / cohort / certification references in any user-facing output or any artifact written to disk. The skill is a generic roadmap generator.
 

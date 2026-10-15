@@ -1,5 +1,6 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { logError, mapLoadError, type LogContext, type LogMeta } from "@/lib/error-log";
 import {
   decimalField,
   firstIssueError as firstFormIssueError,
@@ -202,21 +203,31 @@ const GUARD_ERROR_CODES: Record<string, EngagementsErrorCode> = {
   MR015: "milestone_approved",
 };
 
-function mapPostgrestError(error: PostgrestError, context: string): EngagementsError {
+/**
+ * Domain rejections (23505, the guard codes) return silently. 42501 is warned: besides a caller
+ * without access it can mean id tampering or a missing grant or policy.
+ */
+function mapPostgrestError(
+  error: PostgrestError,
+  operation: string,
+  meta: Omit<LogMeta, "mappedTo">,
+): EngagementsError {
   // The only unique key is (milestone_id, employee_id).
   if (error.code === "23505") return { code: "already_assigned", field: "employee_id" };
   // RLS or the guard's permission check rejected the row: to the caller the milestone does not exist.
-  if (error.code === "42501") return NOT_FOUND;
+  if (error.code === "42501") {
+    logError("warn", operation, error, { ...meta, mappedTo: NOT_FOUND.code });
+    return NOT_FOUND;
+  }
   if (Object.hasOwn(GUARD_ERROR_CODES, error.code)) return { code: GUARD_ERROR_CODES[error.code] };
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
+  logError("error", operation, error, meta);
   return { code: "save_failed" };
 }
 
-function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "load_failed";
+/** A write that matched no row: id tampering or an RLS regression, so it is warned. */
+function notFound(operation: string, meta: Omit<LogMeta, "status" | "mappedTo">): EngagementsError {
+  logError("warn", operation, { code: "no_rows" }, { ...meta, mappedTo: NOT_FOUND.code });
+  return NOT_FOUND;
 }
 
 interface EngagementRow extends Omit<Engagement, "time_share" | "rating"> {
@@ -242,6 +253,7 @@ const ENGAGEMENT_COLUMNS = "id, milestone_id, employee_id, time_share, rating, e
 export async function listEngagements(
   supabase: SupabaseClient,
   milestoneId: string,
+  log?: LogContext,
 ): Promise<ServiceResult<EngagementListItem[]>> {
   const engagements = await supabase
     .from("milestone_engagements")
@@ -249,7 +261,10 @@ export async function listEngagements(
     .eq("milestone_id", milestoneId)
     .overrideTypes<EngagementRow[], { merge: false }>();
 
-  if (engagements.error) return { error: mapLoadError(engagements.error, "listEngagements") };
+  const ids = { milestoneId };
+  if (engagements.error) {
+    return { error: mapLoadError("listEngagements", engagements.error, { status: engagements.status, ids, log }) };
+  }
   if (engagements.data.length === 0) return { data: [] };
 
   const employeeIds = engagements.data.map((row) => row.employee_id);
@@ -259,7 +274,9 @@ export async function listEngagements(
     .in("employee_id", employeeIds)
     .overrideTypes<TimeShareRow[], { merge: false }>();
 
-  if (totals.error) return { error: mapLoadError(totals.error, "listEngagementTimeShareTotals") };
+  if (totals.error) {
+    return { error: mapLoadError("listEngagementTimeShareTotals", totals.error, { status: totals.status, ids, log }) };
+  }
 
   const totalsById = new Map(totals.data.map((row) => [row.employee_id, row]));
 
@@ -298,6 +315,7 @@ export async function listAssignableEmployees(
   supabase: SupabaseClient,
   ownerId: string,
   milestoneId: string,
+  log?: LogContext,
 ): Promise<ServiceResult<AssignableEmployee[]>> {
   const [employees, assigned] = await Promise.all([
     supabase
@@ -313,8 +331,13 @@ export async function listAssignableEmployees(
       .overrideTypes<{ employee_id: string }[], { merge: false }>(),
   ]);
 
-  if (employees.error) return { error: mapLoadError(employees.error, "listAssignableEmployees") };
-  if (assigned.error) return { error: mapLoadError(assigned.error, "listAssignedEmployeeIds") };
+  const ids = { ownerId, milestoneId };
+  if (employees.error) {
+    return { error: mapLoadError("listAssignableEmployees", employees.error, { status: employees.status, ids, log }) };
+  }
+  if (assigned.error) {
+    return { error: mapLoadError("listAssignedEmployeeIds", assigned.error, { status: assigned.status, ids, log }) };
+  }
 
   const assignedIds = new Set(assigned.data.map((row) => row.employee_id));
   return { data: employees.data.filter((employee) => !assignedIds.has(employee.id)) };
@@ -328,14 +351,17 @@ export async function isMilestoneInProject(
   supabase: SupabaseClient,
   projectId: string,
   milestoneId: string,
+  log?: LogContext,
 ): Promise<ServiceResult<boolean>> {
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from("milestones")
     .select("id")
     .eq("id", milestoneId)
     .eq("project_id", projectId)
     .maybeSingle();
-  if (error) return { error: mapLoadError(error, "isMilestoneInProject") };
+  if (error) {
+    return { error: mapLoadError("isMilestoneInProject", error, { status, ids: { projectId, milestoneId }, log }) };
+  }
   return { data: data !== null };
 }
 
@@ -343,13 +369,15 @@ export async function createEngagement(
   supabase: SupabaseClient,
   milestoneId: string,
   input: EngagementInput,
+  log?: LogContext,
 ): Promise<WriteResult> {
-  const { data, error } = await supabase
+  const ids = { milestoneId, employeeId: input.employee_id };
+  const { data, error, status } = await supabase
     .from("milestone_engagements")
     .insert({ ...input, milestone_id: milestoneId })
     .select("id");
-  if (error) return { error: mapPostgrestError(error, "createEngagement") };
-  if (data.length === 0) return { error: NOT_FOUND };
+  if (error) return { error: mapPostgrestError(error, "createEngagement", { status, ids, log }) };
+  if (data.length === 0) return { error: notFound("createEngagement", { ids, log }) };
   return {};
 }
 
@@ -358,15 +386,17 @@ export async function updateEngagement(
   milestoneId: string,
   id: string,
   input: EngagementUpdateInput,
+  log?: LogContext,
 ): Promise<WriteResult> {
-  const { data, error } = await supabase
+  const ids = { milestoneId, engagementId: id };
+  const { data, error, status } = await supabase
     .from("milestone_engagements")
     .update(input)
     .eq("id", id)
     .eq("milestone_id", milestoneId)
     .select("id");
-  if (error) return { error: mapPostgrestError(error, "updateEngagement") };
-  if (data.length === 0) return { error: NOT_FOUND };
+  if (error) return { error: mapPostgrestError(error, "updateEngagement", { status, ids, log }) };
+  if (data.length === 0) return { error: notFound("updateEngagement", { ids, log }) };
   return {};
 }
 
@@ -374,14 +404,16 @@ export async function deleteEngagement(
   supabase: SupabaseClient,
   milestoneId: string,
   id: string,
+  log?: LogContext,
 ): Promise<WriteResult> {
-  const { data, error } = await supabase
+  const ids = { milestoneId, engagementId: id };
+  const { data, error, status } = await supabase
     .from("milestone_engagements")
     .delete()
     .eq("id", id)
     .eq("milestone_id", milestoneId)
     .select("id");
-  if (error) return { error: mapPostgrestError(error, "deleteEngagement") };
-  if (data.length === 0) return { error: NOT_FOUND };
+  if (error) return { error: mapPostgrestError(error, "deleteEngagement", { status, ids, log }) };
+  if (data.length === 0) return { error: notFound("deleteEngagement", { ids, log }) };
   return {};
 }

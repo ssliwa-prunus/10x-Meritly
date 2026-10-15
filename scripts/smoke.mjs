@@ -95,10 +95,15 @@ async function request(path, { as = "smoke", method = "GET", form } = {}) {
   });
   const setCookies = response.headers.getSetCookie();
   storeCookies(jar, response);
+  // The raw bytes, because response.text() strips the UTF-8 byte-order mark the CSV export starts with.
+  const bytes = response.status === 200 ? new Uint8Array(await response.clone().arrayBuffer()) : new Uint8Array();
   const html = response.status === 200 ? await response.text() : "";
   return {
     status: response.status,
     location: response.headers.get("location") ?? "",
+    contentType: response.headers.get("content-type") ?? "",
+    disposition: response.headers.get("content-disposition") ?? "",
+    startsWithBom: bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf,
     text: normaliseText(html),
     html,
     setCookies,
@@ -332,6 +337,66 @@ const steps = [
     () => request("/employees/not-a-uuid", { as: "supervisor" }),
     { status: 200, bodyIncludes: ["Nie znaleziono pracownika."] },
   ],
+
+  // Aggregate bonus report: Supervisor/Admin only, scoped by RLS. No exact totals: e2e runs leave
+  // approved milestones behind in the local database, so the sums grow with every run.
+  [
+    "anon page redirect to the report keeps next",
+    () => request("/reports/bonuses", { as: "anon" }),
+    { status: 302, exact: "/auth/signin?next=%2Freports%2Fbonuses" },
+  ],
+  [
+    "anon CSV redirect has no next",
+    () => request("/api/reports/bonuses.csv", { as: "anon" }),
+    { status: 302, exact: "/auth/signin" },
+  ],
+  ["employee 403 on /reports/bonuses", () => request("/reports/bonuses", { as: "employee" }), { status: 403 }],
+  [
+    "employee 403 on /api/reports/bonuses.csv",
+    () => request("/api/reports/bonuses.csv", { as: "employee" }),
+    { status: 403 },
+  ],
+  ["employee2 403 on /reports/bonuses", () => request("/reports/bonuses", { as: "employee2" }), { status: 403 }],
+  [
+    "employee2 403 on /api/reports/bonuses.csv",
+    () => request("/api/reports/bonuses.csv", { as: "employee2" }),
+    { status: 403 },
+  ],
+  [
+    "supervisor's report links each employee to their detail",
+    () => request("/reports/bonuses", { as: "supervisor" }),
+    {
+      status: 200,
+      bodyIncludes: ["Raport premii", "Local Employee 2"],
+      htmlIncludes: [`href="/employees/${EMPLOYEE_1}"`, `href="/employees/${EMPLOYEE_2}"`],
+    },
+  ],
+  [
+    "admin's report links each employee to their detail",
+    () => request("/reports/bonuses", { as: "admin" }),
+    { status: 200, htmlIncludes: [`href="/employees/${EMPLOYEE_1}"`, `href="/employees/${EMPLOYEE_2}"`] },
+  ],
+  [
+    "supervisor downloads the report as a BOM-prefixed CSV attachment",
+    () => request("/api/reports/bonuses.csv", { as: "supervisor" }),
+    {
+      status: 200,
+      contentType: "text/csv",
+      disposition: "attachment",
+      startsWithBom: true,
+      htmlIncludes: ["Local Employee 2;"],
+    },
+  ],
+  [
+    "admin downloads the report as a CSV attachment",
+    () => request("/api/reports/bonuses.csv", { as: "admin" }),
+    { status: 200, contentType: "text/csv", disposition: "attachment", startsWithBom: true },
+  ],
+  [
+    "CSV rejects an impossible date",
+    () => request("/api/reports/bonuses.csv?from=2026-02-30", { as: "supervisor" }),
+    { status: 400 },
+  ],
 ];
 
 let failed = 0;
@@ -349,6 +414,11 @@ for (const [name, run, expected] of steps) {
     if (actual.text.includes(needle)) problems.push(`body must not contain "${needle}"`);
   for (const needle of expected.htmlIncludes ?? [])
     if (!actual.html.includes(needle)) problems.push(`HTML is missing "${needle}"`);
+  if (expected.startsWithBom && !actual.startsWithBom) problems.push("expected the body to start with a UTF-8 BOM");
+  if (expected.contentType !== undefined && !actual.contentType.startsWith(expected.contentType))
+    problems.push(`expected Content-Type starting with "${expected.contentType}"`);
+  if (expected.disposition !== undefined && !actual.disposition.startsWith(expected.disposition))
+    problems.push(`expected Content-Disposition starting with "${expected.disposition}"`);
   if (expected.setsCookie !== undefined && !actual.setCookies.some((raw) => raw.startsWith(`${expected.setsCookie};`)))
     problems.push(`expected Set-Cookie "${expected.setsCookie}"`);
   if (

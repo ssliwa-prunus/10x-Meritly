@@ -1,10 +1,12 @@
 import type { APIRoute } from "astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { kpiScoresInputSchema, kpiUrl, parseForm, updateKpiScores } from "@/lib/services/payouts";
 import { firstIssueError, projectIdSchema, projectsUrl, projectUrl } from "@/lib/services/projects";
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
+  const log = logContextFrom(context.locals, context.request);
   if (!supabase) {
     return context.redirect(projectsUrl({ error: { code: "not_configured" } }));
   }
@@ -31,7 +33,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   // Filtered by id and project_id: a crafted project/milestone pair updates nothing (not_found).
-  const { error } = await updateKpiScores(supabase, projectId.data, milestoneId.data, parsed.data);
+  const { error } = await updateKpiScores(supabase, projectId.data, milestoneId.data, parsed.data, log);
   if (error) {
     return context.redirect(kpiUrl(projectId.data, milestoneId.data, { error }));
   }

@@ -1,13 +1,20 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "meritly",
-  "main": "@astrojs/cloudflare/entrypoints/server",
+  "main": "./sentry.server.config.ts",
   "compatibility_date": "2026-05-08",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist",
     "not_found_handling": "404-page",
+  },
+  // Deployed Worker reports as production; .dev.vars overrides it locally. SENTRY_DSN is a secret.
+  "vars": {
+    "SENTRY_ENVIRONMENT": "production",
+  },
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA",
   },
   "observability": {
     "enabled": true,

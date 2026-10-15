@@ -1,5 +1,14 @@
 import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import {
+  functionFallbackLevel,
+  logError,
+  logFunctionError,
+  mapLoadError,
+  readFunctionError,
+  type LogContext,
+  type LogMeta,
+} from "@/lib/error-log";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import { format, getMessages, type Locale } from "@/lib/i18n";
 import { PROJECTS_PATH } from "@/lib/services/projects";
@@ -189,19 +198,23 @@ const GUARD_ERROR_CODES: Record<string, ApprovalErrorCode> = {
   MR015: "already_approved",
 };
 
-function mapPostgrestError(error: PostgrestError, context: string): ApprovalError {
+/**
+ * Domain rejections (MR003, MR015) return silently. 42501 and MR014 are warned: they can also mean
+ * a missing grant or a broken snapshot invariant, not only a caller who may not approve.
+ */
+function mapPostgrestError(error: PostgrestError, operation: string, meta: Omit<LogMeta, "mappedTo">): ApprovalError {
   // The RPC's permission check rejected the caller (also Admins): to them the milestone does not exist.
-  if (error.code === "42501") return NOT_FOUND;
-  if (Object.hasOwn(GUARD_ERROR_CODES, error.code)) return { code: GUARD_ERROR_CODES[error.code] };
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
+  if (error.code === "42501") {
+    logError("warn", operation, error, { ...meta, mappedTo: NOT_FOUND.code });
+    return NOT_FOUND;
+  }
+  if (Object.hasOwn(GUARD_ERROR_CODES, error.code)) {
+    const code = GUARD_ERROR_CODES[error.code];
+    if (error.code === "MR014") logError("warn", operation, error, { ...meta, mappedTo: code });
+    return { code };
+  }
+  logError("error", operation, error, meta);
   return { code: "save_failed" };
-}
-
-function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "load_failed";
 }
 
 type Numeric = number | string;
@@ -264,9 +277,13 @@ const toApprovedSummary = (row: ResultHeaderRow): MilestonePayoutSummary => ({
  * Approves a milestone through approve_milestone: the RPC checks ownership, status, scores and
  * engagements, writes the frozen snapshot and sets the status to approved in one transaction.
  */
-export async function approveMilestone(supabase: SupabaseClient, milestoneId: string): Promise<WriteResult> {
-  const { error } = await supabase.rpc("approve_milestone", { p_milestone_id: milestoneId });
-  if (error) return { error: mapPostgrestError(error, "approveMilestone") };
+export async function approveMilestone(
+  supabase: SupabaseClient,
+  milestoneId: string,
+  log?: LogContext,
+): Promise<WriteResult> {
+  const { error, status } = await supabase.rpc("approve_milestone", { p_milestone_id: milestoneId });
+  if (error) return { error: mapPostgrestError(error, "approveMilestone", { status, ids: { milestoneId }, log }) };
   return {};
 }
 
@@ -282,6 +299,7 @@ export async function approveMilestone(supabase: SupabaseClient, milestoneId: st
 export async function getApprovedPayout(
   supabase: SupabaseClient,
   milestoneId: string,
+  log?: LogContext,
 ): Promise<
   ServiceResult<{
     summary: MilestonePayoutSummary;
@@ -306,8 +324,13 @@ export async function getApprovedPayout(
       .overrideTypes<ResultLineRow[], { merge: false }>(),
   ]);
 
-  if (header.error) return { error: mapLoadError(header.error, "getApprovedPayoutHeader") };
-  if (lines.error) return { error: mapLoadError(lines.error, "getApprovedPayoutLines") };
+  const ids = { milestoneId };
+  if (header.error) {
+    return { error: mapLoadError("getApprovedPayoutHeader", header.error, { status: header.status, ids, log }) };
+  }
+  if (lines.error) {
+    return { error: mapLoadError("getApprovedPayoutLines", lines.error, { status: lines.status, ids, log }) };
+  }
   if (!header.data) return { data: null };
 
   const totalContribution = lines.data.reduce((sum, row) => sum + Number(row.weighted_contribution), 0);
@@ -346,18 +369,19 @@ const NOTIFY_ERROR_CODES: Record<string, ApprovalErrorCode> = {
   notify_failed: "notify_failed",
 };
 
-/** Reads the function's `{ code }` body from an HTTP error response; null when it has none. */
-async function functionErrorCode(response: unknown): Promise<string | null> {
-  if (!(response instanceof Response)) return null;
-  try {
-    const body: unknown = await response.json();
-    if (typeof body !== "object" || body === null) return null;
-    const code = (body as Record<string, unknown>).code;
-    return typeof code === "string" ? code : null;
-  } catch {
-    return null;
-  }
-}
+/**
+ * Log level per mapped function code. A permission or input rejection is warned (it can also mean
+ * id tampering or a broken deploy), a send failure is an error; not_approved is a domain rejection
+ * and stays silent.
+ */
+const NOTIFY_LOG_LEVELS: Record<string, "warn" | "error"> = {
+  invalid_request: "warn",
+  forbidden: "warn",
+  not_found: "warn",
+  email_not_configured: "error",
+  send_failed: "error",
+  notify_failed: "error",
+};
 
 const toCount = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0);
 
@@ -391,6 +415,7 @@ export function emailNotice(result: WriteResult<NotifyCounts>): ApprovalNoticeCo
 export async function notifyMilestoneApproved(
   supabase: SupabaseClient,
   milestoneId: string,
+  log?: LogContext,
 ): Promise<WriteResult<NotifyCounts>> {
   const result = await supabase.functions.invoke("notify-milestone-approved", {
     body: { milestone_id: milestoneId },
@@ -404,13 +429,19 @@ export async function notifyMilestoneApproved(
     };
   }
 
-  if (error instanceof FunctionsHttpError) {
-    const code = await functionErrorCode(error.context);
-    if (code !== null && Object.hasOwn(NOTIFY_ERROR_CODES, code)) return { error: { code: NOTIFY_ERROR_CODES[code] } };
+  // Only an HTTP error's body code is mapped, as before; a relay error's body is logged, not trusted.
+  const info = await readFunctionError(error);
+  const meta = { ids: { milestoneId }, log };
+  const code = info.code;
+  if (error instanceof FunctionsHttpError && code !== undefined && Object.hasOwn(NOTIFY_ERROR_CODES, code)) {
+    const mappedTo = NOTIFY_ERROR_CODES[code];
+    if (Object.hasOwn(NOTIFY_LOG_LEVELS, code)) {
+      logFunctionError(NOTIFY_LOG_LEVELS[code], "notifyMilestoneApproved", info, { ...meta, mappedTo });
+    }
+    return { error: { code: mappedTo } };
   }
 
-  // eslint-disable-next-line no-console -- intentional: surfaces function failures in Workers observability logs
-  console.error("notifyMilestoneApproved failed", { name: error instanceof Error ? error.name : typeof error });
+  logFunctionError(functionFallbackLevel(error, info), "notifyMilestoneApproved", info, meta);
   return { error: { code: "notify_failed" } };
 }
 
@@ -458,10 +489,10 @@ const toBonusLine = (row: MyBonusRow): MyBonusLine => ({
  * `not_linked` is set. RLS already limits an employee to their own lines of approved milestones;
  * the employee_id filter is defence in depth.
  */
-export async function listMyBonuses(supabase: SupabaseClient): Promise<ServiceResult<MyBonuses>> {
+export async function listMyBonuses(supabase: SupabaseClient, log?: LogContext): Promise<ServiceResult<MyBonuses>> {
   // Both in parallel: RLS already limits the select to the caller's own approved lines, and the
   // employee id is applied afterwards as the defence-in-depth filter.
-  const [linked, { data, error }] = await Promise.all([
+  const [linked, { data, error, status }] = await Promise.all([
     supabase.rpc("current_employee_id"),
     supabase
       .from("milestone_result_lines")
@@ -470,11 +501,13 @@ export async function listMyBonuses(supabase: SupabaseClient): Promise<ServiceRe
       .order("milestone_name", { ascending: true })
       .overrideTypes<MyBonusRow[], { merge: false }>(),
   ]);
-  if (linked.error) return { error: mapLoadError(linked.error, "listMyBonusesEmployee") };
+  if (linked.error) {
+    return { error: mapLoadError("listMyBonusesEmployee", linked.error, { status: linked.status, log }) };
+  }
   // The function returns a scalar uuid; the untyped client types it as any, so it is narrowed here.
   const employeeId: unknown = linked.data;
   if (typeof employeeId !== "string") return { data: { lines: [], not_linked: true } };
-  if (error) return { error: mapLoadError(error, "listMyBonuses") };
+  if (error) return { error: mapLoadError("listMyBonuses", error, { status, ids: { employeeId }, log }) };
   const ownRows = data.filter((row) => row.employee_id === employeeId);
 
   return { data: { not_linked: false, lines: ownRows.map(toBonusLine) } };
@@ -490,14 +523,15 @@ export async function listMyBonuses(supabase: SupabaseClient): Promise<ServiceRe
 export async function listEmployeeHistory(
   supabase: SupabaseClient,
   employeeId: string,
+  log?: LogContext,
 ): Promise<ServiceResult<MyBonusLine[]>> {
   // Lines reference milestone_results, which references milestones: two inner embeds reach the status.
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from("milestone_result_lines")
     .select(`${MY_BONUS_COLUMNS}, milestone_results!inner(milestones!inner(status))`)
     .eq("employee_id", employeeId)
     .eq("milestone_results.milestones.status", "approved")
     .overrideTypes<MyBonusRow[], { merge: false }>();
-  if (error) return { error: mapLoadError(error, "listEmployeeHistory") };
+  if (error) return { error: mapLoadError("listEmployeeHistory", error, { status, ids: { employeeId }, log }) };
   return { data: data.map(toBonusLine) };
 }

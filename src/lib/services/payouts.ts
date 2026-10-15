@@ -1,5 +1,6 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { logError, mapLoadError, type LogContext, type LogMeta } from "@/lib/error-log";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import type { Locale } from "@/lib/i18n";
 import { PROJECTS_PATH } from "@/lib/services/projects";
@@ -165,19 +166,19 @@ const GUARD_ERROR_CODES: Record<string, KpiErrorCode> = {
   MR015: "milestone_approved",
 };
 
-function mapPostgrestError(error: PostgrestError, context: string): KpiError {
+/**
+ * Domain rejections (the guard codes) return silently. 42501 is warned: besides a caller without
+ * access it can mean id tampering or a missing grant or policy.
+ */
+function mapPostgrestError(error: PostgrestError, operation: string, meta: Omit<LogMeta, "mappedTo">): KpiError {
   // RLS or the guard's permission check rejected the row: to the caller the milestone does not exist.
-  if (error.code === "42501") return NOT_FOUND;
+  if (error.code === "42501") {
+    logError("warn", operation, error, { ...meta, mappedTo: NOT_FOUND.code });
+    return NOT_FOUND;
+  }
   if (Object.hasOwn(GUARD_ERROR_CODES, error.code)) return { code: GUARD_ERROR_CODES[error.code] };
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
+  logError("error", operation, error, meta);
   return { code: "save_failed" };
-}
-
-function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "load_failed";
 }
 
 type Numeric = number | string;
@@ -256,15 +257,21 @@ export async function updateKpiScores(
   projectId: string,
   milestoneId: string,
   input: KpiScoresInput,
+  log?: LogContext,
 ): Promise<WriteResult> {
-  const { data, error } = await supabase
+  const ids = { projectId, milestoneId };
+  const { data, error, status } = await supabase
     .from("milestones")
     .update(input)
     .eq("id", milestoneId)
     .eq("project_id", projectId)
     .select("id");
-  if (error) return { error: mapPostgrestError(error, "updateKpiScores") };
-  if (data.length === 0) return { error: NOT_FOUND };
+  if (error) return { error: mapPostgrestError(error, "updateKpiScores", { status, ids, log }) };
+  if (data.length === 0) {
+    // Matched no row: a crafted id pair or an RLS regression, so it is warned.
+    logError("warn", "updateKpiScores", { code: "no_rows" }, { ids, log, mappedTo: NOT_FOUND.code });
+    return { error: NOT_FOUND };
+  }
   return {};
 }
 
@@ -275,14 +282,20 @@ export async function updateKpiScores(
 export async function getMilestonePayout(
   supabase: SupabaseClient,
   milestoneId: string,
+  log?: LogContext,
 ): Promise<ServiceResult<{ summary: MilestonePayoutSummary | null; lines: MilestonePayoutLine[] }>> {
   const [summary, lines] = await Promise.all([
     supabase.rpc("milestone_payout_summary", { p_milestone_id: milestoneId }),
     supabase.rpc("milestone_payout_lines", { p_milestone_id: milestoneId }),
   ]);
 
-  if (summary.error) return { error: mapLoadError(summary.error, "getMilestonePayoutSummary") };
-  if (lines.error) return { error: mapLoadError(lines.error, "getMilestonePayoutLines") };
+  const ids = { milestoneId };
+  if (summary.error) {
+    return { error: mapLoadError("getMilestonePayoutSummary", summary.error, { status: summary.status, ids, log }) };
+  }
+  if (lines.error) {
+    return { error: mapLoadError("getMilestonePayoutLines", lines.error, { status: lines.status, ids, log }) };
+  }
 
   // Both functions return SETOF rows. On the untyped client overrideTypes<Row[]> rejects RPC
   // results as "single object", so the row shapes are asserted here instead.

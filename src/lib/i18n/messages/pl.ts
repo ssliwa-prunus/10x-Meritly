@@ -62,6 +62,7 @@ export const pl = {
       projects: "Projekty",
       employees: "Pracownicy",
       myBonuses: "Moje premie",
+      reports: "Raporty",
     },
   },
   landing: {
@@ -419,6 +420,45 @@ export const pl = {
       "Twoja premia za każdy zatwierdzony kamień milowy, pogrupowana według projektów, z sumą częściową dla każdego projektu i sumą całkowitą, wraz z wartościami, z których ją wyliczono. Zatwierdzone wyniki są ostateczne.",
     notLinked:
       "Twoje konto nie jest jeszcze powiązane z rekordem pracownika; poproś przełożonego o wysłanie zaproszenia.",
+  },
+  // Aggregate bonus report (/reports/bonuses) and its CSV export.
+  reports: {
+    title: "Raport premii",
+    resultsHeading: "Premie według pracowników",
+    scopeAll: "Premie z zatwierdzonych kamieni milowych we wszystkich projektach, zsumowane dla każdego pracownika.",
+    scopeOwn:
+      "Premie z zatwierdzonych kamieni milowych w Twoich projektach, zsumowane dla każdego pracownika. Jeśli pracownik pracował też w projektach innego przełożonego, jego suma obejmuje tylko Twoje projekty.",
+    filter: {
+      legend: "Okres zatwierdzenia",
+      from: "Zatwierdzone od",
+      to: "Zatwierdzone do",
+      hint: "Dzień zatwierdzenia kamienia milowego (czas polski), obie granice włącznie. Puste pole oznacza brak granicy.",
+      submit: "Pokaż",
+      clear: "Wyczyść",
+    },
+    columns: {
+      employee: "Pracownik",
+      milestones: "Zatwierdzone kamienie milowe",
+      total: "Suma premii",
+    },
+    // Header row of the CSV export; amounts in the file have no currency sign.
+    csv: {
+      name: "Pracownik",
+      milestones: "Liczba zatwierdzonych kamieni milowych",
+      total: "Suma premii (PLN)",
+    },
+    grandTotal: "Razem",
+    downloadCsv: "Pobierz CSV",
+    empty: "Nie ma jeszcze zatwierdzonych premii.",
+    emptyInRange: "Brak zatwierdzonych premii w wybranym okresie.",
+    invalidTitle: "Nieprawidłowy zakres dat.",
+    // Keyed by the parseBonusReportFilter error code.
+    filterErrors: {
+      invalid_date: "Podaj prawidłowe daty w formacie RRRR-MM-DD.",
+      range_reversed: "Data „od” nie może być późniejsza niż data „do”.",
+    },
+    loadFailedTitle: "Nie udało się wczytać raportu.",
+    loadFailed: "Nie udało się wczytać raportu premii. Spróbuj ponownie.",
   },
   admin: {
     loadFailed: "Nie udało się wczytać konfiguracji. Spróbuj ponownie.",

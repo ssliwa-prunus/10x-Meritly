@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 import {
   approvalErrorMessage,
   approvalNoticeMessage,
+  approveMilestone,
   emailNotice,
   getApprovedPayout,
   listEmployeeHistory,
@@ -19,6 +20,9 @@ import {
 // header) and the plan's notice rule — failed call → email_failed, unconfirmed emails → email_partial,
 // emails held by another request → email_pending, otherwise no notice. No network: functions.invoke
 // is faked with what supabase-js returns for a 2xx body, a non-2xx response or a transport failure.
+// Log levels and payloads: context/changes/log-mapped-errors/plan.md (Levels, Phase 2) — function
+// forbidden/not_found/invalid_request warn, failure codes are errors, not_approved is silent, the
+// fall-through is an error; 42501 and MR014 warn, MR003/MR015 are silent.
 
 const MILESTONE_ID = "00000000-0000-4000-8000-000000000023";
 
@@ -29,22 +33,45 @@ function fakeClient(result: { data: unknown; error: unknown }) {
 
 const ok = (body: unknown) => fakeClient({ data: body, error: null });
 
-/** A client whose every query (any chain of builder calls, then awaited) fails with a database error. */
-function failingClient(): SupabaseClient {
-  const result = { data: null, error: { code: "XX000", message: "boom" } };
+interface QueryResult {
+  data: unknown;
+  error: unknown;
+  status?: number;
+}
+
+/** A query builder that resolves to `result` after any chain of builder calls. */
+function resolving(result: QueryResult): object {
   const builder: object = new Proxy(
     {},
     {
       get: (_target, prop) =>
         prop === "then"
-          ? (resolve: (value: typeof result) => void) => {
+          ? (resolve: (value: QueryResult) => void) => {
               resolve(result);
             }
           : () => builder,
     },
   );
-  return { from: () => builder, rpc: () => builder } as unknown as SupabaseClient;
+  return builder;
 }
+
+/** A client whose rpc calls resolve to `rpcResult` and table queries to the next of `fromResults`. */
+function queryClient(rpcResult: QueryResult, ...fromResults: QueryResult[]): SupabaseClient {
+  const queue = fromResults.length > 0 ? fromResults : [rpcResult];
+  let call = 0;
+  return {
+    from: () => resolving(queue[Math.min(call++, queue.length - 1)]),
+    rpc: () => resolving(rpcResult),
+  } as unknown as SupabaseClient;
+}
+
+const DB_ERROR: QueryResult = { data: null, error: { code: "XX000", message: "boom" }, status: 500 };
+
+/** A client whose every query (any chain of builder calls, then awaited) fails with a database error. */
+const failingClient = () => queryClient(DB_ERROR);
+
+const rejecting = (code: string, status = 400) =>
+  queryClient({ data: null, error: { code, message: `rejected ${code}` }, status });
 
 const httpError = (status: number, body: string) =>
   fakeClient({
@@ -59,9 +86,11 @@ async function approveOutcome(client: SupabaseClient) {
 }
 
 let consoleError: MockInstance;
+let consoleWarn: MockInstance;
 
 beforeEach(() => {
   consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
@@ -132,6 +161,103 @@ describe("notifyMilestoneApproved", () => {
   });
 
   it.each([
+    [400, "invalid_request", "invalid_id"],
+    [403, "forbidden", "not_found"],
+    [404, "not_found", "not_found"],
+  ])("warns HTTP %i { code: %s } with the status and mappedTo %s", async (status, code, mappedTo) => {
+    await notifyMilestoneApproved(httpError(status, JSON.stringify({ code })).client, MILESTONE_ID, { userId: "u-1" });
+    expect(consoleWarn).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
+      name: "FunctionsHttpError",
+      status,
+      code,
+      milestoneId: MILESTONE_ID,
+      userId: "u-1",
+      mappedTo,
+    });
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [500, "email_not_configured"],
+    [502, "send_failed"],
+    [500, "notify_failed"],
+  ])("logs HTTP %i { code: %s } at error level with the status", async (status, code) => {
+    await notifyMilestoneApproved(httpError(status, JSON.stringify({ code })).client, MILESTONE_ID);
+    expect(consoleError).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
+      name: "FunctionsHttpError",
+      status,
+      code,
+      milestoneId: MILESTONE_ID,
+      mappedTo: code,
+    });
+    expect(consoleWarn).not.toHaveBeenCalled();
+  });
+
+  it("not_approved is a domain rejection: nothing logged", async () => {
+    await notifyMilestoneApproved(httpError(409, JSON.stringify({ code: "not_approved" })).client, MILESTONE_ID);
+    expect(consoleWarn).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("logs an unmapped HTML 502 at error level with status 502", async () => {
+    await notifyMilestoneApproved(httpError(502, "<html>Bad gateway</html>").client, MILESTONE_ID);
+    expect(consoleError).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
+      name: "FunctionsHttpError",
+      status: 502,
+      milestoneId: MILESTONE_ID,
+    });
+  });
+
+  it("warns on an unknown code from a 4xx (contract drift), with its status and code", async () => {
+    await notifyMilestoneApproved(httpError(409, JSON.stringify({ code: "boom" })).client, MILESTONE_ID);
+    expect(consoleWarn).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
+      name: "FunctionsHttpError",
+      status: 409,
+      code: "boom",
+      milestoneId: MILESTONE_ID,
+    });
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["an unknown code from a 5xx", 500, "boom"],
+    ["the gateway's NOT_FOUND for an undeployed function", 404, "NOT_FOUND"],
+  ])("logs %s at error level (outage)", async (_label, status, code) => {
+    await notifyMilestoneApproved(httpError(status, JSON.stringify({ code })).client, MILESTONE_ID);
+    expect(consoleError).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
+      name: "FunctionsHttpError",
+      status,
+      code,
+      milestoneId: MILESTONE_ID,
+    });
+    expect(consoleWarn).not.toHaveBeenCalled();
+  });
+
+  it("logs a network error with its cause", async () => {
+    const { client } = fakeClient({ data: null, error: new FunctionsFetchError(new TypeError("fetch failed")) });
+    await notifyMilestoneApproved(client, MILESTONE_ID);
+    expect(consoleError).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
+      name: "FunctionsFetchError",
+      causeName: "TypeError",
+      causeMessage: "fetch failed",
+      milestoneId: MILESTONE_ID,
+    });
+  });
+
+  it("does not map a relay error's body code: notify_failed, logged with status and code", async () => {
+    const response = new Response(JSON.stringify({ code: "forbidden" }), { status: 502 });
+    const { client } = fakeClient({ data: null, error: new FunctionsRelayError(response) });
+    expect(await notifyMilestoneApproved(client, MILESTONE_ID)).toEqual({ error: { code: "notify_failed" } });
+    expect(consoleError).toHaveBeenCalledWith("notifyMilestoneApproved failed", {
+      name: "FunctionsRelayError",
+      status: 502,
+      code: "forbidden",
+      milestoneId: MILESTONE_ID,
+    });
+    expect(consoleWarn).not.toHaveBeenCalled();
+  });
+
+  it.each([
     ["an unknown code", httpError(500, JSON.stringify({ code: "boom" }))],
     ["an inherited property name as code", httpError(500, JSON.stringify({ code: "toString" }))],
     ["a non-string code", httpError(500, JSON.stringify({ code: 7 }))],
@@ -146,7 +272,10 @@ describe("notifyMilestoneApproved", () => {
     const { result, notice } = await approveOutcome(client);
     expect(result).toEqual({ error: { code: "notify_failed" } });
     expect(notice).toBe("email_failed");
-    expect(consoleError).toHaveBeenCalledWith("notifyMilestoneApproved failed", expect.any(Object));
+    // Unknown codes warn, everything else errors (pinned above); either way exactly one line is logged.
+    expect([...consoleError.mock.calls, ...consoleWarn.mock.calls]).toEqual([
+      ["notifyMilestoneApproved failed", expect.any(Object)],
+    ]);
   });
 });
 
@@ -212,16 +341,93 @@ describe("approvalErrorMessage", () => {
 });
 
 describe("load errors", () => {
+  const EMPLOYEE_ID = "00000000-0000-4000-8000-000000000002";
+  const DB_PAYLOAD = { code: "XX000", status: 500, message: "boom" };
+
   it("listMyBonuses returns the load_failed code, never text", async () => {
-    expect(await listMyBonuses(failingClient())).toEqual({ error: "load_failed" });
-    expect(consoleError).toHaveBeenCalledWith("listMyBonusesEmployee failed", expect.any(Object));
+    expect(await listMyBonuses(failingClient(), { userId: "u-1" })).toEqual({ error: "load_failed" });
+    expect(consoleError).toHaveBeenCalledWith("listMyBonusesEmployee failed", { ...DB_PAYLOAD, userId: "u-1" });
+  });
+
+  it("listMyBonuses logs the linked employee id when the lines fail", async () => {
+    const client = queryClient({ data: EMPLOYEE_ID, error: null, status: 200 }, DB_ERROR);
+    expect(await listMyBonuses(client)).toEqual({ error: "load_failed" });
+    expect(consoleError).toHaveBeenCalledWith("listMyBonuses failed", { ...DB_PAYLOAD, employeeId: EMPLOYEE_ID });
   });
 
   it("listEmployeeHistory returns the load_failed code", async () => {
-    expect(await listEmployeeHistory(failingClient(), MILESTONE_ID)).toEqual({ error: "load_failed" });
+    expect(await listEmployeeHistory(failingClient(), EMPLOYEE_ID)).toEqual({ error: "load_failed" });
+    expect(consoleError).toHaveBeenCalledWith("listEmployeeHistory failed", { ...DB_PAYLOAD, employeeId: EMPLOYEE_ID });
   });
 
   it("getApprovedPayout returns the load_failed code", async () => {
     expect(await getApprovedPayout(failingClient(), MILESTONE_ID)).toEqual({ error: "load_failed" });
+    expect(consoleError).toHaveBeenCalledWith("getApprovedPayoutHeader failed", {
+      ...DB_PAYLOAD,
+      milestoneId: MILESTONE_ID,
+    });
+  });
+
+  it("getApprovedPayout logs the lines query when only it fails", async () => {
+    const client = queryClient(DB_ERROR, { data: null, error: null, status: 200 }, DB_ERROR);
+    expect(await getApprovedPayout(client, MILESTONE_ID)).toEqual({ error: "load_failed" });
+    expect(consoleError).toHaveBeenCalledWith("getApprovedPayoutLines failed", {
+      ...DB_PAYLOAD,
+      milestoneId: MILESTONE_ID,
+    });
+  });
+});
+
+describe("approveMilestone", () => {
+  it("42501 warns with mappedTo not_found and returns not_found", async () => {
+    expect(await approveMilestone(rejecting("42501", 403), MILESTONE_ID, { requestId: "ray-1" })).toEqual({
+      error: { code: "not_found" },
+    });
+    expect(consoleWarn).toHaveBeenCalledWith("approveMilestone failed", {
+      code: "42501",
+      status: 403,
+      message: "rejected 42501",
+      milestoneId: MILESTONE_ID,
+      requestId: "ray-1",
+      mappedTo: "not_found",
+    });
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("MR014 warns with mappedTo not_approvable", async () => {
+    expect(await approveMilestone(rejecting("MR014"), MILESTONE_ID)).toEqual({ error: { code: "not_approvable" } });
+    expect(consoleWarn).toHaveBeenCalledWith("approveMilestone failed", {
+      code: "MR014",
+      status: 400,
+      message: "rejected MR014",
+      milestoneId: MILESTONE_ID,
+      mappedTo: "not_approvable",
+    });
+  });
+
+  it.each([
+    ["MR003", "project_closed"],
+    ["MR015", "already_approved"],
+  ])("%s is a domain rejection: %s, nothing logged", async (code, expected) => {
+    expect(await approveMilestone(rejecting(code), MILESTONE_ID)).toEqual({ error: { code: expected } });
+    expect(consoleWarn).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("an unexpected error is logged at error level as save_failed", async () => {
+    expect(await approveMilestone(failingClient(), MILESTONE_ID)).toEqual({ error: { code: "save_failed" } });
+    expect(consoleError).toHaveBeenCalledWith("approveMilestone failed", {
+      code: "XX000",
+      status: 500,
+      message: "boom",
+      milestoneId: MILESTONE_ID,
+    });
+    expect(consoleWarn).not.toHaveBeenCalled();
+  });
+
+  it("a successful approval logs nothing", async () => {
+    expect(await approveMilestone(queryClient({ data: null, error: null, status: 204 }), MILESTONE_ID)).toEqual({});
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 });

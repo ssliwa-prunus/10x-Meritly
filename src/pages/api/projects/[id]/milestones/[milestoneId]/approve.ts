@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import {
   approveInputSchema,
@@ -13,6 +14,7 @@ import { firstIssueError, projectIdSchema, projectsUrl, projectUrl } from "@/lib
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
+  const log = logContextFrom(context.locals, context.request);
   if (!supabase) {
     return context.redirect(projectsUrl({ error: { code: "not_configured" } }));
   }
@@ -35,7 +37,7 @@ export const POST: APIRoute = async (context) => {
 
   // The milestone must belong to the project in the URL, so a crafted project/milestone pair
   // cannot approve under one project and redirect to another. The RPC still guards the data itself.
-  const inProject = await isMilestoneInProject(supabase, projectId.data, milestoneId.data);
+  const inProject = await isMilestoneInProject(supabase, projectId.data, milestoneId.data, log);
   if (inProject.error) {
     return context.redirect(projectUrl(projectId.data, "milestones", { error: { code: "save_failed" } }));
   }
@@ -48,13 +50,13 @@ export const POST: APIRoute = async (context) => {
     return context.redirect(approvalUrl(projectId.data, milestoneId.data, { error: parsed.error }));
   }
 
-  const { error } = await approveMilestone(supabase, milestoneId.data);
+  const { error } = await approveMilestone(supabase, milestoneId.data, log);
   if (error) {
     return context.redirect(approvalUrl(projectId.data, milestoneId.data, { error }));
   }
 
   // Approval has committed; the bonus emails go out afterwards and never undo it. Anything not
   // confirmed by the provider stays unsent and shows as "Emails sent: N of M" with a re-send form.
-  const notice = emailNotice(await notifyMilestoneApproved(supabase, milestoneId.data));
+  const notice = emailNotice(await notifyMilestoneApproved(supabase, milestoneId.data, log));
   return context.redirect(approvalUrl(projectId.data, milestoneId.data, { saved: "approved", notice }));
 };
