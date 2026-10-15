@@ -332,26 +332,26 @@ Additive: one new function, no table or policy changes, no data backfill. Rollba
 
 #### Automated
 
-- [x] 3.1 Unit tests pass (route matrix, classification, i18n): `npm test`
-- [x] 3.2 Lint and UI literal check pass: `npm run lint` and `npm run lint:ui`
-- [x] 3.3 Type check and build pass: `npx astro check` and `npm run build`
+- [x] 3.1 Unit tests pass (route matrix, classification, i18n): `npm test` — 47394ed
+- [x] 3.2 Lint and UI literal check pass: `npm run lint` and `npm run lint:ui` — 47394ed
+- [x] 3.3 Type check and build pass: `npx astro check` and `npm run build` — 47394ed
 
 #### Manual
 
-- [x] 3.4 As the seeded supervisor: Topbar shows "Raporty", the report lists both seeded employees with counts and totals, the grand total equals their sum, names open `/employees/[id]`
-- [x] 3.5 A date range excluding today shows the empty state; a reversed range shows the validation Alert
-- [x] 3.6 The downloaded CSV opens in Polish Excel with three separate columns and correct `,` decimals
-- [x] 3.7 As the seeded employee: `/reports/bonuses` and the CSV URL return 403; the Topbar has no Reports link
-- [x] 3.8 The page is usable at phone width
+- [x] 3.4 As the seeded supervisor: Topbar shows "Raporty", the report lists both seeded employees with counts and totals, the grand total equals their sum, names open `/employees/[id]` — 47394ed
+- [x] 3.5 A date range excluding today shows the empty state; a reversed range shows the validation Alert — 47394ed
+- [x] 3.6 The downloaded CSV opens in Polish Excel with three separate columns and correct `,` decimals — 47394ed
+- [x] 3.7 As the seeded employee: `/reports/bonuses` and the CSV URL return 403; the Topbar has no Reports link — 47394ed
+- [x] 3.8 The page is usable at phone width — 47394ed
 
 ### Phase 4: Smoke, e2e and docs
 
 #### Automated
 
-- [ ] 4.1 Smoke passes against a local preview: `npm run smoke`
-- [ ] 4.2 E2E passes: `npm run test:e2e`
-- [ ] 4.3 Full unit suite still passes: `npm test`
+- [x] 4.1 Smoke passes against a local preview: `npm run smoke`
+- [x] 4.2 E2E passes: `npm run test:e2e`
+- [x] 4.3 Full unit suite still passes: `npm test`
 
 #### Manual
 
-- [ ] 4.4 The Playwright report shows the new spec green with a captured CSV
+- [x] 4.4 The Playwright report shows the new spec green with a captured CSV
