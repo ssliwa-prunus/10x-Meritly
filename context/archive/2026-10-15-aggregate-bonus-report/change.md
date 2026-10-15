@@ -1,10 +1,10 @@
 ---
 change_id: aggregate-bonus-report
 title: Aggregate bonus report
-status: impl_reviewed
+status: archived
 created: 2026-10-15
 updated: 2026-10-15
-archived_at: null
+archived_at: 2026-10-15T16:03:09Z
 ---
 
 ## Notes
