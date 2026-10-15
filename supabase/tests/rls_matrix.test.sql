@@ -27,7 +27,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(286);
+select plan(287);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so owners are explicit)
@@ -397,6 +397,29 @@ select results_eq(
   $$ values ('00000000-0000-4000-8000-000000000731'::uuid, 'pgTAP Matrix E1'::text, 2, 5784.79::numeric),
             ('00000000-0000-4000-8000-000000000732'::uuid, 'pgTAP Matrix E2'::text, 1, 4349.81::numeric) $$,
   'S-07: AD calling bonus_report gets every approved fixture line, without the injected Draft line'
+);
+
+-- The cell above pins the fixture employees only (the seed adds more). This one pins AD's whole
+-- report against an independent aggregate computed as the superuser over every approved line in
+-- the database, so the Admin path cannot drop or mis-sum anyone.
+reset role;
+set local request.jwt.claims = '{}';
+
+create temp table s07_all_approved on commit drop as
+  select l.employee_id, count(*)::integer as milestone_count, sum(l.bonus) as total_bonus
+  from public.milestone_result_lines l
+  join public.milestones m on m.id = l.milestone_id
+  where m.status = 'approved'
+  group by l.employee_id;
+grant select on s07_all_approved to authenticated;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000705"}';
+
+select set_eq(
+  $$ select employee_id, milestone_count, total_bonus from public.bonus_report() $$,
+  $$ select employee_id, milestone_count, total_bonus from s07_all_approved $$,
+  'S-07: AD calling bonus_report gets every approved line in the database, summed per employee'
 );
 
 reset role;

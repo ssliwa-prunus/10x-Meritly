@@ -37,12 +37,22 @@ export async function getBonusReport(
   supabase: SupabaseClient,
   filter: BonusReportFilter,
 ): Promise<ServiceResult<BonusReportRow[]>> {
-  const result = await supabase.rpc("bonus_report", { p_from: filter.from, p_to: filter.to });
+  // count: "exact" makes a truncated result detectable: PostgREST caps every response at max_rows
+  // (supabase/config.toml), and a silently shortened payroll report would be wrong, not just short.
+  const result = await supabase.rpc("bonus_report", { p_from: filter.from, p_to: filter.to }, { count: "exact" });
   if (result.error) return { error: mapLoadError(result.error, "getBonusReport") };
 
   // The function returns SETOF rows. On the untyped client overrideTypes<Row[]> rejects RPC results
   // as "single object", so the row shape is asserted here instead.
   const rows = (result.data ?? []) as BonusReportRpcRow[];
+  if (result.count !== null && result.count > rows.length) {
+    // eslint-disable-next-line no-console -- intentional: a truncated report must be visible in Workers logs
+    console.error("getBonusReport failed", {
+      code: "truncated",
+      message: `${rows.length} of ${result.count} rows returned`,
+    });
+    return { error: "load_failed" };
+  }
   return {
     data: rows.map((row) => ({
       employee_id: row.employee_id,

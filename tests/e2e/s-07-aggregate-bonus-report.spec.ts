@@ -8,8 +8,9 @@
 // local database until `npx supabase db reset --local`. The seed alone gives Local Employee one
 // approved milestone and 600,00 zł (supabase/seed.sql), so the floor is count ≥ 1 and total ≥ 600,00 zł.
 // The page and the CSV are compared with each other instead, and the empty state uses a range that
-// starts tomorrow (Europe/Warsaw): approvals are stamped with now(), so no run, past or concurrent,
-// can ever land in it. This test creates no data.
+// starts a year from today (Europe/Warsaw): approvals are stamped with now(), so no past run can be in
+// it, and a concurrent one cannot reach it either (a range starting tomorrow could, for a run that
+// straddles midnight). This test creates no data.
 import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
 
@@ -30,11 +31,11 @@ function toGrosze(amount: string): number {
   return Number(match[1]) * 100 + Number(match[2]);
 }
 
-/** The calendar day after today in Europe/Warsaw, as YYYY-MM-DD. */
-function tomorrowInWarsaw(): string {
+/** Today's date in Europe/Warsaw one year ahead, as YYYY-MM-DD: a day no approval can fall on. */
+function aYearFromTodayInWarsaw(): string {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw" }).format(new Date());
   const next = new Date(`${today}T00:00:00Z`);
-  next.setUTCDate(next.getUTCDate() + 1);
+  next.setUTCFullYear(next.getUTCFullYear() + 1);
   return next.toISOString().slice(0, 10);
 }
 
@@ -95,7 +96,7 @@ test.describe("S-07: aggregate bonus report", () => {
     }).toPass();
 
     // A range no approval can fall in shows the empty state instead of the table.
-    await page.getByLabel("Zatwierdzone od").fill(tomorrowInWarsaw());
+    await page.getByLabel("Zatwierdzone od").fill(aYearFromTodayInWarsaw());
     await page.getByRole("button", { name: "Pokaż", exact: true }).click();
     await expect(page).toHaveURL(/\/reports\/bonuses\?from=\d{4}-\d{2}-\d{2}/);
     await expect(page.getByText("Brak zatwierdzonych premii w wybranym okresie.")).toBeVisible();
