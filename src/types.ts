@@ -290,6 +290,24 @@ export interface EmployeeHistory {
   line_count: number;
 }
 
+/**
+ * Row of `public.bonus_report(p_from, p_to)`: one employee's approved bonuses summed over the
+ * caller's visible milestones (RLS scope). `employee_name` is the snapshot name of their most
+ * recent approved line; `milestone_count` includes 0 zł lines.
+ */
+export interface BonusReportRow {
+  employee_id: string;
+  employee_name: string;
+  milestone_count: number;
+  total_bonus: number;
+}
+
+/** Approval-date range of the bonus report, ISO `YYYY-MM-DD`, inclusive; null = unbounded. */
+export interface BonusReportFilter {
+  from: string | null;
+  to: string | null;
+}
+
 /** Header of `/employees/[id]`: the same shape as a list row, open total as the caller sees it. */
 export type EmployeeDetail = EmployeeListItem;
 

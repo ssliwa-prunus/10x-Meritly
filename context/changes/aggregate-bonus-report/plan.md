@@ -312,21 +312,21 @@ Additive: one new function, no table or policy changes, no data backfill. Rollba
 
 #### Automated
 
-- [x] 1.1 Migration applies: `npx supabase migration up --local`
-- [x] 1.2 pgTAP passes including the new cells: `npx supabase test db`
+- [x] 1.1 Migration applies: `npx supabase migration up --local` — fa83003
+- [x] 1.2 pgTAP passes including the new cells: `npx supabase test db` — fa83003
 
 #### Manual
 
-- [x] 1.3 In Supabase Studio (local), calling `bonus_report()` as the seeded supervisor returns the two seeded employees from "Approved Demo Project" and nothing from Draft milestones
+- [x] 1.3 In Supabase Studio (local), calling `bonus_report()` as the seeded supervisor returns the two seeded employees from "Approved Demo Project" and nothing from Draft milestones — fa83003
 
 ### Phase 2: Service and pure helpers
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass: `npm test`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Type check passes: `npx astro check`
-- [ ] 2.4 Mutation score for the helper is reviewed: `npm run test:mutation -- --mutate src/lib/bonus-report.ts`
+- [x] 2.1 Unit tests pass: `npm test`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Type check passes: `npx astro check`
+- [x] 2.4 Mutation score for the helper is reviewed: `npm run test:mutation -- --mutate src/lib/bonus-report.ts`
 
 ### Phase 3: Page, CSV endpoint and routing
 
