@@ -16,6 +16,8 @@ Within `## Progress` only, collect completed `- [x]` rows ending in ` — <sha>`
 - For a resolved commit, run `git merge-base --is-ancestor <resolved-sha> <target-oid>` and inspect the exit code: **0** = present in target history, **1** = not in target history, **anything else** = check failed. Retain SHAs already in history, including ordinary merges.
 - In a shallow or incomplete repository, a negative ancestry result is inconclusive until relevant history is fetched/deepened successfully. If it cannot be completed, report incomplete history instead of “not integrated”. Missing objects likewise do not prove a squash. Show affected row IDs and the actual failure reason; with incomplete data, warn without recommending replacement.
 
+Every SHA diagnostic names the commit: short SHA plus subject from `git log -1 --format='%h %s' <sha>` (for a missing object, the suffix as written and `object missing`), the affected row IDs, and the target ref with its snapshot OID — for example `Row 1.1: 40b1647 "feat(x): add Y (p1)" is not in origin/master @ 137fc16`.
+
 ## Establish the integration commit
 
 For resolved SHAs conclusively outside the complete target history, inspect the associated **merged implementation PR**. Its merge commit is a candidate only when the PR commit list links the old SHAs to it and the PR diff plus the candidate's diff demonstrate that it integrates the implementation covered by those rows. Inspect the actual code changes, not only filenames. Several unrelated PRs or changes cannot be mapped wholesale to one commit.

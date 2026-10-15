@@ -257,9 +257,9 @@ Alongside the sequence:
 
   2. **Compute the staging set.** Steps 2–4 already ran once as gate-stack step 2; re-run them here so anything a gate fix touched gets captured. When nothing changed since, they are a no-op. Take the touched-file set maintained during the phase (see "Tracking files touched during a phase" above) and union it with `{context/changes/<change-id>/plan.md}`. The plan file is always staged because each phase produces at least one Edit to its `## Progress` section.
 
-  3. **Detect unrelated dirty paths.** Run `git status --porcelain` and intersect with paths _outside_ the staging set. If the dirty-but-untouched set is non-empty, present the offending paths and use `AskUserQuestion`:
+  3. **Detect unrelated dirty paths.** Run `git status --porcelain` and intersect with paths _outside_ the staging set. If the dirty-but-untouched set is non-empty, list the offending paths (with their `git status --short` codes) in a visible chat message, then use `AskUserQuestion`, naming the paths in the question text too:
 
-     - question: "<N> unrelated path(s) are dirty. How should I handle them?"
+     - question: "<N> unrelated path(s) are dirty: <path>, <path>, ... How should I handle them?"
        header: "Dirty paths"
        options:
        - label: "Continue — stage only the planned set (Recommended)"
@@ -282,9 +282,27 @@ Alongside the sequence:
 
      Set `SHA=""` and skip to step 8.
 
-  6. **Propose a Conventional-Commits message.** Build a subject line in the form `<type>(<change-id>): <phase title> (p<N>)`, where `<type>` is one of `feat / fix / chore / refactor / docs` chosen from the phase's nature (e.g., `feat` for new user-visible behavior, `chore` for prompt/doc edits, `refactor` for restructuring without behavior change). The phase title is the meaningful part and leads; the `(p<N>)` suffix carries the phase index. Build a short body listing the touched files, plus the `Refs:` line from "Tracking issue/task references for commits" when applicable. Use `AskUserQuestion`:
+  6. **Propose a Conventional-Commits message.** Build a subject line in the form `<type>(<change-id>): <phase title> (p<N>)`, where `<type>` is one of `feat / fix / chore / refactor / docs` chosen from the phase's nature (e.g., `feat` for new user-visible behavior, `chore` for prompt/doc edits, `refactor` for restructuring without behavior change). The phase title is the meaningful part and leads; the `(p<N>)` suffix carries the phase index. Build a short body listing the touched files, plus the `Refs:` line from "Tracking issue/task references for commits" when applicable.
 
-     - question: "Approve commit message?"
+     **Show what will be committed before asking.** Run `git diff --cached --stat` (the staged set is exactly what the commit will contain) and write this as plain assistant text in the same response, before the tool call — a response that opens with the question tool call here is wrong:
+
+     ```
+     Proposed commit for Phase [N]:
+
+     Files (git diff --cached --stat):
+      <path> | <changes>
+      ...
+      <N> files changed, <X> insertions(+), <Y> deletions(-)
+
+     Message:
+     <subject>
+
+     <body>
+     ```
+
+     Then use `AskUserQuestion`, repeating the subject and the staged files with their `--stat` counts in the question text so they are visible even where the host shows only the dialog. Without a native question tool, ask the same question as plain text after that message and wait for the answer:
+
+     - question: "Approve commit message?\n<subject>\nFiles (<N>, +<X> −<Y>): <path> (+a −b), <path> (+c −d), ..."
        header: "Commit msg"
        options:
        - label: "Approve as proposed (Recommended)"
@@ -309,7 +327,7 @@ Alongside the sequence:
 
      Never pass `--no-verify`, `--amend`, or signing-bypass flags. If a pre-commit hook fails, fix the underlying issue and create a NEW commit — the original commit did NOT happen, so amending would touch the previous phase's commit instead.
 
-  8. **Capture the short SHA.** Run `git rev-parse --short HEAD` and store as `SHA`. Skip this step if `SHA=""` was set by step 5.
+  8. **Capture the short SHA.** Run `git rev-parse --short HEAD` and store as `SHA`, then print `Committed: <SHA> <subject>`. Skip this step if `SHA=""` was set by step 5.
 
   9. **Write the SHA back into Progress.** For every Progress row flipped during this phase, run a targeted Edit:
 
@@ -327,7 +345,7 @@ Alongside the sequence:
   Use `AskUserQuestion` to present the decision:
 
   AskUserQuestion:
-  - question: "Phase [N] complete. How to proceed?"
+  - question: "Phase [N] complete (commit <SHA> <subject>; \"no commit\" for an empty diff). How to proceed?"
     header: "Next phase"
     options:
     - label: "Continue to Phase [N+1] — delegate"
@@ -409,7 +427,7 @@ When every `- [ ]` in the entire `## Progress` section is now `- [x]`:
 4. **Run the epilogue commit.** The final phase's commit cannot contain its own SHA (chicken-and-egg), so the SHA write-back into the final phase's Progress rows plus the `change.md` status flip both sit dirty in the working tree after the final phase ritual returns. Author one closing commit to land them — otherwise `/10x-archive`'s hard-refusal gate (uncommitted paths inside the change folder) will block. Steps:
    1. Stage exactly `context/changes/<change-id>/plan.md` and `context/changes/<change-id>/change.md` (explicit paths, no `git add -A`).
    2. Run `git diff --cached --quiet`; if exit code 0, skip the epilogue (nothing trailing to commit) and stop here.
-   3. Propose subject `chore(<change-id>): close out plan (epilogue)` with a short body noting the plan's final SHA write-back + change.md → implemented, plus the `Refs:` line from "Tracking issue/task references for commits" when applicable. Use AskUserQuestion to approve as proposed / edit subject / override entirely (same options as the phase ritual).
+   3. Propose subject `chore(<change-id>): close out plan (epilogue)` with a short body noting the plan's final SHA write-back + change.md → implemented, plus the `Refs:` line from "Tracking issue/task references for commits" when applicable. Show what will be committed exactly as in the phase ritual (visible message with `git diff --cached --stat` and the full message, then the subject and file paths in the question text), then use AskUserQuestion to approve as proposed / edit subject / override entirely (same options as the phase ritual).
    4. Commit via heredoc per the global protocol (never `--no-verify` / `--amend`).
    5. Do NOT write the epilogue's own SHA back into the plan — its only job is to land the trailing edits cleanly.
 

@@ -29,6 +29,8 @@ First route the invocation: `/10x-plan <change-id> save` (also `$10x-plan <chang
 
 Before the first question, check the tool actually available in the current session. In Codex CLI/app-server, native `request_user_input` requires **Plan collaboration mode**. Invoking this skill does not change the host's mode, and `codex exec` is not an interactive question entrypoint. The host/controller must start the interactive turn in Plan mode. In OpenCode, use a session whose native `question` tool has a connected question client (for example, its interactive terminal); an unattended text-only run is not evidence that the user can answer. If the required native tool is unavailable, name the missing capability and stop before assuming answers or creating the plan. Recommend switching to Plan collaboration mode specifically for Codex; for OpenCode, reconnect an interactive question client and resume the session. Do not claim a question was submitted when you only printed prose. An explicit noninteractive task that stops for missing prerequisites may still report those prerequisites without entering the interview.
 
+**Show what you ask about.** Every approval or confirmation question (complexity, approach, phase structure) must carry its subject. First write the summary the step prescribes as plain assistant text in the same response, before the tool call; a response that opens with the question tool call at such a step is wrong. Also put a compact form of that subject into the `question` text itself — for phases, the numbered phase list — because some hosts show only the question dialog. Never ask the user to approve something that is not on screen.
+
 Use the native tool's supported round size: Claude Code 1–4 questions; Codex guidance 1–3; OpenCode use at most 4 questions per round and respect any tighter native limit. The confirmed question budget is a **total across rounds**, not a requirement to squeeze all questions into the first call. Ask from the primary agent; research subagents do not conduct the user interview.
 
 Check writing capability separately from questioning capability. When the host permits questions but forbids repository writes (including Codex Plan mode), read [references/plan-persistence.md](references/plan-persistence.md). Explain at the start that this session will produce the complete plan and brief in the conversation, followed by a Default-mode save step in the same conversation. A skill cannot switch host mode. Keep the latest decisions and corrections through that transition; do not restart the interview.
@@ -159,8 +161,8 @@ Before any reading, identify what kinds of upstream artifacts the user passed in
    Does this feel right, or would you adjust the complexity level?
    ```
 
-   Use AskUserQuestion for confirmation:
-   - question: "Does this complexity assessment match your expectations?"
+   Send the assessment above as a visible chat message first, then use AskUserQuestion for confirmation. Name the level, the question count and the decision areas in the question text:
+   - question: "Complexity [LEVEL], [N] questions on [decision areas]. Does this assessment match your expectations?"
      header: "Complexity"
      options:
      - label: "⭐ Recommended: [N] questions (Recommended)"
@@ -348,7 +350,7 @@ After getting initial clarifications from the user, NOW is when you address the 
 
 6. **Present findings and design options using AskUserQuestion**:
 
-   First, present a brief summary of research findings:
+   First, send a brief summary of research findings as a visible chat message (before any approach question):
 
    ```
    Based on my research, here's what I found:
@@ -380,7 +382,7 @@ Once aligned on approach:
 
 1. **Present plan outline and get structured feedback**:
 
-   First, print the proposed phases as text (informational):
+   First, write the proposed phases as plain assistant text in the same response, before the tool call. This is required, not optional: the user approves this list, so it must be on screen before the question appears.
 
    ```
    Here's my proposed plan structure:
@@ -394,8 +396,8 @@ Once aligned on approach:
    3. [Phase name] - [what it accomplishes]
    ```
 
-   Then use AskUserQuestion:
-   - question: "Does this phase breakdown look right?"
+   Then use AskUserQuestion. Repeat the numbered phase names in the question text (one line per phase), so the list is visible even where the host shows only the dialog:
+   - question: "Does this phase breakdown look right?\n1. [Phase name] - [what it accomplishes]\n2. [Phase name] - [what it accomplishes]\n3. [Phase name] - [what it accomplishes]"
      header: "Phases"
      options:
      - label: "⭐ Recommended: Approve phases (Recommended)"
