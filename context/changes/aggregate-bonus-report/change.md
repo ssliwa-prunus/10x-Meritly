@@ -1,7 +1,7 @@
 ---
 change_id: aggregate-bonus-report
 title: Aggregate bonus report
-status: implementing
+status: implemented
 created: 2026-10-15
 updated: 2026-10-15
 archived_at: null

@@ -348,10 +348,10 @@ Additive: one new function, no table or policy changes, no data backfill. Rollba
 
 #### Automated
 
-- [x] 4.1 Smoke passes against a local preview: `npm run smoke`
-- [x] 4.2 E2E passes: `npm run test:e2e`
-- [x] 4.3 Full unit suite still passes: `npm test`
+- [x] 4.1 Smoke passes against a local preview: `npm run smoke` — 2db986a
+- [x] 4.2 E2E passes: `npm run test:e2e` — 2db986a
+- [x] 4.3 Full unit suite still passes: `npm test` — 2db986a
 
 #### Manual
 
-- [x] 4.4 The Playwright report shows the new spec green with a captured CSV
+- [x] 4.4 The Playwright report shows the new spec green with a captured CSV — 2db986a
