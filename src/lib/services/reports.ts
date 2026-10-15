@@ -1,4 +1,5 @@
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { logError, mapLoadError, type LogContext } from "@/lib/error-log";
 import type { BonusReportFilter, BonusReportRow, LoadErrorCode } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -11,12 +12,6 @@ import type { BonusReportFilter, BonusReportRow, LoadErrorCode } from "@/types";
 export interface ServiceResult<T = undefined> {
   data?: T;
   error?: LoadErrorCode;
-}
-
-function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "load_failed";
 }
 
 type Numeric = number | string;
@@ -36,21 +31,20 @@ interface BonusReportRpcRow {
 export async function getBonusReport(
   supabase: SupabaseClient,
   filter: BonusReportFilter,
+  log?: LogContext,
 ): Promise<ServiceResult<BonusReportRow[]>> {
   // count: "exact" makes a truncated result detectable: PostgREST caps every response at max_rows
   // (supabase/config.toml), and a silently shortened payroll report would be wrong, not just short.
   const result = await supabase.rpc("bonus_report", { p_from: filter.from, p_to: filter.to }, { count: "exact" });
-  if (result.error) return { error: mapLoadError(result.error, "getBonusReport") };
+  if (result.error) return { error: mapLoadError("getBonusReport", result.error, { status: result.status, log }) };
 
   // The function returns SETOF rows. On the untyped client overrideTypes<Row[]> rejects RPC results
   // as "single object", so the row shape is asserted here instead.
   const rows = (result.data ?? []) as BonusReportRpcRow[];
   if (result.count !== null && result.count > rows.length) {
-    // eslint-disable-next-line no-console -- intentional: a truncated report must be visible in Workers logs
-    console.error("getBonusReport failed", {
-      code: "truncated",
-      message: `${rows.length} of ${result.count} rows returned`,
-    });
+    // A truncated report must be visible in Workers logs.
+    const message = `${rows.length} of ${result.count} rows returned`;
+    logError("error", "getBonusReport", { code: "truncated", message }, { status: result.status, log });
     return { error: "load_failed" };
   }
   return {

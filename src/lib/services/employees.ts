@@ -1,6 +1,14 @@
 import { FunctionsHttpError, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { toOpenAssignments, type AssignmentRow } from "@/lib/assignments";
+import {
+  logError,
+  logFunctionError,
+  mapLoadError,
+  readFunctionError,
+  type LogContext,
+  type LogMeta,
+} from "@/lib/error-log";
 import { firstIssueError as firstFormIssueError, parseForm as parseFormWith } from "@/lib/forms";
 import type { Locale } from "@/lib/i18n";
 import type {
@@ -215,21 +223,21 @@ const GUARD_ERROR_CODES: Record<string, EmployeesErrorCode> = {
   MR010: "job_role_archived",
 };
 
-function mapPostgrestError(error: PostgrestError, context: string): EmployeesError {
+/**
+ * Domain rejections (23505, the guard codes) return silently. 42501 is warned: besides a caller
+ * without access it can mean id tampering or a missing grant or policy.
+ */
+function mapPostgrestError(error: PostgrestError, operation: string, meta: Omit<LogMeta, "mappedTo">): EmployeesError {
   // The only user-writable unique column is email; the message stays generic on purpose.
   if (error.code === "23505") return { code: "registration_failed", field: "email" };
   // RLS or the guard's permission check rejected the row: to the caller the employee does not exist.
-  if (error.code === "42501") return NOT_FOUND;
+  if (error.code === "42501") {
+    logError("warn", operation, error, { ...meta, mappedTo: NOT_FOUND.code });
+    return NOT_FOUND;
+  }
   if (Object.hasOwn(GUARD_ERROR_CODES, error.code)) return { code: GUARD_ERROR_CODES[error.code] };
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
+  logError("error", operation, error, meta);
   return { code: "save_failed" };
-}
-
-function mapLoadError(error: PostgrestError, context: string): LoadErrorCode {
-  // eslint-disable-next-line no-console -- intentional: surfaces unexpected DB errors in Workers observability logs
-  console.error(`${context} failed`, { code: error.code, message: error.message });
-  return "load_failed";
 }
 
 interface EmployeeRow extends Employee {
@@ -260,6 +268,7 @@ const toTimeShare = (row: TimeShareRow): EmployeeTimeShare => ({
 export async function listEmployees(
   supabase: SupabaseClient,
   { ownerId }: { ownerId?: string } = {},
+  log?: LogContext,
 ): Promise<ServiceResult<EmployeeListItem[]>> {
   let employeesQuery = supabase.from("employees").select(EMPLOYEE_COLUMNS);
   if (ownerId) employeesQuery = employeesQuery.eq("supervisor_id", ownerId);
@@ -272,8 +281,13 @@ export async function listEmployees(
       .overrideTypes<TimeShareRow[], { merge: false }>(),
   ]);
 
-  if (employees.error) return { error: mapLoadError(employees.error, "listEmployees") };
-  if (totals.error) return { error: mapLoadError(totals.error, "listEmployeeTimeShareTotals") };
+  const ids = { ownerId };
+  if (employees.error) {
+    return { error: mapLoadError("listEmployees", employees.error, { status: employees.status, ids, log }) };
+  }
+  if (totals.error) {
+    return { error: mapLoadError("listEmployeeTimeShareTotals", totals.error, { status: totals.status, ids, log }) };
+  }
 
   const totalsById = new Map(totals.data.map((row) => [row.employee_id, toTimeShare(row)]));
 
@@ -298,6 +312,7 @@ export async function listEmployees(
 export async function getEmployeeDetail(
   supabase: SupabaseClient,
   id: string,
+  log?: LogContext,
 ): Promise<ServiceResult<EmployeeDetail | null>> {
   const [employee, total] = await Promise.all([
     supabase.from("employees").select(EMPLOYEE_COLUMNS).eq("id", id).maybeSingle<EmployeeRow>(),
@@ -308,8 +323,13 @@ export async function getEmployeeDetail(
       .maybeSingle<TimeShareRow>(),
   ]);
 
-  if (employee.error) return { error: mapLoadError(employee.error, "getEmployeeDetail") };
-  if (total.error) return { error: mapLoadError(total.error, "getEmployeeTimeShareTotal") };
+  const ids = { employeeId: id };
+  if (employee.error) {
+    return { error: mapLoadError("getEmployeeDetail", employee.error, { status: employee.status, ids, log }) };
+  }
+  if (total.error) {
+    return { error: mapLoadError("getEmployeeTimeShareTotal", total.error, { status: total.status, ids, log }) };
+  }
   if (!employee.data) return { data: null };
 
   const { job_roles, ...row } = employee.data;
@@ -332,13 +352,14 @@ export async function getEmployeeDetail(
 export async function listOpenAssignments(
   supabase: SupabaseClient,
   employeeId: string,
+  log?: LogContext,
 ): Promise<ServiceResult<OpenAssignment[]>> {
-  const { data, error } = await supabase
+  const { data, error, status } = await supabase
     .from("milestone_engagements")
     .select("id, time_share, milestones(id, name, status, start_date, end_date, projects(id, name, status))")
     .eq("employee_id", employeeId)
     .overrideTypes<AssignmentRow[], { merge: false }>();
-  if (error) return { error: mapLoadError(error, "listOpenAssignments") };
+  if (error) return { error: mapLoadError("listOpenAssignments", error, { status, ids: { employeeId }, log }) };
   return { data: toOpenAssignments(data) };
 }
 
@@ -352,9 +373,10 @@ export function inviteStatus(employee: Pick<Employee, "invited_at" | "activated_
 export async function createEmployee(
   supabase: SupabaseClient,
   input: EmployeeInput,
+  log?: LogContext,
 ): Promise<WriteResult<{ id: string }>> {
-  const { data, error } = await supabase.from("employees").insert(input).select("id").single<{ id: string }>();
-  if (error) return { error: mapPostgrestError(error, "createEmployee") };
+  const { data, error, status } = await supabase.from("employees").insert(input).select("id").single<{ id: string }>();
+  if (error) return { error: mapPostgrestError(error, "createEmployee", { status, log }) };
   return { data };
 }
 
@@ -362,13 +384,19 @@ export async function updateEmployee(
   supabase: SupabaseClient,
   id: string,
   input: EmployeeUpdateInput,
+  log?: LogContext,
 ): Promise<WriteResult> {
   // A locked (invited) row posts no email; leave the column out instead of sending undefined.
   const { email, ...rest } = input;
   const changes = email === undefined ? rest : { ...rest, email };
-  const { data, error } = await supabase.from("employees").update(changes).eq("id", id).select("id");
-  if (error) return { error: mapPostgrestError(error, "updateEmployee") };
-  if (data.length === 0) return { error: NOT_FOUND };
+  const ids = { employeeId: id };
+  const { data, error, status } = await supabase.from("employees").update(changes).eq("id", id).select("id");
+  if (error) return { error: mapPostgrestError(error, "updateEmployee", { status, ids, log }) };
+  if (data.length === 0) {
+    // Matched no row: id tampering or an RLS regression, so it is warned.
+    logError("warn", "updateEmployee", { code: "no_rows" }, { ids, log, mappedTo: NOT_FOUND.code });
+    return { error: NOT_FOUND };
+  }
   return {};
 }
 
@@ -382,31 +410,39 @@ const INVITE_ERROR_CODES: Record<string, EmployeesErrorCode> = {
   invite_failed: "invite_failed",
 };
 
-/** Reads the function's `{ code }` body from an HTTP error response; null when it has none. */
-async function functionErrorCode(response: unknown): Promise<string | null> {
-  if (!(response instanceof Response)) return null;
-  try {
-    const body: unknown = await response.json();
-    if (typeof body !== "object" || body === null) return null;
-    const code = (body as Record<string, unknown>).code;
-    return typeof code === "string" ? code : null;
-  } catch {
-    return null;
-  }
-}
+/**
+ * Log level per mapped function code. A permission or input rejection is warned (it can also mean
+ * id tampering or a broken deploy), a send failure is an error; already_active and
+ * email_unavailable are domain rejections and stay silent.
+ */
+const INVITE_LOG_LEVELS: Record<string, "warn" | "error"> = {
+  invalid_request: "warn",
+  forbidden: "warn",
+  not_found: "warn",
+  invite_failed: "error",
+};
 
 /** Sends or re-sends the invite email through the invite-employee Edge Function. */
-export async function inviteEmployee(supabase: SupabaseClient, id: string): Promise<WriteResult> {
+export async function inviteEmployee(supabase: SupabaseClient, id: string, log?: LogContext): Promise<WriteResult> {
   const result = await supabase.functions.invoke("invite-employee", { body: { employee_id: id } });
   const error: unknown = result.error;
   if (!error) return {};
 
-  if (error instanceof FunctionsHttpError) {
-    const code = await functionErrorCode(error.context);
-    if (code !== null && Object.hasOwn(INVITE_ERROR_CODES, code)) return { error: { code: INVITE_ERROR_CODES[code] } };
+  // Only an HTTP error's body code is mapped, as before; a relay error's body is logged, not trusted.
+  const info = await readFunctionError(error);
+  const meta = { ids: { employeeId: id }, log };
+  const code = info.code;
+  if (error instanceof FunctionsHttpError && code !== undefined && Object.hasOwn(INVITE_ERROR_CODES, code)) {
+    const mappedTo = INVITE_ERROR_CODES[code];
+    if (Object.hasOwn(INVITE_LOG_LEVELS, code)) {
+      logFunctionError(INVITE_LOG_LEVELS[code], "inviteEmployee", info, { ...meta, mappedTo });
+    }
+    return { error: { code: mappedTo } };
   }
 
-  // eslint-disable-next-line no-console -- intentional: surfaces function failures in Workers observability logs
-  console.error("inviteEmployee failed", { name: error instanceof Error ? error.name : typeof error });
+  // A code the function sent but this table does not know means the two sides drifted: warn. No code
+  // at all (crash, gateway page, relay or network failure) is an unexpected failure: error.
+  const level = error instanceof FunctionsHttpError && code !== undefined ? "warn" : "error";
+  logFunctionError(level, "inviteEmployee", info, meta);
   return { error: { code: "invite_failed" } };
 }

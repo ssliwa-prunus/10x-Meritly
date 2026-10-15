@@ -429,20 +429,20 @@ The code refactor is in-process only: no schema, data or contract changes. Rollb
 
 #### Automated
 
-- [x] 1.1 Helper unit tests pass: `npx vitest run src/lib/__tests__/error-log.test.ts`
-- [x] 1.2 Full unit suite passes: `npm test`
-- [x] 1.3 Lint and type check pass: `npm run lint` and `npx astro check`
-- [x] 1.4 Mutation score for the helper is reviewed (no surviving mutants without a written reason): `npm run test:mutation -- --mutate src/lib/error-log.ts`
+- [x] 1.1 Helper unit tests pass: `npx vitest run src/lib/__tests__/error-log.test.ts` — 7e940e5
+- [x] 1.2 Full unit suite passes: `npm test` — 7e940e5
+- [x] 1.3 Lint and type check pass: `npm run lint` and `npx astro check` — 7e940e5
+- [x] 1.4 Mutation score for the helper is reviewed (no surviving mutants without a written reason): `npm run test:mutation -- --mutate src/lib/error-log.ts` — 7e940e5
 
 ### Phase 2: Migrate the service mappers and function wrappers
 
 #### Automated
 
-- [ ] 2.1 Service tests pass: `npx vitest run src/lib/services/__tests__`
-- [ ] 2.2 Full unit suite passes: `npm test`
-- [ ] 2.3 No service keeps its own console call: `grep -rn "console\." src/lib/services` returns nothing
-- [ ] 2.4 Lint and type check pass: `npm run lint` and `npx astro check`
-- [ ] 2.5 Mutation score for the migrated services is reviewed: `npm run test:mutation -- --mutate "src/lib/services/*.ts"`
+- [x] 2.1 Service tests pass: `npx vitest run src/lib/services/__tests__`
+- [x] 2.2 Full unit suite passes: `npm test`
+- [x] 2.3 No service keeps its own console call: `grep -rn "console\." src/lib/services` returns nothing
+- [x] 2.4 Lint and type check pass: `npm run lint` and `npx astro check`
+- [x] 2.5 Mutation score for the migrated services is reviewed: `npm run test:mutation -- --mutate "src/lib/services/*.ts"`
 
 ### Phase 3: Wire the call sites and verify end to end
 

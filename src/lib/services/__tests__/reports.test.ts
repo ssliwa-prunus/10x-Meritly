@@ -7,15 +7,17 @@ import { getBonusReport } from "@/lib/services/reports";
 // unbounded), numeric columns normalised with Number(), any database error logged and mapped to
 // load_failed. No network: rpc is faked with what supabase-js resolves to.
 
-function fakeClient(result: { data: unknown; error: unknown; count?: number | null }) {
+function fakeClient(result: { data: unknown; error: unknown; count?: number | null; status?: number }) {
   const rpc = vi.fn().mockResolvedValue({ count: null, ...result });
   return { client: { rpc } as unknown as SupabaseClient, rpc };
 }
 
 let consoleError: MockInstance;
+let consoleWarn: MockInstance;
 
 beforeEach(() => {
   consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
@@ -60,12 +62,20 @@ describe("getBonusReport", () => {
   // PostgREST caps responses at max_rows (supabase/config.toml); a capped report must fail loudly.
   it("truncated result (count above the rows received): load_failed, logged", async () => {
     const row = { employee_id: "e-1", employee_name: "Anna", milestone_count: 1, total_bonus: "1.00" };
-    const { client } = fakeClient({ data: Array.from({ length: 1000 }, () => row), error: null, count: 1001 });
-    expect(await getBonusReport(client, { from: null, to: null })).toEqual({ error: "load_failed" });
+    const { client } = fakeClient({
+      data: Array.from({ length: 1000 }, () => row),
+      error: null,
+      count: 1001,
+      status: 206,
+    });
+    expect(await getBonusReport(client, { from: null, to: null }, { userId: "u-1" })).toEqual({ error: "load_failed" });
     expect(consoleError).toHaveBeenCalledWith("getBonusReport failed", {
       code: "truncated",
+      status: 206,
       message: "1000 of 1001 rows returned",
+      userId: "u-1",
     });
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 
   it("complete result (count equals the rows received): data", async () => {
@@ -81,8 +91,19 @@ describe("getBonusReport", () => {
   });
 
   it("database error: load_failed, logged with code and message", async () => {
-    const { client } = fakeClient({ data: null, error: { code: "XX000", message: "boom", details: "", hint: "" } });
-    expect(await getBonusReport(client, { from: null, to: null })).toEqual({ error: "load_failed" });
-    expect(consoleError).toHaveBeenCalledWith("getBonusReport failed", { code: "XX000", message: "boom" });
+    const { client } = fakeClient({
+      data: null,
+      error: { code: "XX000", message: "boom", details: "", hint: "" },
+      status: 500,
+    });
+    expect(await getBonusReport(client, { from: null, to: null }, { requestId: "ray-1" })).toEqual({
+      error: "load_failed",
+    });
+    expect(consoleError).toHaveBeenCalledWith("getBonusReport failed", {
+      code: "XX000",
+      status: 500,
+      message: "boom",
+      requestId: "ray-1",
+    });
   });
 });
