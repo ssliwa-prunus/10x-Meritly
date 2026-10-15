@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { formatPercent, formatPln } from "@/lib/format";
 import { format, getMessages } from "@/lib/i18n";
@@ -51,6 +52,7 @@ const savedMessage = saved !== null && Object.hasOwn(m.saved, saved) ? m.saved[s
 const projectId = projectIdSchema.safeParse(Astro.params.id);
 const milestoneId = projectIdSchema.safeParse(Astro.params.milestoneId);
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const log = logContextFrom(Astro.locals, Astro.request);
 
 let loadError: string | null = null;
 let projectResult: Awaited<ReturnType<typeof getProject>> = {};
@@ -67,13 +69,13 @@ if (!supabase || !profile) {
 } else if (projectId.success && milestoneId.success) {
   let approvedResult: Awaited<ReturnType<typeof getApprovedPayout>>;
   [projectResult, milestonesResult, engagementsResult, assignableResult, approvedResult] = await Promise.all([
-    getProject(supabase, projectId.data),
-    listMilestones(supabase, projectId.data),
-    listEngagements(supabase, milestoneId.data),
+    getProject(supabase, projectId.data, log),
+    listMilestones(supabase, projectId.data, log),
+    listEngagements(supabase, milestoneId.data, log),
     // Admins are read-only, so they get no picker. A Supervisor picks only employees they own.
-    isAdmin ? Promise.resolve({}) : listAssignableEmployees(supabase, profile.id, milestoneId.data),
+    isAdmin ? Promise.resolve({}) : listAssignableEmployees(supabase, profile.id, milestoneId.data, log),
     // The frozen snapshot, if any, loads in parallel; a Draft milestone simply has none.
-    getApprovedPayout(supabase, milestoneId.data),
+    getApprovedPayout(supabase, milestoneId.data, log),
   ]);
   loadError =
     projectResult.error || milestonesResult.error
@@ -105,7 +107,7 @@ if (!supabase || !profile) {
         payoutResult = { error: "load_failed" };
       }
     } else {
-      payoutResult = await getMilestonePayout(supabase, milestoneId.data);
+      payoutResult = await getMilestonePayout(supabase, milestoneId.data, log);
     }
   }
 }

@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { bonusReportFilename, buildBonusReportCsv, parseBonusReportFilter } from "@/lib/bonus-report";
+import { logContextFrom } from "@/lib/error-log";
 import { getMessages } from "@/lib/i18n";
 import { getBonusReport } from "@/lib/services/reports";
 import { createClient } from "@/lib/supabase";
@@ -17,13 +18,14 @@ export const GET: APIRoute = async ({ url, request, cookies, locals }) => {
   if (filter.error) return textResponse(400, filter.error);
 
   const supabase = createClient(request.headers, cookies);
+  const log = logContextFrom(locals, request);
   if (!supabase) {
     // eslint-disable-next-line no-console -- intentional: a missing Supabase config must be visible in Workers logs
     console.error("bonus report CSV: Supabase is not configured");
     return textResponse(500, "not_configured");
   }
 
-  const result = await getBonusReport(supabase, filter.data);
+  const result = await getBonusReport(supabase, filter.data, log);
   if (result.error || !result.data) return textResponse(500, result.error ?? "load_failed");
 
   const csv = buildBonusReportCsv(result.data, getMessages(locals.locale).reports.csv);

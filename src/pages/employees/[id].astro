@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { formatPercent } from "@/lib/format";
 import { getMessages } from "@/lib/i18n";
@@ -23,6 +24,7 @@ const f = t.common.fields;
 const d = t.employees.detail;
 const id = employeeIdSchema.safeParse(Astro.params.id);
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const log = logContextFrom(Astro.locals, Astro.request);
 
 let loadError: string | null = null;
 let detailResult: Awaited<ReturnType<typeof getEmployeeDetail>> = {};
@@ -33,9 +35,9 @@ if (!supabase) {
   loadError = t.common.supabaseNotConfigured;
 } else if (id.success) {
   [detailResult, assignmentsResult, historyResult] = await Promise.all([
-    getEmployeeDetail(supabase, id.data),
-    listOpenAssignments(supabase, id.data),
-    listEmployeeHistory(supabase, id.data),
+    getEmployeeDetail(supabase, id.data, log),
+    listOpenAssignments(supabase, id.data, log),
+    listEmployeeHistory(supabase, id.data, log),
   ]);
   loadError =
     detailResult.error || assignmentsResult.error

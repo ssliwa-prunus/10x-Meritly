@@ -4,6 +4,7 @@ import Topbar from "@/components/Topbar.astro";
 import BudgetExposurePanel from "@/components/projects/BudgetExposurePanel.astro";
 import MilestonesSection from "@/components/projects/MilestonesSection.astro";
 import ProjectForm from "@/components/projects/ProjectForm.astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,7 @@ const pageError = section === null ? errorMessage : null;
 
 const id = projectIdSchema.safeParse(Astro.params.id);
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const log = logContextFrom(Astro.locals, Astro.request);
 
 let loadError: string | null = null;
 let projectResult: Awaited<ReturnType<typeof getProject>> = {};
@@ -49,10 +51,10 @@ if (!supabase) {
   loadError = t.common.supabaseNotConfigured;
 } else if (id.success) {
   [projectResult, milestonesResult, exposureResult, supervisorsResult] = await Promise.all([
-    getProject(supabase, id.data),
-    listMilestones(supabase, id.data),
-    getProjectExposure(supabase, id.data),
-    isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
+    getProject(supabase, id.data, log),
+    listMilestones(supabase, id.data, log),
+    getProjectExposure(supabase, id.data, log),
+    isAdmin ? listSupervisors(supabase, log) : Promise.resolve({}),
   ]);
   const failed = projectResult.error ?? milestonesResult.error ?? exposureResult.error ?? supervisorsResult.error;
   loadError = failed ? t.projects.loadFailed : null;

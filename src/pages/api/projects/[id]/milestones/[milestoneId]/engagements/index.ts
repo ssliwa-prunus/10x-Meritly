@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import {
   createEngagement,
@@ -12,6 +13,7 @@ import { projectIdSchema, projectsUrl, projectUrl } from "@/lib/services/project
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
+  const log = logContextFrom(context.locals, context.request);
   if (!supabase) {
     return context.redirect(projectsUrl({ error: { code: "not_configured" } }));
   }
@@ -34,7 +36,7 @@ export const POST: APIRoute = async (context) => {
 
   // The milestone must belong to the project in the URL, so a crafted project/milestone pair
   // cannot write under one project and redirect to another. RLS still guards the data itself.
-  const inProject = await isMilestoneInProject(supabase, projectId.data, milestoneId.data);
+  const inProject = await isMilestoneInProject(supabase, projectId.data, milestoneId.data, log);
   if (inProject.error) {
     return context.redirect(projectUrl(projectId.data, "milestones", { error: { code: "save_failed" } }));
   }
@@ -52,7 +54,7 @@ export const POST: APIRoute = async (context) => {
   if (!profile) {
     return context.redirect(milestoneUrl(projectId.data, milestoneId.data, { error: { code: "not_found" } }));
   }
-  const assignable = await listAssignableEmployees(supabase, profile.id, milestoneId.data);
+  const assignable = await listAssignableEmployees(supabase, profile.id, milestoneId.data, log);
   if (!assignable.data) {
     return context.redirect(milestoneUrl(projectId.data, milestoneId.data, { error: { code: "save_failed" } }));
   }
@@ -64,7 +66,7 @@ export const POST: APIRoute = async (context) => {
     );
   }
 
-  const { error } = await createEngagement(supabase, milestoneId.data, parsed.data);
+  const { error } = await createEngagement(supabase, milestoneId.data, parsed.data, log);
   if (error) {
     return context.redirect(milestoneUrl(projectId.data, milestoneId.data, { error }));
   }

@@ -438,24 +438,24 @@ The code refactor is in-process only: no schema, data or contract changes. Rollb
 
 #### Automated
 
-- [x] 2.1 Service tests pass: `npx vitest run src/lib/services/__tests__`
-- [x] 2.2 Full unit suite passes: `npm test`
-- [x] 2.3 No service keeps its own console call: `grep -rn "console\." src/lib/services` returns nothing
-- [x] 2.4 Lint and type check pass: `npm run lint` and `npx astro check`
-- [x] 2.5 Mutation score for the migrated services is reviewed: `npm run test:mutation -- --mutate "src/lib/services/*.ts"`
+- [x] 2.1 Service tests pass: `npx vitest run src/lib/services/__tests__` — e81b09f
+- [x] 2.2 Full unit suite passes: `npm test` — e81b09f
+- [x] 2.3 No service keeps its own console call: `grep -rn "console\." src/lib/services` returns nothing — e81b09f
+- [x] 2.4 Lint and type check pass: `npm run lint` and `npx astro check` — e81b09f
+- [x] 2.5 Mutation score for the migrated services is reviewed: `npm run test:mutation -- --mutate "src/lib/services/*.ts"` — e81b09f
 
 ### Phase 3: Wire the call sites and verify end to end
 
 #### Automated
 
-- [ ] 3.1 Full unit suite passes: `npm test`
-- [ ] 3.2 Lint, UI check and type check pass: `npm run lint`, `npm run lint:ui`, `npx astro check`
-- [ ] 3.3 Production build passes: `npm run build`
-- [ ] 3.4 Smoke passes against a local server: `npm run smoke`
-- [ ] 3.5 Every service call in pages passes a log context: `grep -rn "logContextFrom" src/pages | wc -l` is at least the number of files that import a service
+- [x] 3.1 Full unit suite passes: `npm test`
+- [x] 3.2 Lint, UI check and type check pass: `npm run lint`, `npm run lint:ui`, `npx astro check`
+- [x] 3.3 Production build passes: `npm run build`
+- [x] 3.4 Smoke passes against a local server: `npm run smoke`
+- [x] 3.5 Every service call in pages passes a log context: `grep -rn "logContextFrom" src/pages | wc -l` is at least the number of files that import a service
 
 #### Manual
 
-- [ ] 3.6 The probe suite rerun in the audit worktree shows `status`, the entity id and `userId` on P6, P6e and P6b, and status plus code on PEDGE404 / PEDGE500 (which now differ from each other)
-- [ ] 3.7 In `npm run dev`, a forced `42501` (or an id from another supervisor on a write) prints one `warn` line with `mappedTo: "not_found"`, while the UI still shows the same "Not found" message
-- [ ] 3.8 No email address or row values appear in any line produced during the smoke run
+- [x] 3.6 The probe suite rerun in the audit worktree shows `status`, the entity id and `userId` on P6, P6e and P6b, and status plus code on PEDGE404 / PEDGE500 (which now differ from each other)
+- [x] 3.7 In `npm run dev`, a forced `42501` (or an id from another supervisor on a write) prints one `warn` line with `mappedTo: "not_found"`, while the UI still shows the same "Not found" message
+- [x] 3.8 No email address or row values appear in any line produced during the smoke run

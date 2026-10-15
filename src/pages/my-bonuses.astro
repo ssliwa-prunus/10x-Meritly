@@ -4,6 +4,7 @@ import Topbar from "@/components/Topbar.astro";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import EmployeeHistory from "@/components/history/EmployeeHistory.astro";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { groupHistory } from "@/lib/history";
 import { getMessages } from "@/lib/i18n";
@@ -15,6 +16,7 @@ import type { MyBonuses } from "@/types";
 // shows no share, pool or colleague data.
 const t = getMessages(Astro.locals.locale);
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const log = logContextFrom(Astro.locals, Astro.request);
 
 let loadError: string | null = null;
 let bonuses: MyBonuses = { lines: [], not_linked: false };
@@ -22,7 +24,7 @@ let bonuses: MyBonuses = { lines: [], not_linked: false };
 if (!supabase) {
   loadError = t.common.supabaseNotConfigured;
 } else {
-  const result = await listMyBonuses(supabase);
+  const result = await listMyBonuses(supabase, log);
   if (result.error || !result.data) loadError = t.myBonuses.loadFailed;
   else bonuses = result.data;
 }

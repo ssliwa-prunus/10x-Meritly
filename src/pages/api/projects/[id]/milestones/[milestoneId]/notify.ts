@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { approvalUrl, emailNotice, notifyMilestoneApproved } from "@/lib/services/approvals";
 import { isMilestoneInProject } from "@/lib/services/engagements";
@@ -7,6 +8,7 @@ import { firstIssueError, projectIdSchema, projectsUrl, projectUrl } from "@/lib
 /** Re-sends the bonus emails of an approved milestone that the provider has not confirmed yet. */
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
+  const log = logContextFrom(context.locals, context.request);
   if (!supabase) {
     return context.redirect(projectsUrl({ error: { code: "not_configured" } }));
   }
@@ -29,7 +31,7 @@ export const POST: APIRoute = async (context) => {
 
   // The milestone must belong to the project in the URL, so a crafted project/milestone pair
   // cannot notify under one project and redirect to another.
-  const inProject = await isMilestoneInProject(supabase, projectId.data, milestoneId.data);
+  const inProject = await isMilestoneInProject(supabase, projectId.data, milestoneId.data, log);
   if (inProject.error) {
     return context.redirect(projectUrl(projectId.data, "milestones", { error: { code: "save_failed" } }));
   }
@@ -38,7 +40,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   // The form carries no fields, so the body is not read.
-  const notified = await notifyMilestoneApproved(supabase, milestoneId.data);
+  const notified = await notifyMilestoneApproved(supabase, milestoneId.data, log);
   if (notified.error) {
     return context.redirect(approvalUrl(projectId.data, milestoneId.data, { error: notified.error }));
   }

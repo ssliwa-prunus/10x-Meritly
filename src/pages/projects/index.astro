@@ -2,6 +2,7 @@
 import Layout from "@/layouts/Layout.astro";
 import Topbar from "@/components/Topbar.astro";
 import ProjectForm from "@/components/projects/ProjectForm.astro";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { formatPln } from "@/lib/format";
 import { getMessages } from "@/lib/i18n";
@@ -22,6 +23,7 @@ const newFormError = section === "new" ? errorMessage : null;
 const pageError = section === null ? errorMessage : null;
 
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const log = logContextFrom(Astro.locals, Astro.request);
 
 let loadError: string | null;
 let projectsResult: Awaited<ReturnType<typeof listProjects>> = {};
@@ -32,9 +34,9 @@ if (!supabase) {
   loadError = t.common.supabaseNotConfigured;
 } else {
   [projectsResult, exposureResult, supervisorsResult] = await Promise.all([
-    listProjects(supabase),
-    listProjectExposure(supabase),
-    isAdmin ? listSupervisors(supabase) : Promise.resolve({}),
+    listProjects(supabase, log),
+    listProjectExposure(supabase, log),
+    isAdmin ? listSupervisors(supabase, log) : Promise.resolve({}),
   ]);
   const failed = projectsResult.error ?? exposureResult.error ?? supervisorsResult.error;
   loadError = failed ? t.projects.loadFailed : null;

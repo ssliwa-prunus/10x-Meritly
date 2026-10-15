@@ -11,6 +11,7 @@ import { parseBonusReportFilter, reportGrandTotal } from "@/lib/bonus-report";
 import { formatPln } from "@/lib/format";
 import { getMessages } from "@/lib/i18n";
 import { getBonusReport } from "@/lib/services/reports";
+import { logContextFrom } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import type { BonusReportRow } from "@/types";
@@ -30,10 +31,11 @@ let rows: BonusReportRow[] = [];
 
 if (filter.data) {
   const supabase = createClient(Astro.request.headers, Astro.cookies);
+  const log = logContextFrom(Astro.locals, Astro.request);
   if (!supabase) {
     loadError = t.common.supabaseNotConfigured;
   } else {
-    const result = await getBonusReport(supabase, filter.data);
+    const result = await getBonusReport(supabase, filter.data, log);
     if (result.error || !result.data) loadError = r.loadFailed;
     else rows = result.data;
   }
