@@ -448,14 +448,14 @@ The code refactor is in-process only: no schema, data or contract changes. Rollb
 
 #### Automated
 
-- [x] 3.1 Full unit suite passes: `npm test`
-- [x] 3.2 Lint, UI check and type check pass: `npm run lint`, `npm run lint:ui`, `npx astro check`
-- [x] 3.3 Production build passes: `npm run build`
-- [x] 3.4 Smoke passes against a local server: `npm run smoke`
-- [x] 3.5 Every service call in pages passes a log context: `grep -rn "logContextFrom" src/pages | wc -l` is at least the number of files that import a service
+- [x] 3.1 Full unit suite passes: `npm test` — e5efacc
+- [x] 3.2 Lint, UI check and type check pass: `npm run lint`, `npm run lint:ui`, `npx astro check` — e5efacc
+- [x] 3.3 Production build passes: `npm run build` — e5efacc
+- [x] 3.4 Smoke passes against a local server: `npm run smoke` — e5efacc
+- [x] 3.5 Every service call in pages passes a log context: `grep -rn "logContextFrom" src/pages | wc -l` is at least the number of files that import a service — e5efacc
 
 #### Manual
 
-- [x] 3.6 The probe suite rerun in the audit worktree shows `status`, the entity id and `userId` on P6, P6e and P6b, and status plus code on PEDGE404 / PEDGE500 (which now differ from each other)
-- [x] 3.7 In `npm run dev`, a forced `42501` (or an id from another supervisor on a write) prints one `warn` line with `mappedTo: "not_found"`, while the UI still shows the same "Not found" message
-- [x] 3.8 No email address or row values appear in any line produced during the smoke run
+- [x] 3.6 The probe suite rerun in the audit worktree shows `status`, the entity id and `userId` on P6, P6e and P6b, and status plus code on PEDGE404 / PEDGE500 (which now differ from each other) — e5efacc
+- [x] 3.7 In `npm run dev`, a forced `42501` (or an id from another supervisor on a write) prints one `warn` line with `mappedTo: "not_found"`, while the UI still shows the same "Not found" message — e5efacc
+- [x] 3.8 No email address or row values appear in any line produced during the smoke run — e5efacc
