@@ -1,10 +1,10 @@
 ---
 change_id: language-switch-pl-en
 title: Polish translation of all app text with a PL/EN language switch on the first page
-status: impl_reviewed
+status: archived
 created: 2026-10-13
-updated: 2026-10-13
-archived_at: null
+updated: 2026-10-15
+archived_at: 2026-10-15T10:14:39Z
 ---
 
 ## Notes
