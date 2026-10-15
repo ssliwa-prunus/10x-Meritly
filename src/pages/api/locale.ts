@@ -13,7 +13,13 @@ const localeFormSchema = z.object({
 });
 
 export const POST: APIRoute = async (context) => {
-  const form = await context.request.formData();
+  // A body that is not a form changes nothing (same guard as parseForm in @/lib/forms).
+  let form: FormData;
+  try {
+    form = await context.request.formData();
+  } catch {
+    return context.redirect("/");
+  }
   const next = safeNext(form.get("next")) ?? "/";
   const parsed = localeFormSchema.safeParse({ locale: form.get("locale") });
 

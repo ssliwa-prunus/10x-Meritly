@@ -24,6 +24,8 @@ test.afterEach(async ({ page, baseURL }) => {
   });
 });
 
+// <html lang> has no role or label, so it is read with page.locator("html"), the one structural
+// locator in this spec (an accepted exception to the role/label-first locator rule).
 async function expectPolish(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("lang", "pl");
   await expect(page.getByText(PL_PITCH)).toBeVisible();

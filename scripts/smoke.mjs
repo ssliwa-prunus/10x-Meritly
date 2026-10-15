@@ -32,6 +32,7 @@ const DRAFT_BONUS = "1000,00 zł";
 const ADMIN_ONLY_TEXT = "Ta strona jest dostępna tylko dla administratorów.";
 // The landing pitch in English (en dictionary), shown only with `lang=en`.
 const EN_LANDING_TEXT = "Fair split of milestone bonus pools";
+const PL_LANDING_TEXT = "Sprawiedliwy podział puli premiowej kamieni milowych";
 
 /** One cookie jar per actor, so sessions never leak between roles. */
 const jars = {
@@ -114,11 +115,16 @@ const signIn = (as, account, next) =>
 const steps = [
   // Locale: Polish without a cookie, English with `lang=en`; the switch endpoint sets the cookie,
   // keeps only same-origin return targets and ignores an unsupported locale.
-  ["home is Polish without a cookie", () => request("/", { as: "anon" }), { status: 200, htmlIncludes: ['lang="pl"'] }],
+  // Match the opening <html> tag: the language switch renders lang="pl" and lang="en" on its buttons on every page.
+  [
+    "home is Polish without a cookie",
+    () => request("/", { as: "anon" }),
+    { status: 200, htmlIncludes: ['<html lang="pl"'], bodyIncludes: [PL_LANDING_TEXT] },
+  ],
   [
     "home is English with lang=en",
     () => request("/", { as: "english" }),
-    { status: 200, htmlIncludes: ['lang="en"'], bodyIncludes: [EN_LANDING_TEXT] },
+    { status: 200, htmlIncludes: ['<html lang="en"'], bodyIncludes: [EN_LANDING_TEXT] },
   ],
   [
     "language switch sets lang=en and returns to next",
@@ -134,6 +140,11 @@ const steps = [
   [
     "language switch ignores an unsupported locale",
     () => request("/api/locale", { as: "switchInvalid", method: "POST", form: { locale: "de", next: "/" } }),
+    { status: 302, exact: "/", setsNoCookie: "lang" },
+  ],
+  [
+    "language switch ignores a body that is not a form",
+    () => request("/api/locale", { as: "switchInvalid", method: "POST" }),
     { status: 302, exact: "/", setsNoCookie: "lang" },
   ],
 
@@ -156,7 +167,11 @@ const steps = [
     { status: 302, location: "/" },
   ],
   ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
-  ["signout clears session", () => request("/api/auth/signout", { method: "POST" }), { status: 302, location: "/" }],
+  [
+    "signout clears session and the language cookie",
+    () => request("/api/auth/signout", { method: "POST" }),
+    { status: 302, location: "/", clearsCookie: "lang" },
+  ],
   ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
 
   // Anonymous: pages keep their return target, API routes get none.
@@ -341,6 +356,14 @@ for (const [name, run, expected] of steps) {
     actual.setCookies.some((raw) => raw.startsWith(`${expected.setsNoCookie}=`))
   )
     problems.push(`expected no "${expected.setsNoCookie}" Set-Cookie`);
+  // A cleared cookie comes back expired: Max-Age=0 or an Expires date in 1970.
+  if (
+    expected.clearsCookie !== undefined &&
+    !actual.setCookies.some(
+      (raw) => raw.startsWith(`${expected.clearsCookie}=`) && /max-age=0|expires=[^;]*1970/i.test(raw),
+    )
+  )
+    problems.push(`expected "${expected.clearsCookie}" to be cleared`);
 
   console.log(`${problems.length ? "FAIL" : "PASS"}  ${name}  -> ${actual.status} ${actual.location}`);
   if (problems.length) {

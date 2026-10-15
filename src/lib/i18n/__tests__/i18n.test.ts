@@ -67,7 +67,9 @@ describe("plural (Polish)", () => {
     [2, "pracowników-few"],
     [4, "pracowników-few"],
     [5, "pracowników-many"],
+    [12, "pracowników-many"],
     [22, "pracowników-few"],
+    [25, "pracowników-many"],
   ])("%d → %s", (n, expected) => {
     expect(plural("pl", n, forms)).toBe(expected);
   });
