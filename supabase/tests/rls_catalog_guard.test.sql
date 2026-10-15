@@ -23,7 +23,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(10);
 
 -- ---------------------------------------------------------------------------
 -- Table set: every table in public is one the matrix classifies
@@ -218,6 +218,20 @@ select is_empty(
       )
   $$,
   'every security definer function in public sets search_path (add "set search_path = ''''"; update rls_catalog_guard.test.sql and rls_matrix.test.sql)'
+);
+
+-- ---------------------------------------------------------------------------
+-- bonus_report (aggregate-bonus-report): an invoker aggregate over every approved result line the
+-- caller's RLS shows. Switching it to security definer would hand any caller every employee's pay,
+-- and anon must not call it at all.
+-- ---------------------------------------------------------------------------
+select ok(
+  not (select p.prosecdef from pg_catalog.pg_proc p where p.oid = 'public.bonus_report(date, date)'::regprocedure),
+  'bonus_report(date, date) is security invoker (definer would bypass RLS; update rls_catalog_guard.test.sql and rls_matrix.test.sql)'
+);
+select ok(
+  not pg_catalog.has_function_privilege('anon', 'public.bonus_report(date, date)', 'EXECUTE'),
+  'anon cannot execute bonus_report(date, date) (update rls_catalog_guard.test.sql and rls_matrix.test.sql)'
 );
 
 select * from finish();

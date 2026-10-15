@@ -27,7 +27,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(274);
+select plan(286);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as the table owner; auth.uid() is null, so owners are explicit)
@@ -47,6 +47,8 @@ select plan(274);
 --                ...0745 EB@MB   ...0746 E1@MR_appr   ...0747 E1@MC 0.40 (closed project, so outside
 --                E1's open time share)   (SA inserts and deletes E3@MA_draft)
 --   result line: ...0751 injected E1 line of MA_draft (Draft, never visible to E1)
+--   pgtap.approved_day: the Europe/Warsaw day of the fixture approvals (approve_milestone stamps
+--                now(), so S-07's date-range cells derive their bounds from it, never a literal)
 -- ---------------------------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, raw_user_meta_data, created_at, updated_at)
 values
@@ -185,6 +187,12 @@ begin
        and employee_id = '00000000-0000-4000-8000-000000000732'),
     true
   );
+  perform set_config(
+    'pgtap.approved_day',
+    (select ((approved_at at time zone 'Europe/Warsaw')::date)::text from public.milestone_result_lines
+     where id = current_setting('pgtap.e1_line_ma')::uuid),
+    true
+  );
 end;
 $$;
 
@@ -313,6 +321,82 @@ select results_eq(
   $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' order by milestone_id $$,
   $$ values ('00000000-0000-4000-8000-000000000721'::uuid), ('00000000-0000-4000-8000-000000000724'::uuid) $$,
   'S-06: E1 reading own history sees MA_appr and MR_appr, never the injected Draft line'
+);
+
+reset role;
+set local request.jwt.claims = '{}';
+
+-- ---------------------------------------------------------------------------
+-- S-07 aggregate bonus report: bonus_report() per actor, on the untouched fixtures (before the PR
+-- reassignment, so SA still owns MR_appr). Decided matrix: SA gets E1 (MA_appr + MR_appr) and E2
+-- (MA_appr), never the injected Draft line on MA_draft although SA can read it; SB gets nothing of
+-- SA's; AD gets every approved line; U gets nothing; an employee gets nothing either (no policy on
+-- milestone_results or milestones, which the approved filter joins; the page is Supervisor/Admin
+-- only); anon cannot call it. Date bounds are the Europe/Warsaw approval day, inclusive.
+-- Totals: E1 = MA_appr 4784.79 + MR_appr 1000.00, E2 = MA_appr 4349.81.
+-- ---------------------------------------------------------------------------
+set local role anon;
+set local request.jwt.claims = '{}';
+
+select throws_ok(
+  $$ select * from public.bonus_report() $$,
+  '42501', null, 'S-07: anon calling bonus_report is denied (42501)'
+);
+
+reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000706"}';
+
+select is_empty($$ select employee_id from public.bonus_report() $$, 'S-07: U calling bonus_report gets none');
+
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000702"}';
+
+select is_empty(
+  $$ select employee_id from public.bonus_report() $$,
+  'S-07: E2 calling bonus_report gets none, not even their own line (no milestone visibility)'
+);
+
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000704"}';
+
+select is_empty($$ select employee_id from public.bonus_report() $$, 'S-07: SB calling bonus_report gets none of SA''s lines');
+
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000703"}';
+
+select results_eq(
+  $$ select employee_id, employee_name, milestone_count, total_bonus from public.bonus_report() $$,
+  $$ values ('00000000-0000-4000-8000-000000000731'::uuid, 'pgTAP Matrix E1'::text, 2, 5784.79::numeric),
+            ('00000000-0000-4000-8000-000000000732'::uuid, 'pgTAP Matrix E2'::text, 1, 4349.81::numeric) $$,
+  'S-07: SA calling bonus_report gets E1 (MA_appr, MR_appr) and E2 (MA_appr), without the injected Draft line'
+);
+select results_eq(
+  $$ select employee_id, milestone_count, total_bonus
+     from public.bonus_report(current_setting('pgtap.approved_day')::date, current_setting('pgtap.approved_day')::date) $$,
+  $$ values ('00000000-0000-4000-8000-000000000731'::uuid, 2, 5784.79::numeric),
+            ('00000000-0000-4000-8000-000000000732'::uuid, 1, 4349.81::numeric) $$,
+  'S-07: SA calling bonus_report(approval day, approval day) gets the same rows (bounds inclusive)'
+);
+select is_empty(
+  $$ select employee_id from public.bonus_report(null, current_setting('pgtap.approved_day')::date - 1) $$,
+  'S-07: SA calling bonus_report with a range ending the day before the approval gets none'
+);
+select is_empty(
+  $$ select employee_id from public.bonus_report(current_setting('pgtap.approved_day')::date + 1, null) $$,
+  'S-07: SA calling bonus_report with a range starting the day after the approval gets none'
+);
+select is_empty(
+  $$ select employee_id
+     from public.bonus_report(current_setting('pgtap.approved_day')::date + 1, current_setting('pgtap.approved_day')::date - 1) $$,
+  'S-07: SA calling bonus_report with p_from > p_to gets none'
+);
+
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000705"}';
+
+select results_eq(
+  $$ select employee_id, employee_name, milestone_count, total_bonus from public.bonus_report()
+     where employee_id in ('00000000-0000-4000-8000-000000000731', '00000000-0000-4000-8000-000000000732') $$,
+  $$ values ('00000000-0000-4000-8000-000000000731'::uuid, 'pgTAP Matrix E1'::text, 2, 5784.79::numeric),
+            ('00000000-0000-4000-8000-000000000732'::uuid, 'pgTAP Matrix E2'::text, 1, 4349.81::numeric) $$,
+  'S-07: AD calling bonus_report gets every approved fixture line, without the injected Draft line'
 );
 
 reset role;
@@ -1476,6 +1560,25 @@ select results_eq(
   $$ select milestone_id from public.milestone_result_lines where employee_id = '00000000-0000-4000-8000-000000000731' order by milestone_id $$,
   $$ values ('00000000-0000-4000-8000-000000000721'::uuid), ('00000000-0000-4000-8000-000000000722'::uuid) $$,
   'S-06: after reassignment SA reading E1''s history sees only PA''s lines'
+);
+
+-- S-07 after reassignment: the report follows the current owner, so each Supervisor's total for E1
+-- is partial (SB: MR_appr only; SA: MA_appr only).
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000704"}';
+
+select results_eq(
+  $$ select employee_id, milestone_count, total_bonus from public.bonus_report() $$,
+  $$ values ('00000000-0000-4000-8000-000000000731'::uuid, 1, 1000.00::numeric) $$,
+  'S-07: after reassignment SB calling bonus_report gets E1 with MR_appr only'
+);
+
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000703"}';
+
+select results_eq(
+  $$ select employee_id, milestone_count, total_bonus from public.bonus_report() $$,
+  $$ values ('00000000-0000-4000-8000-000000000731'::uuid, 1, 4784.79::numeric),
+            ('00000000-0000-4000-8000-000000000732'::uuid, 1, 4349.81::numeric) $$,
+  'S-07: after reassignment SA calling bonus_report gets E1 and E2 with MA_appr only'
 );
 
 reset role;
