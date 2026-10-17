@@ -161,6 +161,7 @@ Move the two logs that carry no error value onto `logError` with synthetic codes
 #### Manual Verification:
 
 - The CSV export without Supabase config (empty `SUPABASE_URL` in `.dev.vars`) still answers `500 not_configured` and logs `bonus report CSV failed { code: "not_configured", … }`
+  - _Review note (impl-review F1):_ this can't be observed over HTTP. Without config, `createClient` returns `null`, so there's no user, and the middleware redirects `/api/reports` (a protected route) to sign-in before the handler runs. The branch and its line are correct by lint and the type check only. Queued for X3 in `follow-ups/review-fixes.md`.
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful.
 
