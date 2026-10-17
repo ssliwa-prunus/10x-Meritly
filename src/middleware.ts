@@ -1,4 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
+import { logContextFrom, logError } from "@/lib/error-log";
 import { LOCALE_COOKIE, localeCookieOptions, resolveLocale } from "@/lib/i18n";
 import { discardUnreadBody } from "@/lib/request-body";
 import { decideAccess, matchesRoute, SET_PASSWORD_ROUTES } from "@/lib/route-access";
@@ -22,7 +23,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     if (user) {
       // Queried as the signed-in user, so RLS applies.
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from("profiles")
         .select("id, email, display_name, role, locale")
         .eq("id", user.id)
@@ -30,8 +31,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
       if (error) {
         context.locals.profileError = true;
-        // eslint-disable-next-line no-console -- intentional: surfaces DB outages in Workers observability logs
-        console.error("Profile lookup failed", { userId: user.id, code: error.code, message: error.message });
+        logError("error", "Profile lookup", error, {
+          status,
+          log: logContextFrom(context.locals, context.request),
+        });
       } else {
         context.locals.profile = data;
       }

@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
+import { logContextFrom, logError } from "@/lib/error-log";
 import { LOCALE_COOKIE, LOCALES, localeCookieOptions } from "@/lib/i18n";
 import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase";
@@ -29,13 +30,13 @@ export const POST: APIRoute = async (context) => {
 
     if (context.locals.user) {
       const supabase = createClient(context.request.headers, context.cookies);
-      const { error } = supabase ? await supabase.rpc("set_my_locale", { p_locale: locale }) : { error: null };
+      const { error, status } = supabase
+        ? await supabase.rpc("set_my_locale", { p_locale: locale })
+        : { error: null, status: undefined };
       if (error) {
-        // eslint-disable-next-line no-console -- intentional: a failed profile write must not block the switch
-        console.error("set_my_locale failed", {
-          userId: context.locals.user.id,
-          code: error.code,
-          message: error.message,
+        logError("error", "set_my_locale", error, {
+          status,
+          log: logContextFrom(context.locals, context.request),
         });
       }
     }
