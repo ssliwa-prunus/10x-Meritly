@@ -221,15 +221,15 @@ Saved Workers Logs searches on `bonus report CSV: Supabase is not configured` or
 
 #### Automated
 
-- [x] 2.1 Guard grep finds no console call or no-console disable outside error-log.ts
-- [x] 2.2 Lint passes
-- [x] 2.3 UI literal check passes
-- [x] 2.4 Type check passes
-- [x] 2.5 Unit tests pass
-- [x] 2.6 Build passes
-- [x] 2.7 Smoke passes
-- [x] 2.8 E2E passes
+- [x] 2.1 Guard grep finds no console call or no-console disable outside error-log.ts — 32cf67d
+- [x] 2.2 Lint passes — 32cf67d
+- [x] 2.3 UI literal check passes — 32cf67d
+- [x] 2.4 Type check passes — 32cf67d
+- [x] 2.5 Unit tests pass — 32cf67d
+- [x] 2.6 Build passes — 32cf67d
+- [x] 2.7 Smoke passes — 32cf67d
+- [x] 2.8 E2E passes — 32cf67d
 
 #### Manual
 
-- [x] 2.9 CSV export without config answers 500 not_configured and logs the new line
+- [x] 2.9 CSV export without config answers 500 not_configured and logs the new line — 32cf67d
