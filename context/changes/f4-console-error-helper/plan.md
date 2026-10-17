@@ -206,30 +206,30 @@ Saved Workers Logs searches on `bonus report CSV: Supabase is not configured` or
 
 #### Automated
 
-- [x] 1.1 No `console.` call remains in middleware, signin, locale and set-password
-- [x] 1.2 Lint passes
-- [x] 1.3 Type check passes
-- [x] 1.4 Unit tests pass
-- [x] 1.5 Build passes
+- [x] 1.1 No `console.` call remains in middleware, signin, locale and set-password — db9e04e
+- [x] 1.2 Lint passes — db9e04e
+- [x] 1.3 Type check passes — db9e04e
+- [x] 1.4 Unit tests pass — db9e04e
+- [x] 1.5 Build passes — db9e04e
 
 #### Manual
 
-- [x] 1.6 Probe P4 shows unchanged 503 and the new Profile lookup payload
-- [x] 1.7 Sign-in, language switch and set-password behave as before
+- [x] 1.6 Probe P4 shows unchanged 503 and the new Profile lookup payload — db9e04e
+- [x] 1.7 Sign-in, language switch and set-password behave as before — db9e04e
 
 ### Phase 2: Message-only sites and the guard
 
 #### Automated
 
-- [ ] 2.1 Guard grep finds no console call or no-console disable outside error-log.ts
-- [ ] 2.2 Lint passes
-- [ ] 2.3 UI literal check passes
-- [ ] 2.4 Type check passes
-- [ ] 2.5 Unit tests pass
-- [ ] 2.6 Build passes
-- [ ] 2.7 Smoke passes
-- [ ] 2.8 E2E passes
+- [x] 2.1 Guard grep finds no console call or no-console disable outside error-log.ts
+- [x] 2.2 Lint passes
+- [x] 2.3 UI literal check passes
+- [x] 2.4 Type check passes
+- [x] 2.5 Unit tests pass
+- [x] 2.6 Build passes
+- [x] 2.7 Smoke passes
+- [x] 2.8 E2E passes
 
 #### Manual
 
-- [ ] 2.9 CSV export without config answers 500 not_configured and logs the new line
+- [x] 2.9 CSV export without config answers 500 not_configured and logs the new line
