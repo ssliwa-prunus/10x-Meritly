@@ -1,10 +1,10 @@
 ---
 change_id: log-mapped-errors
 title: Shared error-logging helper that keeps code, message, details, hint, status and ids
-status: impl_reviewed
+status: archived
 created: 2026-10-15
-updated: 2026-10-15
-archived_at: null
+updated: 2026-10-17
+archived_at: 2026-10-17T17:09:11Z
 ---
 
 ## Notes

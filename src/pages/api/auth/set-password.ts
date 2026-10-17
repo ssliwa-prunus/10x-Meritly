@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { logContextFrom, logError } from "@/lib/error-log";
 import { parseForm } from "@/lib/forms";
 import { isSetPasswordErrorCode, setPasswordSchema, setPasswordUrl } from "@/lib/set-password";
 import { createClient } from "@/lib/supabase";
@@ -19,8 +20,7 @@ export const POST: APIRoute = async (context) => {
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
-    // eslint-disable-next-line no-console -- intentional: surfaces Auth failures in Workers observability logs
-    console.error("Set password failed", { status: error.status, code: error.code });
+    logError("error", "Set password", error, { log: logContextFrom(context.locals, context.request) });
     return context.redirect(setPasswordUrl("update_failed"));
   }
 

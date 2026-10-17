@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { logContextFrom } from "@/lib/error-log";
+import { logContextFrom, logError } from "@/lib/error-log";
 import { createClient } from "@/lib/supabase";
 import { formatPercent, formatPln } from "@/lib/format";
 import { format, getMessages } from "@/lib/i18n";
@@ -101,8 +101,12 @@ if (!supabase || !profile) {
         if (!approvedResult.error) {
           // An approved milestone always has a header (approve_milestone writes both in one
           // statement), so a missing one is a broken invariant or an RLS gap: surface it.
-          // eslint-disable-next-line no-console -- intentional: surfaces the broken invariant in Workers observability logs
-          console.error("Approved milestone has no snapshot header", { milestoneId: milestoneId.data });
+          logError(
+            "error",
+            "getApprovedPayoutHeader",
+            { code: "no_snapshot_header" },
+            { ids: { milestoneId: milestoneId.data }, log },
+          );
         }
         payoutResult = { error: "load_failed" };
       }

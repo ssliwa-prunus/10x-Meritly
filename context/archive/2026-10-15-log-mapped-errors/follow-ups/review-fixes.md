@@ -4,6 +4,8 @@ Queued from `reviews/impl-review.md`. Not part of this change; each needs its ow
 
 ## F4: move the remaining direct `console.error` calls onto the shared helper
 
+**Resolved** (2026-10-17): done in `f4-console-error-helper` (db9e04e, 32cf67d), archived at `context/archive/2026-10-17-f4-console-error-helper/`. All three sites, plus set-password, the CSV export and the milestone page, now call `logError`; no direct `console` call remains in `src` outside `src/lib/error-log.ts`. The audit findings named under "Natural home" (X2, X3, X4, E2, E5, E10) stay open as separate work.
+
 - **Where**:
   - `src/middleware.ts:33` (profile lookup)
   - `src/pages/api/auth/signin.ts:33` (`set_my_locale` at sign-in)
