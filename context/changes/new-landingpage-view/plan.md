@@ -333,19 +333,19 @@ Rebuild `Welcome.astro` from the design. Add the PL and EN copy, wire fonts and 
 
 #### Automated
 
-- [x] 3.1 Type-check passes (EN dictionary matches the `Messages` type): `npx astro sync && npx astro check`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 UI literal guard passes: `npm run lint:ui`
-- [x] 3.4 Unit tests pass: `npm test`
-- [x] 3.5 Production build succeeds: `npm run build`
-- [x] 3.6 Smoke passes against the running preview, including the new CTA steps: `npm run smoke`
-- [x] 3.7 E2E passes, including `language-switch.spec.ts` unchanged: `npm run test:e2e`
+- [x] 3.1 Type-check passes (EN dictionary matches the `Messages` type): `npx astro sync && npx astro check` — c3fd261
+- [x] 3.2 Lint passes: `npm run lint` — c3fd261
+- [x] 3.3 UI literal guard passes: `npm run lint:ui` — c3fd261
+- [x] 3.4 Unit tests pass: `npm test` — c3fd261
+- [x] 3.5 Production build succeeds: `npm run build` — c3fd261
+- [x] 3.6 Smoke passes against the running preview, including the new CTA steps: `npm run smoke` — c3fd261
+- [x] 3.7 E2E passes, including `language-switch.spec.ts` unchanged: `npm run test:e2e` — c3fd261
 
 #### Manual
 
-- [x] 3.8 At 1440 px, `/` matches the design section by section (layout, fonts, illustrations, worked example)
-- [x] 3.9 At 375 px there is no horizontal page scroll, the header wraps cleanly and the example table scrolls inside its card
-- [x] 3.10 With `lang=en`, every text on `/` is English and the figures stay pl-PL
-- [x] 3.11 Signed in, the header shows the dashboard link and the sign-out button and the hero CTA reads "Przejdź do panelu"; sign-out works
-- [x] 3.12 Keyboard tab order reaches nav, switch and CTAs with a visible focus ring
-- [x] 3.13 Other pages still show the bottom-right switch and no web fonts
+- [x] 3.8 At 1440 px, `/` matches the design section by section (layout, fonts, illustrations, worked example) — c3fd261
+- [x] 3.9 At 375 px there is no horizontal page scroll, the header wraps cleanly and the example table scrolls inside its card — c3fd261
+- [x] 3.10 With `lang=en`, every text on `/` is English and the figures stay pl-PL — c3fd261
+- [x] 3.11 Signed in, the header shows the dashboard link and the sign-out button and the hero CTA reads "Przejdź do panelu"; sign-out works — c3fd261
+- [x] 3.12 Keyboard tab order reaches nav, switch and CTAs with a visible focus ring — c3fd261
+- [x] 3.13 Other pages still show the bottom-right switch and no web fonts — c3fd261
