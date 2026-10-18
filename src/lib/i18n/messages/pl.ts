@@ -58,6 +58,7 @@ export const pl = {
     supabaseDocsLabel: "Zobacz instrukcję konfiguracji",
     notSignedIn: "Nie zalogowano",
     nav: {
+      label: "Główna",
       dashboard: "Panel",
       projects: "Projekty",
       employees: "Pracownicy",

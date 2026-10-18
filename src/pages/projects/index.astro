@@ -50,10 +50,10 @@ const ownerById = new Map((supervisors ?? []).map((profile) => [profile.id, prof
 const loaded = !loadError && projects && exposureResult.data && (!isAdmin || supervisors);
 ---
 
-<Layout title={t.projects.title}>
+<Layout title={t.projects.title} languageSwitch={false}>
   <div class="bg-cosmic min-h-screen p-4 text-white">
     <div class="mx-auto w-full max-w-5xl">
-      <Topbar />
+      <Topbar current="projects" />
       <h1 class="mb-2 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
         {t.projects.title}
       </h1>

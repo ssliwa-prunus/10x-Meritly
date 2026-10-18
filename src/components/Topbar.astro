@@ -1,56 +1,111 @@
 ---
+import MeritlyLogo from "@/components/landing/illustrations/MeritlyLogo.astro";
+import LanguageSwitch from "@/components/LanguageSwitch.astro";
+import { Button } from "@/components/ui/button";
 import { getMessages } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
+// Shared app bar for the signed-in pages, built from the header in reports/design/project/Dashboard.dc.html:
+// logo + wordmark, the role-based nav (pills, the current page marked), the inline PL | EN switch, an
+// avatar chip with the email and sign-out. Pages render it inside their own width-capped container and
+// turn Layout's fixed switch off (languageSwitch={false}). `current` marks the active nav item; "admin"
+// has no link here yet, so it marks nothing. The avatar letter is decorative (aria-hidden), and the email
+// sits outside every link, so link and button names stay "Raporty", "Wyloguj się" and so on.
+interface Props {
+  current?: "dashboard" | "projects" | "employees" | "reports" | "myBonuses" | "admin";
+}
+
+const { current } = Astro.props;
 const { user, profile, locale } = Astro.locals;
 const t = getMessages(locale);
 const canSeeProjects = profile?.role === "supervisor" || profile?.role === "admin";
 const canSeeMyBonuses = profile?.role === "employee";
+
+const links: { key: NonNullable<Props["current"]>; href: string; label: string }[] = [
+  { key: "dashboard", href: "/dashboard", label: t.layout.nav.dashboard },
+  ...(canSeeProjects
+    ? [
+        { key: "projects" as const, href: "/projects", label: t.layout.nav.projects },
+        { key: "employees" as const, href: "/employees", label: t.layout.nav.employees },
+        { key: "reports" as const, href: "/reports/bonuses", label: t.layout.nav.reports },
+      ]
+    : []),
+  ...(canSeeMyBonuses ? [{ key: "myBonuses" as const, href: "/my-bonuses", label: t.layout.nav.myBonuses }] : []),
+];
+
+const initial = user?.email?.charAt(0).toUpperCase() ?? "";
+const focusRing = "focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none";
+const pill = cn(focusRing, "inline-flex min-h-10 items-center rounded-lg px-3.5 text-sm transition-colors");
 ---
 
-<div class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-  {user ? (
-    <>
-      <span class="min-w-0 truncate text-blue-100/70">{user.email}</span>
-      <div class="flex items-center gap-3">
-        <a href="/dashboard" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-          {t.layout.nav.dashboard}
-        </a>
-        {canSeeProjects && (
-          <>
-            <a href="/projects" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-              {t.layout.nav.projects}
-            </a>
-            <a href="/employees" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-              {t.layout.nav.employees}
-            </a>
-            <a href="/reports/bonuses" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-              {t.layout.nav.reports}
-            </a>
-          </>
-        )}
-        {canSeeMyBonuses && (
-          <a href="/my-bonuses" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-            {t.layout.nav.myBonuses}
+<header class="border-border text-foreground font-body mb-6 border-b pb-3">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex min-w-0 flex-wrap items-center gap-x-8 gap-y-2">
+      <a
+        href={user ? "/dashboard" : "/"}
+        class:list={cn(focusRing, "text-foreground flex items-center gap-2.5 rounded-md")}
+      >
+        <MeritlyLogo class="text-primary size-6" />
+        <span class="font-heading text-xl font-bold tracking-tight">{t.common.appName}</span>
+      </a>
+      {user && (
+        <nav aria-label={t.layout.nav.label} class="flex flex-wrap gap-1">
+          {links.map((link) => {
+            const active = link.key === current;
+            return (
+              <a
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                class:list={cn(
+                  pill,
+                  active
+                    ? "bg-primary/15 text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                {link.label}
+              </a>
+            );
+          })}
+        </nav>
+      )}
+    </div>
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
+      <LanguageSwitch placement="inline" />
+      {user ? (
+        <>
+          <div class="border-border flex min-w-0 items-center gap-2.5 rounded-full border py-1 ps-1 pe-3">
+            <span
+              aria-hidden="true"
+              class="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+            >
+              {initial}
+            </span>
+            <span class="text-muted-foreground min-w-0 truncate text-sm">{user.email}</span>
+          </div>
+          <form method="POST" action="/api/auth/signout">
+            <Button type="submit" variant="outline" className="h-10 px-3.5">
+              {t.common.signOut}
+            </Button>
+          </form>
+        </>
+      ) : (
+        <>
+          <span class="text-muted-foreground text-sm">{t.layout.notSignedIn}</span>
+          <a
+            href="/auth/signin"
+            class:list={cn(pill, "text-muted-foreground hover:bg-accent hover:text-accent-foreground")}
+          >
+            {t.common.signIn}
           </a>
-        )}
-        <form method="POST" action="/api/auth/signout">
-          <button type="submit" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-            {t.common.signOut}
-          </button>
-        </form>
-      </div>
-    </>
-  ) : (
-    <>
-      <span class="text-blue-100/70">{t.layout.notSignedIn}</span>
-      <div class="flex gap-3">
-        <a href="/auth/signin" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-          {t.common.signIn}
-        </a>
-        <a href="/auth/signup" class="text-purple-300 transition-colors hover:text-purple-100 hover:underline">
-          {t.common.signUp}
-        </a>
-      </div>
-    </>
-  )}
-</div>
+          <a
+            href="/auth/signup"
+            class:list={cn(pill, "text-muted-foreground hover:bg-accent hover:text-accent-foreground")}
+          >
+            {t.common.signUp}
+          </a>
+        </>
+      )}
+    </div>
+  </div>
+</header>

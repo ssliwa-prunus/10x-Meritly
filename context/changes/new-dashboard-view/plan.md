@@ -554,30 +554,30 @@ Not applicable: no schema or data change.
 
 #### Automated
 
-- [x] 1.1 `npm run lint` and `npm run lint:ui` pass with the three new components in `CLEAN_PATHS`
-- [x] 1.2 `npx astro sync && npx astro check` passes
-- [x] 1.3 `npm test` passes
-- [x] 1.4 `context/changes/new-dashboard-view/tokens.md` lists `warning`/`info` values with contrast of at least 4.5:1 for pill text
+- [x] 1.1 `npm run lint` and `npm run lint:ui` pass with the three new components in `CLEAN_PATHS` — 3e65928
+- [x] 1.2 `npx astro sync && npx astro check` passes — 3e65928
+- [x] 1.3 `npm test` passes — 3e65928
+- [x] 1.4 `context/changes/new-dashboard-view/tokens.md` lists `warning`/`info` values with contrast of at least 4.5:1 for pill text — 3e65928
 
 #### Manual
 
-- [x] 1.5 The landing page `/` still renders the same fonts and its inline language switch, with no visual regression
-- [x] 1.6 `/projects` renders in IBM Plex Sans with nothing broken
+- [x] 1.5 The landing page `/` still renders the same fonts and its inline language switch, with no visual regression — 3e65928
+- [x] 1.6 `/projects` renders in IBM Plex Sans with nothing broken — 3e65928
 
 ### Phase 2: Topbar migration
 
 #### Automated
 
-- [ ] 2.1 `npm run lint:ui` passes with `Topbar.astro` in `CLEAN_PATHS` (0 hits, down from 11)
-- [ ] 2.2 `npx astro check` and `npm test` pass
-- [ ] 2.3 `npm run smoke` passes (role × route, sign-out)
-- [ ] 2.4 `npm run test:e2e` passes, including `s-07-aggregate-bonus-report` ("Raporty" link) and `seed` ("Wyloguj się")
+- [x] 2.1 `npm run lint:ui` passes with `Topbar.astro` in `CLEAN_PATHS` (0 hits, down from 11)
+- [x] 2.2 `npx astro check` and `npm test` pass
+- [x] 2.3 `npm run smoke` passes (role × route, sign-out)
+- [x] 2.4 `npm run test:e2e` passes, including `s-07-aggregate-bonus-report` ("Raporty" link) and `seed` ("Wyloguj się")
 
 #### Manual
 
-- [ ] 2.5 On each of the 8 pages, the app bar matches the mockup header and exactly one PL/EN switch is visible
-- [ ] 2.6 Keyboard tab order: logo → nav → PL/EN → sign-out, each with a visible `ring` focus
-- [ ] 2.7 At 375px the bar wraps without horizontal scroll
+- [x] 2.5 On each of the 8 pages, the app bar matches the mockup header and exactly one PL/EN switch is visible
+- [x] 2.6 Keyboard tab order: logo → nav → PL/EN → sign-out, each with a visible `ring` focus
+- [x] 2.7 At 375px the bar wraps without horizontal scroll
 
 ### Phase 3: Dashboard data layer (TDD)
 

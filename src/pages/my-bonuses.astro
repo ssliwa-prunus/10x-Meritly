@@ -32,10 +32,10 @@ if (!supabase) {
 const history = groupHistory(bonuses.lines);
 ---
 
-<Layout title={t.myBonuses.title}>
+<Layout title={t.myBonuses.title} languageSwitch={false}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
-      <Topbar />
+      <Topbar current="myBonuses" />
       <h1 class="text-foreground mb-6 text-3xl font-bold">{t.myBonuses.title}</h1>
 
       {loadError ? (

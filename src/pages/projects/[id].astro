@@ -78,10 +78,10 @@ const addFormError = canEditMilestones && errorMilestoneId === null ? milestones
 const sectionError = rowErrorId || addFormError ? null : milestonesStatus.error;
 ---
 
-<Layout title={project ? project.name : t.projects.detail.fallbackTitle}>
+<Layout title={project ? project.name : t.projects.detail.fallbackTitle} languageSwitch={false}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
-      <Topbar />
+      <Topbar current="projects" />
       <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
         <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">
           {project ? project.name : t.projects.detail.fallbackTitle}

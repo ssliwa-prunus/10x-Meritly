@@ -55,6 +55,7 @@ export const en: Messages = {
     supabaseDocsLabel: "See the configuration guide",
     notSignedIn: "Not signed in",
     nav: {
+      label: "Main",
       dashboard: "Dashboard",
       projects: "Projects",
       employees: "Employees",
