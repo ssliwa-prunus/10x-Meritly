@@ -583,28 +583,28 @@ Not applicable: no schema or data change.
 
 #### Automated
 
-- [x] 3.1 `npx vitest run src/lib/__tests__/dashboard.test.ts src/lib/services/__tests__/dashboard.test.ts` passes, and each test was seen failing before its helper existed
-- [x] 3.2 `npm test` and `npx astro check` pass
-- [x] 3.3 `npm run test:mutation -- --mutate src/lib/dashboard.ts` reports no surviving mutant in `isAwaitingApproval`, `warsawYearBounds` or `reservedBudget`
+- [x] 3.1 `npx vitest run src/lib/__tests__/dashboard.test.ts src/lib/services/__tests__/dashboard.test.ts` passes, and each test was seen failing before its helper existed — 5c147bb
+- [x] 3.2 `npm test` and `npx astro check` pass — 5c147bb
+- [x] 3.3 `npm run test:mutation -- --mutate src/lib/dashboard.ts` reports no surviving mutant in `isAwaitingApproval`, `warsawYearBounds` or `reservedBudget` — 5c147bb
 
 #### Manual
 
-- [x] 3.4 Against the seeded local Supabase, a scratch call of `listVisibleMilestones` as the seeded supervisor returns rows with project names, confirming the `projects(...)` embed works under RLS
+- [x] 3.4 Against the seeded local Supabase, a scratch call of `listVisibleMilestones` as the seeded supervisor returns rows with project names, confirming the `projects(...)` embed works under RLS — 5c147bb
 
 ### Phase 4: Dashboard view
 
 #### Automated
 
-- [ ] 4.1 `npm run lint:ui` passes with `dashboard.astro` and `src/components/dashboard/*` in `CLEAN_PATHS` (dashboard hits 10 → 0)
-- [ ] 4.2 `npm run lint`, `npx astro check` and `npm test` pass
-- [ ] 4.3 `npm run smoke` passes (`/dashboard` anonymous 302, signed-in 200, after sign-out 302)
+- [x] 4.1 `npm run lint:ui` passes with `dashboard.astro` and `src/components/dashboard/*` in `CLEAN_PATHS` (dashboard hits 10 → 0)
+- [x] 4.2 `npm run lint`, `npx astro check` and `npm test` pass
+- [x] 4.3 `npm run smoke` passes (`/dashboard` anonymous 302, signed-in 200, after sign-out 302)
 
 #### Manual
 
-- [ ] 4.4 Signed in as the seeded supervisor, `/dashboard` matches `Dashboard.dc.html` in layout and hierarchy at 1440px and at 375px, and the numbers agree with the project pages
-- [ ] 4.5 Signed in as admin: company-wide figures, and no "Zatwierdź" anywhere
-- [ ] 4.6 Signed in as the seeded employee, `/dashboard` matches `DashboardEmployee.dc.html`, the breakdown shows the KPI multiplier and no pool, and the history total equals `/my-bonuses`
-- [ ] 4.7 Switching to EN translates every dashboard string, and the figures stay pl-PL
+- [x] 4.4 Signed in as the seeded supervisor, `/dashboard` matches `Dashboard.dc.html` in layout and hierarchy at 1440px and at 375px, and the numbers agree with the project pages
+- [x] 4.5 Signed in as admin: company-wide figures, and no "Zatwierdź" anywhere
+- [x] 4.6 Signed in as the seeded employee, `/dashboard` matches `DashboardEmployee.dc.html`, the breakdown shows the KPI multiplier and no pool, and the history total equals `/my-bonuses`
+- [x] 4.7 Switching to EN translates every dashboard string, and the figures stay pl-PL
 
 ### Phase 5: States, visual gate and guard
 

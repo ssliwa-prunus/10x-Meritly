@@ -1,0 +1,74 @@
+---
+import MilestoneStatusBadge from "@/components/MilestoneStatusBadge.astro";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
+import { formatMultiplier, formatPercent, formatPln } from "@/lib/format";
+import { format, getMessages, type Locale } from "@/lib/i18n";
+import type { MyBonusLine } from "@/types";
+
+// "Jak wyliczono Twoją ostatnią premię" (DashboardEmployee.dc.html): the employee's own time share, role
+// weight, rating → factor and the milestone's KPI multiplier from the frozen snapshot, then the bonus. The
+// mockup's "Pula do wypłaty" tile is replaced by the KPI multiplier on purpose: the payout pool is never
+// readable by employees (supabase/migrations/20261005120000_milestone_approval.sql).
+interface Props {
+  /** The latest approved line (employeeStats().latest); null when there is none yet. */
+  line: MyBonusLine | null;
+  error?: boolean;
+  locale: Locale;
+}
+
+const { line, error = false, locale } = Astro.props;
+const t = getMessages(locale).dashboard.breakdown;
+const factorTile = "bg-muted flex flex-col gap-1 rounded-xl p-3.5";
+---
+
+<Card className="gap-5 rounded-2xl px-6 sm:px-7">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h2 class="font-heading text-xl font-semibold">{t.heading}</h2>
+    {line && <MilestoneStatusBadge status="approved" locale={locale} />}
+  </div>
+
+  {error ? (
+    <Alert variant="destructive">
+      <AlertDescription>{t.loadFailed}</AlertDescription>
+    </Alert>
+  ) : !line ? (
+    <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{t.empty}</p>
+  ) : (
+    <>
+      <p class="text-muted-foreground text-sm break-words">
+        {format(t.context, {
+          project: line.project_name,
+          milestone: line.milestone_name,
+          start: line.start_date,
+          end: line.end_date,
+        })}
+      </p>
+      <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class:list={factorTile}>
+          <dt class="text-muted-foreground text-xs">{t.timeShare}</dt>
+          <dd class="font-figures text-lg">{formatPercent(line.time_share)}</dd>
+        </div>
+        <div class:list={factorTile}>
+          <dt class="text-muted-foreground text-xs">{t.roleWeight}</dt>
+          <dd class="font-figures text-lg">{formatMultiplier(line.role_weight)}</dd>
+        </div>
+        <div class:list={factorTile}>
+          <dt class="text-muted-foreground text-xs">{t.ratingFactor}</dt>
+          <dd class="font-figures text-lg">
+            {format(t.ratingFactorValue, { rating: line.rating, factor: formatMultiplier(line.rating_factor) })}
+          </dd>
+        </div>
+        <div class:list={factorTile}>
+          <dt class="text-muted-foreground text-xs">{t.kpiMultiplier}</dt>
+          <dd class="font-figures text-lg">{formatMultiplier(line.multiplier)}</dd>
+        </div>
+      </dl>
+      <div class="border-primary/40 bg-primary/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4.5">
+        <span class="font-medium">{t.bonus}</span>
+        <span class="font-figures text-primary text-2xl font-medium">{formatPln(line.bonus)}</span>
+      </div>
+      <p class="text-muted-foreground text-sm">{t.frozenNote}</p>
+    </>
+  )}
+</Card>

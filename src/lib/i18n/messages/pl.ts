@@ -173,11 +173,165 @@ export const pl = {
       title: "Podziel pierwszą pulę premiową w kilka minut",
     },
   },
+  // Dashboard (/dashboard): supervisor/admin and employee variants (reports/design/project/Dashboard.dc.html,
+  // DashboardEmployee.dc.html). {count}, {name}, {date} … are filled by format(); plural forms by plural().
   dashboard: {
     title: "Panel",
-    welcome: "Witaj,",
-    noRole: "brak roli",
-    authOnly: "Ta strona jest dostępna tylko dla zalogowanych użytkowników.",
+    noRoleTitle: "Brak roli",
+    noRole: "Twoje konto nie ma jeszcze przypisanej roli. Poproś administratora o jej nadanie.",
+    greeting: {
+      title: "Dzień dobry!",
+      newProject: "Nowy projekt",
+      inviteEmployee: "Zaproś pracownika",
+      myBonuses: "Moje premie",
+      employee: "Tu widzisz swoje premie z zatwierdzonych kamieni milowych. Twoje kwoty widzisz tylko Ty.",
+      // {awaiting} and {overBudget} are the plural phrases below, filled with their {count}.
+      supervisor: {
+        both: "{awaiting}, a {overBudget}.",
+        awaitingOnly: "{awaiting}.",
+        overBudgetOnly: "{overBudget}.",
+        calm: "Nic nie czeka na Twoje zatwierdzenie, a budżety projektów mieszczą się w limitach.",
+        // When the counts could not be loaded: no claim either way.
+        neutral: "Oto przegląd Twoich projektów i kamieni milowych.",
+        awaiting: {
+          one: "{count} kamień milowy czeka na Twoje zatwierdzenie",
+          few: "{count} kamienie milowe czekają na Twoje zatwierdzenie",
+          many: "{count} kamieni milowych czeka na Twoje zatwierdzenie",
+        },
+      },
+      // Admins never approve, so their sentence names no "Twoje zatwierdzenie".
+      admin: {
+        both: "Przegląd całej firmy: {awaiting}, a {overBudget}.",
+        awaitingOnly: "Przegląd całej firmy: {awaiting}.",
+        overBudgetOnly: "Przegląd całej firmy: {overBudget}.",
+        calm: "Przegląd całej firmy: nic nie czeka na zatwierdzenie, a budżety projektów mieszczą się w limitach.",
+        neutral: "Oto przegląd wszystkich projektów w firmie.",
+        awaiting: {
+          one: "{count} kamień milowy czeka na zatwierdzenie przez przełożonego",
+          few: "{count} kamienie milowe czekają na zatwierdzenie przez przełożonych",
+          many: "{count} kamieni milowych czeka na zatwierdzenie przez przełożonych",
+        },
+      },
+      overBudget: {
+        one: "{count} projekt przekroczył budżet",
+        few: "{count} projekty przekroczyły budżet",
+        many: "{count} projektów przekroczyło budżet",
+      },
+    },
+    stats: {
+      label: "Podsumowanie",
+      loadFailed: "Nie udało się wczytać podsumowania. Spróbuj ponownie.",
+      activeProjects: "Aktywne projekty",
+      activeMilestones: {
+        one: "{count} kamień milowy w toku",
+        few: "{count} kamienie milowe w toku",
+        many: "{count} kamieni milowych w toku",
+      },
+      awaiting: "Do zatwierdzenia",
+      awaitingHint: "Wyniki w szkicu, pracownicy ich nie widzą",
+      reserved: "Zarezerwowane z budżetu",
+      // {budget} is a formatted amount, {percent} a whole number.
+      reservedHint: "z {budget} ({percent}%)",
+      reservedBar: "Zarezerwowano {percent}% budżetu otwartych projektów",
+      paid: "Wypłacone premie w {year}",
+      paidHint: {
+        one: "{count} zatwierdzony kamień milowy",
+        few: "{count} zatwierdzone kamienie milowe",
+        many: "{count} zatwierdzonych kamieni milowych",
+      },
+    },
+    table: {
+      heading: "Kamienie milowe",
+      allProjects: "Wszystkie projekty →",
+      milestone: "Kamień milowy",
+      period: "Okres",
+      targetPool: "Pula docelowa",
+      kpi: "Mnożnik KPI",
+      status: "Status",
+      action: "Akcja",
+      // {kpi} and {max} are formatted multipliers.
+      kpiOf: "{kpi} / {max}",
+      noKpi: "—",
+      approve: "Zatwierdź",
+      results: "Wyniki",
+      open: "Otwórz",
+      empty: "Nie ma jeszcze kamieni milowych do pokazania. Dodaj je na stronie projektu.",
+      loadFailed: "Nie udało się wczytać kamieni milowych. Spróbuj ponownie.",
+    },
+    attention: {
+      heading: "Wymaga uwagi",
+      // {name} is user data (milestone, project).
+      awaitingTitle: "{name} czeka na zatwierdzenie",
+      // {pool} is a formatted amount, {people} the plural phrase below.
+      awaitingDetail: "Pula do wypłaty {pool} dla {people}.",
+      people: {
+        one: "{count} osoby",
+        few: "{count} osób",
+        many: "{count} osób",
+      },
+      overBudgetTitle: "{name}: budżet przekroczony",
+      overBudgetDetail: "Najgorszy przypadek {reserved} przy budżecie {budget}.",
+      overAllocatedTitle: {
+        one: "{count} pracownik powyżej 100%",
+        few: "{count} pracowników powyżej 100%",
+        many: "{count} pracowników powyżej 100%",
+      },
+      // {list} is "name: percent" pairs joined with commas.
+      overAllocatedDetailSupervisor: "Otwarta suma udziału czasowego na Twoich kamieniach milowych: {list}.",
+      overAllocatedDetailAdmin: "Otwarta suma udziału czasowego: {list}.",
+      empty: "Nic nie wymaga teraz uwagi.",
+      loadFailed: "Nie udało się wczytać części ostrzeżeń. Lista może być niepełna.",
+    },
+    budgets: {
+      heading: "Budżety projektów",
+      overBudget: "Budżet przekroczony",
+      // {reserved} and {budget} are formatted amounts.
+      amounts: "{reserved} / {budget}",
+      bar: "Zarezerwowano {percent}% budżetu projektu {name}",
+      note: "Kwota zarezerwowana to najgorszy przypadek: faktyczna pula zatwierdzonych kamieni milowych i pula docelowa pozostałych.",
+      empty: "Brak otwartych projektów.",
+      loadFailed: "Nie udało się wczytać budżetów projektów. Spróbuj ponownie.",
+    },
+    employee: {
+      yearTotal: "Suma premii w {year}",
+      yearTotalHint: {
+        one: "z {count} zatwierdzonego kamienia milowego",
+        few: "z {count} zatwierdzonych kamieni milowych",
+        many: "z {count} zatwierdzonych kamieni milowych",
+      },
+      latest: "Ostatnia premia",
+      // {milestone} is user data, {date} a formatted date.
+      latestHint: "{milestone} · zatwierdzono {date}",
+      latestEmpty: "Brak zatwierdzonych premii",
+      projects: "Projekty z premią",
+      noValue: "—",
+      loadFailed: "Nie udało się wczytać Twoich premii. Spróbuj ponownie.",
+    },
+    breakdown: {
+      heading: "Jak wyliczono Twoją ostatnią premię",
+      // {project} and {milestone} are user data; {start} and {end} dates.
+      context: "{project} · {milestone} · {start} – {end}",
+      timeShare: "Twój udział czasowy",
+      roleWeight: "Waga roli",
+      ratingFactor: "Ocena → współczynnik",
+      // {rating} is 1–5, {factor} a formatted multiplier.
+      ratingFactorValue: "{rating} → ×{factor}",
+      kpiMultiplier: "Mnożnik KPI",
+      bonus: "Twoja premia",
+      frozenNote: "Zatwierdzone wyniki są ostateczne. Późniejsze zmiany wag i współczynników ich nie zmieniają.",
+      empty: "Gdy przełożony zatwierdzi pierwszy kamień milowy, zobaczysz tutaj, jak wyliczono Twoją premię.",
+      loadFailed: "Nie udało się wczytać Twojej ostatniej premii. Spróbuj ponownie.",
+    },
+    history: {
+      heading: "Historia premii",
+      seeAll: "Zobacz wszystkie →",
+      // {project} is user data, {date} a formatted date.
+      lineDetail: "{project} · zatwierdzono {date}",
+      total: "Razem",
+      note: "Nowe premie pojawią się tutaj, gdy przełożony zatwierdzi kamień milowy. Dostaniesz też e-mail z kwotą.",
+      empty: "Nie ma jeszcze zatwierdzonych premii.",
+      loadFailed: "Nie udało się wczytać historii premii. Spróbuj ponownie.",
+    },
   },
   auth: {
     signin: {
