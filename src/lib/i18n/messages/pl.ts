@@ -66,22 +66,110 @@ export const pl = {
     },
   },
   landing: {
+    // Smoke and E2E pin the pitch text (footer of the landing page).
     pitch: "Sprawiedliwy podział puli premiowej kamieni milowych",
     howItWorks: "Jak to działa",
+    howItWorksLead: "Trzy kroki od wyniku kamienia milowego do premii na koncie.",
     goToDashboard: "Przejdź do panelu",
+    nav: {
+      label: "Sekcje strony",
+      howItWorks: "Jak to działa",
+      roles: "Dla kogo",
+      guarantees: "Gwarancje",
+    },
+    badge: "Premie za kamienie milowe, bez arkuszy kalkulacyjnych",
+    title: "Pula premiowa podzielona uczciwie. Co do złotówki.",
+    lead: "Meritly przelicza wynik KPI kamienia milowego na pulę do wypłaty i dzieli ją według czasu pracy, wagi roli i oceny wkładu. Przełożony zatwierdza, a każdy pracownik widzi tylko swoją premię.",
+    bullets: {
+      withinPool: "Wypłaty nigdy nie przekraczają puli",
+      draft: "Szkic do czasu zatwierdzenia",
+    },
+    // Illustrative marketing figures, kept as designed (whole złoty) and in pl-PL format in every locale.
+    example: {
+      ariaLabel: "Przykład podziału puli",
+      title: "Kamień milowy: Wdrożenie v2",
+      illustrative: "Przykład ilustracyjny",
+      targetPool: { label: "Pula docelowa", value: "30 000 zł" },
+      multiplier: { label: "Mnożnik KPI", value: "1,2", max: "/ 1,5" },
+      payoutPool: { label: "Pula do wypłaty", value: "24 000 zł" },
+      formula: "30 000 × 1,2 ÷ 1,5 = 24 000 zł",
+      columns: {
+        role: "Rola",
+        time: "Czas",
+        weight: "Waga",
+        rating: "Ocena",
+        bonus: "Premia",
+      },
+      rows: {
+        lead: { role: "Lider techniczny", time: "100%", weight: "1,5", rating: "×1,2", bonus: "13 935 zł" },
+        developer: { role: "Programistka", time: "100%", weight: "1,0", rating: "×0,8", bonus: "6 193 zł" },
+        tester: { role: "Tester (½ etatu)", time: "50%", weight: "1,0", rating: "×1,0", bonus: "3 870 zł" },
+      },
+      sumLabel: "Suma wypłat:",
+      sumValue: "23 998 zł",
+      residual: "2 zł z zaokrągleń w dół zostaje w puli",
+    },
+    formula: {
+      ariaLabel: "Formuła podziału",
+      share: "udział pracownika",
+      time: "czas pracy",
+      roleWeight: "waga roli",
+      ratingFactor: "współczynnik oceny",
+      proportional: "∝",
+      times: "×",
+    },
     steps: {
       pool: {
         title: "Pula do wypłaty",
-        body: "Wynik KPI kamienia milowego skaluje pulę docelową do puli do wypłaty, która nigdy nie przekracza puli docelowej.",
+        body: "Wynik KPI kamienia milowego skaluje pulę docelową do puli do wypłaty. Pula do wypłaty nigdy nie przekracza zatwierdzonej puli docelowej.",
       },
       share: {
         title: "Udział każdego pracownika",
-        body: "Pula jest dzielona proporcjonalnie do iloczynu: udział czasowy × waga roli × współczynnik oceny, z zaokrągleniem w dół.",
+        body: "Pula jest dzielona proporcjonalnie do iloczynu udziału czasowego, wagi roli i współczynnika oceny. Kwoty są zaokrąglane w dół, więc suma nigdy nie przekroczy puli.",
       },
       approval: {
         title: "Zatwierdzenie",
-        body: "Wyniki pozostają szkicem, dopóki przełożony nie zatwierdzi kamienia milowego. Dopiero wtedy każdy pracownik widzi swoją premię.",
+        body: "Wyniki są szkicem widocznym tylko dla przełożonego. Dopiero po zatwierdzeniu kamienia milowego każdy pracownik widzi swoją premię i dostaje e-mail.",
       },
+    },
+    roles: {
+      title: "Każdy widzi to, co powinien",
+      lead: "Trzy role z jasno określonymi uprawnieniami.",
+      admin: {
+        title: "Administrator",
+        body: "Ustala globalną konfigurację: wagi ról, wagi KPI i mapowanie ocen na współczynniki. Widzi wszystkie projekty.",
+      },
+      supervisor: {
+        title: "Przełożony",
+        body: "Prowadzi swoje projekty i kamienie milowe, przypisuje ludzi, ocenia KPI i zatwierdza wyniki.",
+      },
+      employee: {
+        title: "Pracownik",
+        body: "Widzi tylko swoje zatwierdzone premie i ich historię. Cudzych kwot nie zobaczy nawet po zmianie adresu URL.",
+      },
+    },
+    guarantees: {
+      title: "Zasady, których system pilnuje sam",
+      lead: "Reguły są egzekwowane w bazie danych, nie tylko w interfejsie.",
+      budget: {
+        title: "Budżet pod kontrolą",
+        body: "Wypłaty nie przekroczą puli, a ryzyko przekroczenia budżetu projektu jest oznaczane z wyprzedzeniem.",
+      },
+      frozen: {
+        title: "Zamrożone wyniki",
+        body: "Zmiana wag lub współczynników działa tylko na przyszłe wyliczenia. Zatwierdzone kamienie milowe się nie zmieniają.",
+      },
+      overload: {
+        title: "Ostrzeżenie o przeciążeniu",
+        body: "Gdy łączny udział czasowy pracownika w aktywnych kamieniach milowych przekracza 100%, system to oznacza.",
+      },
+      privacy: {
+        title: "Prywatność kwot",
+        body: "Uprawnienia na poziomie wierszy w bazie gwarantują, że każdy widzi wyłącznie swoje dane.",
+      },
+    },
+    finalCta: {
+      title: "Podziel pierwszą pulę premiową w kilka minut",
     },
   },
   dashboard: {

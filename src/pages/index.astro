@@ -1,8 +1,20 @@
 ---
+import "@fontsource/space-grotesk/500.css";
+import "@fontsource/space-grotesk/600.css";
+import "@fontsource/space-grotesk/700.css";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import Welcome from "@/components/Welcome.astro";
 import Layout from "@/layouts/Layout.astro";
+
+// The landing header renders its own inline language switch, so Layout's fixed one is off here, and only
+// this page loads the landing fonts (Space Grotesk, IBM Plex Sans, IBM Plex Mono). They are self-hosted
+// via Fontsource so no visitor request goes to a third-party font CDN.
 ---
 
-<Layout>
+<Layout languageSwitch={false}>
   <Welcome />
 </Layout>

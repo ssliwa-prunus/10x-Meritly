@@ -1,58 +1,377 @@
 ---
-import Topbar from "@/components/Topbar.astro";
+import AdminAvatar from "@/components/landing/illustrations/AdminAvatar.astro";
+import CelebrationIllustration from "@/components/landing/illustrations/CelebrationIllustration.astro";
+import EmployeeAvatar from "@/components/landing/illustrations/EmployeeAvatar.astro";
+import MeritlyLogo from "@/components/landing/illustrations/MeritlyLogo.astro";
+import StepApprovalIllustration from "@/components/landing/illustrations/StepApprovalIllustration.astro";
+import StepPoolIllustration from "@/components/landing/illustrations/StepPoolIllustration.astro";
+import StepShareIllustration from "@/components/landing/illustrations/StepShareIllustration.astro";
+import SupervisorAvatar from "@/components/landing/illustrations/SupervisorAvatar.astro";
+import LanguageSwitch from "@/components/LanguageSwitch.astro";
 import { buttonVariants } from "@/components/ui/button";
 import { getMessages } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-// Meritly landing page (`/`): what the app does and the way in. Signed-in visitors get a link to the
-// dashboard instead of the sign-in / sign-up calls to action.
+// Meritly landing page (`/`), built from reports/design/project/Main.dc.html: its own header (logo,
+// section anchors, the inline PL | EN switch, sign-in / sign-up or dashboard / sign-out), the hero with
+// an illustrative worked example of a pool split, the split formula, how it works, the three roles,
+// the guarantees, a closing call to action and a footer with the pitch. Layout's fixed switch is off
+// on this page (src/pages/index.astro). Signed-in visitors get the dashboard link and a sign-out
+// button instead of the sign-in / sign-up calls to action. All text comes from t.landing.
 const t = getMessages(Astro.locals.locale);
 const signedIn = Boolean(Astro.locals.user);
-const steps = [t.landing.steps.pool, t.landing.steps.share, t.landing.steps.approval];
-const primaryCta = cn(buttonVariants({ size: "lg" }));
-const secondaryCta = cn(buttonVariants({ variant: "outline", size: "lg" }));
+const l = t.landing;
+
+const container = "mx-auto w-full max-w-6xl px-6";
+const focusRing = "focus-visible:ring-ring/50 rounded-md focus-visible:ring-3 focus-visible:outline-none";
+const headerCta = (variant: "default" | "ghost") => cn(buttonVariants({ variant }), "h-11 px-4 text-base");
+const bigCta = (variant: "default" | "outline") =>
+  cn(buttonVariants({ variant, size: "lg" }), "h-13 rounded-xl px-7 text-base");
+const sectionTitle = "font-heading text-3xl leading-tight font-bold tracking-tight sm:text-4xl";
+
+const rows = [
+  { ...l.example.rows.lead, bar: "w-7/12" },
+  { ...l.example.rows.developer, bar: "w-1/4" },
+  { ...l.example.rows.tester, bar: "w-1/6" },
+];
+const steps = [
+  { ...l.steps.pool, key: "pool", number: "01" },
+  { ...l.steps.share, key: "share", number: "02" },
+  { ...l.steps.approval, key: "approval", number: "03" },
+];
+const roles = [
+  { ...l.roles.admin, key: "admin" },
+  { ...l.roles.supervisor, key: "supervisor" },
+  { ...l.roles.employee, key: "employee" },
+];
+const guarantees = [l.guarantees.budget, l.guarantees.frozen, l.guarantees.overload, l.guarantees.privacy];
+const formulaTerms = [l.formula.time, l.formula.roleWeight, l.formula.ratingFactor];
 ---
 
-<div class="bg-cosmic text-foreground min-h-screen w-full p-4 sm:p-8">
-  <div class="mx-auto w-full max-w-4xl">
-    <Topbar />
+<div class="bg-cosmic text-foreground font-body min-h-screen w-full overflow-x-hidden leading-relaxed">
+  <header class:list={cn(container, "flex flex-wrap items-center justify-between gap-4 py-5")}>
+    <a href="#top" class:list={cn(focusRing, "text-foreground flex items-center gap-2.5")}>
+      <MeritlyLogo class="text-primary" />
+      <span class="font-heading text-2xl font-bold tracking-tight">{t.common.appName}</span>
+    </a>
+    <nav aria-label={l.nav.label} class="flex flex-wrap gap-x-7 gap-y-2 text-sm">
+      <a
+        href="#how-it-works"
+        class:list={cn(focusRing, "text-muted-foreground hover:text-foreground transition-colors")}
+      >
+        {l.nav.howItWorks}
+      </a>
+      <a href="#roles" class:list={cn(focusRing, "text-muted-foreground hover:text-foreground transition-colors")}>
+        {l.nav.roles}
+      </a>
+      <a href="#guarantees" class:list={cn(focusRing, "text-muted-foreground hover:text-foreground transition-colors")}>
+        {l.nav.guarantees}
+      </a>
+    </nav>
+    <div class="flex flex-wrap items-center gap-3">
+      <LanguageSwitch placement="inline" />
+      {signedIn ? (
+        <>
+          <a href="/dashboard" class:list={headerCta("ghost")}>
+            {t.layout.nav.dashboard}
+          </a>
+          <form method="POST" action="/api/auth/signout">
+            <button type="submit" class:list={headerCta("default")}>
+              {t.common.signOut}
+            </button>
+          </form>
+        </>
+      ) : (
+        <>
+          <a href="/auth/signin" class:list={headerCta("ghost")}>
+            {t.common.signIn}
+          </a>
+          <a href="/auth/signup" class:list={headerCta("default")}>
+            {t.common.signUp}
+          </a>
+        </>
+      )}
+    </div>
+  </header>
 
-    <section class="flex flex-col items-center px-4 py-16 text-center sm:py-24">
-      <h1 class="text-primary mb-4 text-5xl leading-tight font-bold sm:text-6xl">{t.common.appName}</h1>
-      <p class="text-muted-foreground mb-10 max-w-2xl text-lg sm:text-xl">{t.landing.pitch}</p>
-      <div class="flex flex-col gap-3 sm:flex-row">
+  <main>
+    <section
+      id="top"
+      aria-labelledby="landing-title"
+      class:list={cn(container, "flex flex-col gap-16 pt-16 pb-24 lg:flex-row lg:items-center lg:pt-18")}
+    >
+      <div class="flex min-w-0 flex-col gap-7 lg:flex-1">
+        <p class="border-primary/35 text-primary inline-flex items-center gap-2 self-start rounded-full border px-3.5 py-1.5 text-sm">
+          <span aria-hidden="true" class="bg-success size-2 rounded-full"></span>
+          {l.badge}
+        </p>
+        <h1
+          id="landing-title"
+          class="font-heading text-4xl leading-none font-bold tracking-tight sm:text-5xl lg:text-6xl"
+        >
+          {l.title}
+        </h1>
+        <p class="text-muted-foreground max-w-xl text-lg sm:text-xl">{l.lead}</p>
+        <div class="flex flex-wrap gap-3">
+          {signedIn ? (
+            <a href="/dashboard" class:list={bigCta("default")}>
+              {l.goToDashboard}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                class="size-4.5"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6"></path>
+              </svg>
+            </a>
+          ) : (
+            <>
+              <a href="/auth/signup" class:list={bigCta("default")}>
+                {t.common.signUp}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  class="size-4.5"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6"></path>
+                </svg>
+              </a>
+              <a href="/auth/signin" class:list={bigCta("outline")}>
+                {t.common.signIn}
+              </a>
+            </>
+          )}
+        </div>
+        <ul class="text-muted-foreground flex flex-wrap gap-x-6 gap-y-2.5 text-sm">
+          {[l.bullets.withinPool, l.bullets.draft].map((bullet) => (
+            <li class="flex items-center gap-2">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                class="text-success size-4 shrink-0"
+              >
+                <path d="M5 12l5 5 9-10"></path>
+              </svg>
+              {bullet}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <figure
+        aria-label={l.example.ariaLabel}
+        class="border-border bg-muted m-0 flex min-w-0 flex-col gap-5 rounded-2xl border p-5 shadow-2xl sm:p-7 lg:flex-1"
+      >
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <div class="font-heading text-lg font-semibold">{l.example.title}</div>
+          <span class="text-muted-foreground text-xs tracking-widest uppercase">{l.example.illustrative}</span>
+        </div>
+
+        <div class="grid gap-2.5 sm:grid-cols-3">
+          <div class="bg-muted rounded-xl p-3.5">
+            <div class="text-muted-foreground text-xs">{l.example.targetPool.label}</div>
+            <div class="font-figures text-xl font-medium">{l.example.targetPool.value}</div>
+          </div>
+          <div class="bg-muted rounded-xl p-3.5">
+            <div class="text-muted-foreground text-xs">{l.example.multiplier.label}</div>
+            <div class="font-figures text-xl font-medium">
+              {l.example.multiplier.value}
+              <span class="text-muted-foreground text-sm">{l.example.multiplier.max}</span>
+            </div>
+          </div>
+          <div class="bg-primary/15 border-primary/40 rounded-xl border p-3.5">
+            <div class="text-primary text-xs">{l.example.payoutPool.label}</div>
+            <div class="font-figures text-primary text-xl font-medium">{l.example.payoutPool.value}</div>
+          </div>
+        </div>
+
+        <div class="font-figures text-muted-foreground text-sm">{l.example.formula}</div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-md border-collapse text-sm">
+            <thead>
+              <tr class="text-muted-foreground text-left text-xs">
+                <th scope="col" class="px-1.5 py-2 font-medium">
+                  {l.example.columns.role}
+                </th>
+                <th scope="col" class="px-1.5 py-2 text-right font-medium">
+                  {l.example.columns.time}
+                </th>
+                <th scope="col" class="px-1.5 py-2 text-right font-medium">
+                  {l.example.columns.weight}
+                </th>
+                <th scope="col" class="px-1.5 py-2 text-right font-medium">
+                  {l.example.columns.rating}
+                </th>
+                <th scope="col" class="px-1.5 py-2 text-right font-medium">
+                  {l.example.columns.bonus}
+                </th>
+              </tr>
+            </thead>
+            <tbody class="font-figures">
+              {rows.map((row) => (
+                <tr class="border-border border-t">
+                  <td class="font-body px-1.5 py-3">
+                    {row.role}
+                    <div aria-hidden="true" class="bg-muted mt-1.5 h-1.5 rounded-full">
+                      <div class:list={cn("bg-primary h-1.5 rounded-full", row.bar)}></div>
+                    </div>
+                  </td>
+                  <td class="px-1.5 py-3 text-right">{row.time}</td>
+                  <td class="px-1.5 py-3 text-right">{row.weight}</td>
+                  <td class="px-1.5 py-3 text-right">{row.rating}</td>
+                  <td class="px-1.5 py-3 text-right font-medium whitespace-nowrap">{row.bonus}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <figcaption class="border-border text-muted-foreground flex flex-wrap justify-between gap-2 border-t pt-3.5 text-sm">
+          <span>
+            {l.example.sumLabel}
+            <strong class="font-figures text-foreground font-medium">{l.example.sumValue}</strong>
+          </span>
+          <span>{l.example.residual}</span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section aria-label={l.formula.ariaLabel} class="border-border bg-muted border-y">
+      <div
+        class:list={cn(
+          container,
+          "font-heading flex flex-wrap items-center justify-center gap-x-4.5 gap-y-3.5 py-10 text-lg font-medium sm:text-xl lg:text-2xl",
+        )}
+      >
+        <span class="text-muted-foreground">{l.formula.share}</span>
+        <span class="text-muted-foreground">{l.formula.proportional}</span>
+        {formulaTerms.map((term, index) => (
+          <>
+            {index > 0 && <span class="text-primary">{l.formula.times}</span>}
+            <span class="bg-card rounded-lg px-4 py-2">{term}</span>
+          </>
+        ))}
+      </div>
+    </section>
+
+    <section
+      id="how-it-works"
+      aria-labelledby="how-it-works-title"
+      class:list={cn(container, "flex flex-col gap-12 pt-28 pb-12")}
+    >
+      <div class="flex max-w-2xl flex-col gap-3">
+        <h2 id="how-it-works-title" class:list={sectionTitle}>
+          {l.howItWorks}
+        </h2>
+        <p class="text-muted-foreground text-lg">{l.howItWorksLead}</p>
+      </div>
+      <ol class="grid gap-5 md:grid-cols-3">
+        {steps.map(({ key, number, title, body }) => (
+          <li class="border-border bg-muted flex flex-col gap-3.5 rounded-2xl border p-8">
+            <div class="bg-primary/10 flex h-38 items-center justify-center rounded-xl">
+              {key === "pool" && <StepPoolIllustration />}
+              {key === "share" && <StepShareIllustration />}
+              {key === "approval" && <StepApprovalIllustration />}
+            </div>
+            <span aria-hidden="true" class="font-figures text-primary text-sm">
+              {number}
+            </span>
+            <h3 class="font-heading text-2xl font-semibold">{title}</h3>
+            <p class="text-muted-foreground">{body}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section id="roles" aria-labelledby="roles-title" class:list={cn(container, "flex flex-col gap-12 py-16")}>
+      <div class="flex max-w-2xl flex-col gap-3">
+        <h2 id="roles-title" class:list={sectionTitle}>
+          {l.roles.title}
+        </h2>
+        <p class="text-muted-foreground text-lg">{l.roles.lead}</p>
+      </div>
+      <div class="grid gap-5 md:grid-cols-3">
+        {roles.map(({ key, title, body }) => (
+          <article class="border-border flex flex-col gap-3.5 rounded-2xl border p-8">
+            {key === "admin" && <AdminAvatar />}
+            {key === "supervisor" && <SupervisorAvatar />}
+            {key === "employee" && <EmployeeAvatar />}
+            <h3 class="font-heading text-2xl font-semibold">{title}</h3>
+            <p class="text-muted-foreground">{body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section id="guarantees" aria-labelledby="guarantees-title" class:list={cn(container, "pt-16 pb-28")}>
+      <div class="border-border bg-muted grid gap-12 rounded-3xl border p-8 sm:p-12 lg:grid-cols-3">
+        <div class="flex min-w-0 flex-col gap-3">
+          <h2 id="guarantees-title" class="font-heading text-3xl leading-tight font-bold tracking-tight sm:text-4xl">
+            {l.guarantees.title}
+          </h2>
+          <p class="text-muted-foreground">{l.guarantees.lead}</p>
+        </div>
+        <ul class="grid min-w-0 gap-x-8 gap-y-7 sm:grid-cols-2 lg:col-span-2">
+          {guarantees.map((item) => (
+            <li class="flex flex-col gap-1.5">
+              <strong class="text-lg font-semibold">{item.title}</strong>
+              <span class="text-muted-foreground text-base">{item.body}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section
+      aria-labelledby="final-cta-title"
+      class:list={cn(container, "flex flex-col items-center gap-6 pb-28 text-center")}
+    >
+      <CelebrationIllustration />
+      <h2
+        id="final-cta-title"
+        class="font-heading max-w-2xl text-3xl leading-tight font-bold tracking-tight sm:text-4xl lg:text-5xl"
+      >
+        {l.finalCta.title}
+      </h2>
+      <div class="flex flex-wrap justify-center gap-3">
         {signedIn ? (
-          <a href="/dashboard" class:list={primaryCta}>
-            {t.landing.goToDashboard}
+          <a href="/dashboard" class:list={bigCta("default")}>
+            {l.goToDashboard}
           </a>
         ) : (
           <>
-            <a href="/auth/signin" class:list={primaryCta}>
-              {t.common.signIn}
-            </a>
-            <a href="/auth/signup" class:list={secondaryCta}>
+            <a href="/auth/signup" class:list={bigCta("default")}>
               {t.common.signUp}
+            </a>
+            <a href="/auth/signin" class:list={bigCta("outline")}>
+              {t.common.signIn}
             </a>
           </>
         )}
       </div>
     </section>
+  </main>
 
-    <section aria-labelledby="how-it-works" class="pb-24">
-      <h2 id="how-it-works" class="text-foreground mb-6 text-center text-2xl font-semibold">
-        {t.landing.howItWorks}
-      </h2>
-      <ol class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        {steps.map((step, index) => (
-          <li class="border-border bg-card text-card-foreground rounded-xl border p-6 backdrop-blur-xl">
-            <span aria-hidden="true" class="text-primary mb-2 block text-sm font-semibold">
-              {index + 1}
-            </span>
-            <h3 class="mb-2 text-lg font-semibold">{step.title}</h3>
-            <p class="text-muted-foreground text-sm leading-relaxed">{step.body}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
-  </div>
+  <footer class="border-border border-t">
+    <div class:list={cn(container, "text-muted-foreground flex flex-wrap justify-between gap-3 py-7 text-sm")}>
+      <span class="font-heading text-foreground font-semibold">{t.common.appName}</span>
+      <span>{l.pitch}</span>
+    </div>
+  </footer>
 </div>

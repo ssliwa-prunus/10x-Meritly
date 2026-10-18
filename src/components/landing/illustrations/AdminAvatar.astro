@@ -1,0 +1,104 @@
+---
+import { cn } from "@/lib/utils";
+
+// Role card avatar for the Administrator (headset and settings cog); decorative.
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<svg viewBox="0 0 120 120" width="96" height="96" aria-hidden="true" class:list={cn(className)}>
+  <circle cx="60" cy="60" r="56" fill="var(--primary)" fill-opacity="0.14"></circle>
+  <rect
+    x="52"
+    y="72"
+    width="16"
+    height="16"
+    rx="4"
+    fill="var(--illustration-skin-1)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></rect>
+  <path
+    d="M20 120Q20 86 60 86Q100 86 100 120Z"
+    fill="var(--illustration-periwinkle)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <circle
+    cx="60"
+    cy="54"
+    r="22"
+    fill="var(--illustration-skin-1)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <path
+    d="M38 52Q36 28 60 28Q84 28 82 52Q76 40 60 40Q46 40 38 52Z"
+    fill="var(--illustration-hair-1)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <circle cx="52" cy="56" r="2.8" fill="var(--illustration-outline)"></circle>
+  <circle cx="68" cy="56" r="2.8" fill="var(--illustration-outline)"></circle>
+  <circle cx="46" cy="62" r="3.5" fill="var(--illustration-blush)" fill-opacity="0.7"></circle>
+  <circle cx="74" cy="62" r="3.5" fill="var(--illustration-blush)" fill-opacity="0.7"></circle>
+  <path
+    d="M53 64q7 6 14 0"
+    fill="none"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  ></path>
+  <path d="M36 54A24 24 0 0 1 84 54" fill="none" stroke="var(--illustration-peach)" stroke-width="4"></path>
+  <rect
+    x="31"
+    y="49"
+    width="9"
+    height="14"
+    rx="3"
+    fill="var(--illustration-peach)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></rect>
+  <rect
+    x="80"
+    y="49"
+    width="9"
+    height="14"
+    rx="3"
+    fill="var(--illustration-peach)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></rect>
+  <path
+    d="M36 62Q38 74 50 72"
+    fill="none"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  ></path>
+  <circle cx="51" cy="72" r="2.5" fill="var(--illustration-outline)"></circle>
+  <circle
+    cx="99"
+    cy="24"
+    r="11"
+    fill="none"
+    stroke="var(--illustration-peach)"
+    stroke-width="6"
+    stroke-dasharray="4.3 3"
+  ></circle>
+  <circle
+    cx="99"
+    cy="24"
+    r="8"
+    fill="var(--illustration-peach)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle cx="99" cy="24" r="3" fill="var(--illustration-outline)"></circle>
+</svg>

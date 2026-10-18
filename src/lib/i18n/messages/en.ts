@@ -65,20 +65,107 @@ export const en: Messages = {
   landing: {
     pitch: "Fair split of milestone bonus pools",
     howItWorks: "How it works",
+    howItWorksLead: "Three steps from a milestone result to a bonus in the bank.",
     goToDashboard: "Go to dashboard",
+    nav: {
+      label: "Page sections",
+      howItWorks: "How it works",
+      roles: "Who it's for",
+      guarantees: "Guarantees",
+    },
+    badge: "Milestone bonuses, no spreadsheets",
+    title: "Bonus pools split fairly. Down to the last złoty.",
+    lead: "Meritly turns a milestone's KPI score into a payout pool and splits it by time worked, role weight and contribution rating. The supervisor approves, and each employee sees only their own bonus.",
+    bullets: {
+      withinPool: "Payouts never exceed the pool",
+      draft: "Draft until approved",
+    },
+    // Figures stay in pl-PL format (as in every locale).
+    example: {
+      ariaLabel: "Example of a pool split",
+      title: "Milestone: v2 rollout",
+      illustrative: "Illustrative example",
+      targetPool: { label: "Target pool", value: "30 000 zł" },
+      multiplier: { label: "KPI multiplier", value: "1,2", max: "/ 1,5" },
+      payoutPool: { label: "Payout pool", value: "24 000 zł" },
+      formula: "30 000 × 1,2 ÷ 1,5 = 24 000 zł",
+      columns: {
+        role: "Role",
+        time: "Time",
+        weight: "Weight",
+        rating: "Rating",
+        bonus: "Bonus",
+      },
+      rows: {
+        lead: { role: "Tech lead", time: "100%", weight: "1,5", rating: "×1,2", bonus: "13 935 zł" },
+        developer: { role: "Developer", time: "100%", weight: "1,0", rating: "×0,8", bonus: "6 193 zł" },
+        tester: { role: "Tester (half-time)", time: "50%", weight: "1,0", rating: "×1,0", bonus: "3 870 zł" },
+      },
+      sumLabel: "Total payouts:",
+      sumValue: "23 998 zł",
+      residual: "2 zł from rounding down stays in the pool",
+    },
+    formula: {
+      ariaLabel: "Split formula",
+      share: "employee's share",
+      time: "time worked",
+      roleWeight: "role weight",
+      ratingFactor: "rating factor",
+      proportional: "∝",
+      times: "×",
+    },
     steps: {
       pool: {
         title: "Payout pool",
-        body: "The milestone's KPI score scales the target pool into the payout pool, which never exceeds the target pool.",
+        body: "The milestone's KPI score scales the target pool into the payout pool. The payout pool never exceeds the approved target pool.",
       },
       share: {
         title: "Each employee's share",
-        body: "The pool is split in proportion to time share × role weight × rating factor, rounded down.",
+        body: "The pool is split in proportion to the product of time share, role weight and rating factor. Amounts are rounded down, so the total never exceeds the pool.",
       },
       approval: {
         title: "Approval",
-        body: "Results stay a draft until the supervisor approves the milestone. Only then does each employee see their own bonus.",
+        body: "Results are a draft that only the supervisor can see. Only once the milestone is approved does each employee see their bonus and get an email.",
       },
+    },
+    roles: {
+      title: "Everyone sees what they should",
+      lead: "Three roles with clearly defined permissions.",
+      admin: {
+        title: "Administrator",
+        body: "Sets the global configuration: role weights, KPI weights and the rating-to-factor mapping. Sees every project.",
+      },
+      supervisor: {
+        title: "Supervisor",
+        body: "Runs their own projects and milestones, assigns people, scores KPIs and approves results.",
+      },
+      employee: {
+        title: "Employee",
+        body: "Sees only their own approved bonuses and their history. Changing the URL won't reveal anyone else's amounts.",
+      },
+    },
+    guarantees: {
+      title: "Rules the system enforces on its own",
+      lead: "The rules are enforced in the database, not just in the interface.",
+      budget: {
+        title: "Budget under control",
+        body: "Payouts never exceed the pool, and the risk of going over the project budget is flagged in advance.",
+      },
+      frozen: {
+        title: "Frozen results",
+        body: "Changing weights or factors affects future calculations only. Approved milestones stay as they are.",
+      },
+      overload: {
+        title: "Overload warning",
+        body: "When an employee's total time share across active milestones exceeds 100%, the system flags it.",
+      },
+      privacy: {
+        title: "Private amounts",
+        body: "Row-level security in the database ensures that everyone sees only their own data.",
+      },
+    },
+    finalCta: {
+      title: "Split your first bonus pool in minutes",
     },
   },
   dashboard: {

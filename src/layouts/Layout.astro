@@ -8,11 +8,13 @@ import { getMessages } from "@/lib/i18n";
 
 interface Props {
   title?: string;
+  // false drops the global fixed PL | EN switch, for a page that renders its own (the landing header).
+  languageSwitch?: boolean;
 }
 
 const locale = Astro.locals.locale;
 const t = getMessages(locale);
-const { title = t.common.appName } = Astro.props;
+const { title = t.common.appName, languageSwitch = true } = Astro.props;
 const missing = missingConfigs({ supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_KEY }, locale);
 ---
 
@@ -23,6 +25,7 @@ const missing = missingConfigs({ supabaseUrl: SUPABASE_URL, supabaseKey: SUPABAS
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>{title}</title>
+    <slot name="head" />
   </head>
   <body>
     {missing.map((cfg) => (
@@ -40,7 +43,7 @@ const missing = missingConfigs({ supabaseUrl: SUPABASE_URL, supabaseKey: SUPABAS
       </Banner>
     ))}
     <slot />
-    <LanguageSwitch />
+    {languageSwitch && <LanguageSwitch />}
   </body>
 </html>
 

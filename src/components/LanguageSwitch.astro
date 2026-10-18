@@ -4,7 +4,13 @@ import { cn } from "@/lib/utils";
 
 // PL | EN switch on every page (rendered by Layout). A plain form POST to /api/locale, so it works
 // without JavaScript; `next` brings the visitor back to the same path and query. Fixed bottom-right
-// so it never collides with the Topbar's right-hand sign-out.
+// so it never collides with the Topbar's right-hand sign-out; the landing page (/) turns the Layout
+// copy off and renders it with placement="inline" in its own header.
+interface Props {
+  placement?: "fixed" | "inline";
+}
+
+const { placement = "fixed" } = Astro.props;
 const locale = Astro.locals.locale;
 const t = getMessages(locale);
 const next = Astro.url.pathname + Astro.url.search;
@@ -19,7 +25,10 @@ const options: { value: Locale; label: string; ariaLabel: string }[] = [
   method="POST"
   action="/api/locale"
   aria-label={t.layout.languageSwitch}
-  class="border-border bg-card text-card-foreground fixed right-4 bottom-4 z-50 flex items-center gap-1 rounded-full border p-1 text-xs shadow-sm backdrop-blur"
+  class:list={cn(
+    "border-border bg-card text-card-foreground flex items-center gap-1 rounded-full border p-1 text-xs shadow-sm backdrop-blur",
+    placement === "fixed" && "fixed right-4 bottom-4 z-50",
+  )}
 >
   <input type="hidden" name="next" value={next} />
   {options.map((option) => {

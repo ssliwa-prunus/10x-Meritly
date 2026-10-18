@@ -1,0 +1,21 @@
+---
+import { cn } from "@/lib/utils";
+
+// Meritly logo mark (rounded square with an M); decorative, strokes in currentColor so the caller sets text-primary.
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true" class:list={cn(className)}>
+  <rect x="1" y="1" width="26" height="26" rx="8" stroke="currentColor" stroke-width="2"></rect>
+  <path
+    d="M7 19V9l7 6 7-6v10"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  ></path>
+</svg>
