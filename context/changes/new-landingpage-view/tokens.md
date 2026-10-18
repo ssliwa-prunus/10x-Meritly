@@ -1,10 +1,10 @@
 # Token values — new-landingpage-view
 
-Mapping from the artwork colours in `reports/design/project/Main.dc.html` (SVG `fill` / `stroke` attributes) to the tokens in `src/styles/global.css`. The `--illustration-*` values are identical in `:root` and `.dark` and are published as Tailwind colours through `@theme inline` (`--color-illustration-*`), so SVGs reference them as `var(--illustration-*)` and views as `fill-illustration-*` / `text-illustration-*`. Conversion: sRGB → linear → OKLab → OKLCH, rounded to 3 decimals.
+Mapping from the artwork colours in `reports/design/project/Main.dc.html` (SVG `fill` / `stroke` attributes) to the tokens in `src/styles/global.css`. The `--illustration-*` values are declared once in `:root` (inherited by `.dark`) and are published as Tailwind colours through `@theme inline` (`--color-illustration-*`), so SVGs reference them as `var(--illustration-*)` and views as `fill-illustration-*` / `text-illustration-*`. Conversion: sRGB → linear → OKLab → OKLCH, rounded to 3 decimals.
 
 ## Illustration palette (new)
 
-| Design hex | Token                       | Value (`:root` and `.dark`)  |
+| Design hex | Token                       | Value (`:root`)              |
 | ---------- | --------------------------- | ---------------------------- |
 | `#1a1426`  | `--illustration-outline`    | `oklch(0.208 0.036 298.588)` |
 | `#f7f8fb`  | `--illustration-highlight`  | `oklch(0.979 0.004 271.37)`  |

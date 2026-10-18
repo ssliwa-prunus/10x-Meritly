@@ -72,7 +72,7 @@ export const pl = {
     howItWorksLead: "Trzy kroki od wyniku kamienia milowego do premii na koncie.",
     goToDashboard: "Przejdź do panelu",
     nav: {
-      label: "Główna",
+      label: "Sekcje strony",
       howItWorks: "Jak to działa",
       roles: "Dla kogo",
       guarantees: "Gwarancje",
@@ -115,6 +115,8 @@ export const pl = {
       time: "czas pracy",
       roleWeight: "waga roli",
       ratingFactor: "współczynnik oceny",
+      proportional: "∝",
+      times: "×",
     },
     steps: {
       pool: {

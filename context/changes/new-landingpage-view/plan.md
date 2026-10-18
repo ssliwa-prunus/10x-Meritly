@@ -33,6 +33,7 @@ Rebuild the public landing page (`/`) from the supplied design (`reports/design/
 - No change to the worked example's numbers or rounding text. It stays exactly as designed (whole-złoty bonuses, "2 zł z zaokrągleń w dół zostaje w puli", max multiplier 1,5) as static marketing copy marked "Przykład ilustracyjny". This is the user's decision: it is marketing, not a real computation. No helper and no unit test compute it.
 - No app-wide font change. The web fonts load on `/` only.
 - No restyle of `Topbar.astro` or of any other page. Topbar simply stops rendering on `/`.
+- No role-specific nav on `/`. Signed-in visitors see only the dashboard link and sign-out in the landing header (no email, no Projects / Employees / Reports / My bonuses links); they reach the role nav through the dashboard, which keeps the Topbar.
 - No `accent` / `showExample` switches. These are design-tool knobs, so the accent is `--primary` and the example is always shown.
 - No edits to existing smoke or E2E assertions, and no new E2E spec.
 - No light-mode artwork. The app runs dark (`Layout.astro:20`), and illustration tokens get the same values in `:root` and `.dark`.

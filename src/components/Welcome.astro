@@ -260,10 +260,10 @@ const formulaTerms = [l.formula.time, l.formula.roleWeight, l.formula.ratingFact
         )}
       >
         <span class="text-muted-foreground">{l.formula.share}</span>
-        <span class="text-muted-foreground">∝</span>
+        <span class="text-muted-foreground">{l.formula.proportional}</span>
         {formulaTerms.map((term, index) => (
           <>
-            {index > 0 && <span class="text-primary">×</span>}
+            {index > 0 && <span class="text-primary">{l.formula.times}</span>}
             <span class="bg-card rounded-lg px-4 py-2">{term}</span>
           </>
         ))}

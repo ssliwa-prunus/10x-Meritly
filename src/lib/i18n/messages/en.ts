@@ -68,7 +68,7 @@ export const en: Messages = {
     howItWorksLead: "Three steps from a milestone result to a bonus in the bank.",
     goToDashboard: "Go to dashboard",
     nav: {
-      label: "Main",
+      label: "Page sections",
       howItWorks: "How it works",
       roles: "Who it's for",
       guarantees: "Guarantees",
@@ -111,6 +111,8 @@ export const en: Messages = {
       time: "time worked",
       roleWeight: "role weight",
       ratingFactor: "rating factor",
+      proportional: "∝",
+      times: "×",
     },
     steps: {
       pool: {
