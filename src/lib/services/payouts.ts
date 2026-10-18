@@ -183,7 +183,7 @@ function mapPostgrestError(error: PostgrestError, operation: string, meta: Omit<
 
 type Numeric = number | string;
 
-interface PayoutSummaryRow {
+export interface PayoutSummaryRow {
   milestone_id: string;
   target_pool: Numeric;
   kpi_schedule: number | null;
@@ -216,7 +216,7 @@ interface PayoutLineRow {
 
 const toNullableNumber = (value: Numeric | null) => (value === null ? null : Number(value));
 
-const toSummary = (row: PayoutSummaryRow): MilestonePayoutSummary => ({
+export const toSummary = (row: PayoutSummaryRow): MilestonePayoutSummary => ({
   milestone_id: row.milestone_id,
   target_pool: Number(row.target_pool),
   kpi_schedule: toNullableNumber(row.kpi_schedule),

@@ -339,7 +339,7 @@ interface ProjectExposureRow {
 
 const PROJECT_COLUMNS = "id, name, start_date, end_date, status, total_budget, notes, supervisor_id";
 
-const MILESTONE_COLUMNS = "id, project_id, name, start_date, end_date, status, target_pool, notes";
+export const MILESTONE_COLUMNS = "id, project_id, name, start_date, end_date, status, target_pool, notes";
 
 const EXPOSURE_COLUMNS = "project_id, total_budget, reserved_total, remaining, over_budget";
 

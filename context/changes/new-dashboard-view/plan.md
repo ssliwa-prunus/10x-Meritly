@@ -568,28 +568,28 @@ Not applicable: no schema or data change.
 
 #### Automated
 
-- [x] 2.1 `npm run lint:ui` passes with `Topbar.astro` in `CLEAN_PATHS` (0 hits, down from 11)
-- [x] 2.2 `npx astro check` and `npm test` pass
-- [x] 2.3 `npm run smoke` passes (role × route, sign-out)
-- [x] 2.4 `npm run test:e2e` passes, including `s-07-aggregate-bonus-report` ("Raporty" link) and `seed` ("Wyloguj się")
+- [x] 2.1 `npm run lint:ui` passes with `Topbar.astro` in `CLEAN_PATHS` (0 hits, down from 11) — b5fec1a
+- [x] 2.2 `npx astro check` and `npm test` pass — b5fec1a
+- [x] 2.3 `npm run smoke` passes (role × route, sign-out) — b5fec1a
+- [x] 2.4 `npm run test:e2e` passes, including `s-07-aggregate-bonus-report` ("Raporty" link) and `seed` ("Wyloguj się") — b5fec1a
 
 #### Manual
 
-- [x] 2.5 On each of the 8 pages, the app bar matches the mockup header and exactly one PL/EN switch is visible
-- [x] 2.6 Keyboard tab order: logo → nav → PL/EN → sign-out, each with a visible `ring` focus
-- [x] 2.7 At 375px the bar wraps without horizontal scroll
+- [x] 2.5 On each of the 8 pages, the app bar matches the mockup header and exactly one PL/EN switch is visible — b5fec1a
+- [x] 2.6 Keyboard tab order: logo → nav → PL/EN → sign-out, each with a visible `ring` focus — b5fec1a
+- [x] 2.7 At 375px the bar wraps without horizontal scroll — b5fec1a
 
 ### Phase 3: Dashboard data layer (TDD)
 
 #### Automated
 
-- [ ] 3.1 `npx vitest run src/lib/__tests__/dashboard.test.ts src/lib/services/__tests__/dashboard.test.ts` passes, and each test was seen failing before its helper existed
-- [ ] 3.2 `npm test` and `npx astro check` pass
-- [ ] 3.3 `npm run test:mutation -- --mutate src/lib/dashboard.ts` reports no surviving mutant in `isAwaitingApproval`, `warsawYearBounds` or `reservedBudget`
+- [x] 3.1 `npx vitest run src/lib/__tests__/dashboard.test.ts src/lib/services/__tests__/dashboard.test.ts` passes, and each test was seen failing before its helper existed
+- [x] 3.2 `npm test` and `npx astro check` pass
+- [x] 3.3 `npm run test:mutation -- --mutate src/lib/dashboard.ts` reports no surviving mutant in `isAwaitingApproval`, `warsawYearBounds` or `reservedBudget`
 
 #### Manual
 
-- [ ] 3.4 Against the seeded local Supabase, a scratch call of `listVisibleMilestones` as the seeded supervisor returns rows with project names, confirming the `projects(...)` embed works under RLS
+- [x] 3.4 Against the seeded local Supabase, a scratch call of `listVisibleMilestones` as the seeded supervisor returns rows with project names, confirming the `projects(...)` embed works under RLS
 
 ### Phase 4: Dashboard view
 

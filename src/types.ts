@@ -322,3 +322,85 @@ export interface OpenAssignment {
   end_date: string;
   time_share: number;
 }
+
+/**
+ * A milestone as listed on the dashboard: the row plus its four KPI scores (all null or all set,
+ * `milestones_kpi_all_or_none`, so "scored" is known before any RPC) and its project's name and
+ * status from the `projects` embed.
+ */
+export interface DashboardMilestone extends Milestone {
+  kpi_schedule: number | null;
+  kpi_budget: number | null;
+  kpi_quality: number | null;
+  kpi_risk: number | null;
+  project_name: string;
+  project_status: WorkStatus;
+}
+
+/** The `milestone_results` columns the dashboard reads: one approval in the current Warsaw year. */
+export type DashboardApprovedResult = Pick<
+  MilestoneResult,
+  "milestone_id" | "multiplier" | "multiplier_max" | "payout_total" | "approved_at"
+>;
+
+/** A milestone that awaits the Supervisor's approval, with the live summary that proved it (pool, headcount). */
+export interface AwaitingMilestone {
+  milestone: DashboardMilestone;
+  summary: MilestonePayoutSummary;
+}
+
+/** The dashboard table's action: Approve (supervisor only), Results (approved) or Open. */
+export type DashboardAction = "approve" | "results" | "open";
+
+/** A KPI cell: the multiplier out of its maximum (snapshot for approved rows, live otherwise). */
+export interface DashboardKpi {
+  multiplier: number;
+  multiplier_max: number;
+}
+
+/** One row of the dashboard milestones table. `kpi` null renders "—"; `approved_at` is set on approved rows only. */
+export interface DashboardMilestoneRow {
+  milestone: DashboardMilestone;
+  awaiting: boolean;
+  kpi: DashboardKpi | null;
+  action: DashboardAction;
+  approved_at: string | null;
+}
+
+/** The "Zarezerwowane z budżetu" tile over open projects; `percent` is floored, 0 when the budget is 0. */
+export interface ReservedBudget {
+  reserved: number;
+  budget: number;
+  percent: number;
+}
+
+/** The Supervisor/Admin dashboard tiles' counts and the year's paid total (Warsaw calendar year). */
+export interface SupervisorStats {
+  active_projects: number;
+  active_milestones: number;
+  awaiting: number;
+  paid_total: number;
+  paid_count: number;
+}
+
+/** A visible project whose worst-case payout exceeds its budget (FR-017). */
+export interface OverBudgetProject {
+  project: Project;
+  exposure: ProjectExposure;
+}
+
+/** The "Wymaga uwagi" list: milestones awaiting approval, projects over budget, employees above 100%. */
+export interface AttentionItems {
+  awaiting: AwaitingMilestone[];
+  over_budget: OverBudgetProject[];
+  over_allocated: EmployeeListItem[];
+}
+
+/** The employee dashboard tiles: this Warsaw year's total and count, the latest line and the projects with a bonus. */
+export interface EmployeeStats {
+  year: number;
+  year_total: number;
+  year_count: number;
+  latest: MyBonusLine | null;
+  project_names: string[];
+}
