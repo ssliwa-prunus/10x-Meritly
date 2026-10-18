@@ -1,0 +1,117 @@
+---
+import { cn } from "@/lib/utils";
+
+// "How it works" step 1: a coin jar next to a KPI gauge (the payout pool); decorative.
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<svg viewBox="0 0 200 140" width="200" height="140" aria-hidden="true" class:list={cn("max-w-full h-auto", className)}>
+  <ellipse cx="100" cy="131" rx="66" ry="7" fill="var(--illustration-outline)" fill-opacity="0.3"></ellipse>
+  <rect
+    x="60"
+    y="42"
+    width="80"
+    height="84"
+    rx="16"
+    fill="var(--illustration-navy)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></rect>
+  <circle
+    cx="90"
+    cy="94"
+    r="11"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="112"
+    cy="95"
+    r="11"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="101"
+    cy="80"
+    r="11"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="80"
+    cy="111"
+    r="11"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="100"
+    cy="113"
+    r="11"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="120"
+    cy="111"
+    r="11"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle cx="101" cy="80" r="6" fill="none" stroke="var(--illustration-gold-deep)" stroke-width="2"></circle>
+  <circle cx="80" cy="111" r="6" fill="none" stroke="var(--illustration-gold-deep)" stroke-width="2"></circle>
+  <circle cx="100" cy="113" r="6" fill="none" stroke="var(--illustration-gold-deep)" stroke-width="2"></circle>
+  <circle cx="120" cy="111" r="6" fill="none" stroke="var(--illustration-gold-deep)" stroke-width="2"></circle>
+  <path
+    d="M70 56v30"
+    stroke="var(--illustration-highlight)"
+    stroke-opacity="0.5"
+    stroke-width="4"
+    stroke-linecap="round"
+  ></path>
+  <circle cx="90" cy="57" r="4.5" fill="var(--illustration-highlight)"></circle>
+  <circle cx="112" cy="57" r="4.5" fill="var(--illustration-highlight)"></circle>
+  <circle cx="91" cy="58" r="2.2" fill="var(--illustration-outline)"></circle>
+  <circle cx="113" cy="58" r="2.2" fill="var(--illustration-outline)"></circle>
+  <path
+    d="M95 63q6 5 12 0"
+    fill="none"
+    stroke="var(--illustration-highlight)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  ></path>
+  <rect
+    x="55"
+    y="30"
+    width="90"
+    height="15"
+    rx="6"
+    fill="var(--illustration-peach)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></rect>
+  <path
+    d="M148 48A22 22 0 0 1 192 48Z"
+    fill="var(--illustration-highlight)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <path d="M155 48A15 15 0 0 1 185 48" fill="none" stroke="var(--success)" stroke-width="5"></path>
+  <path d="M170 48L180 34" stroke="var(--illustration-outline)" stroke-width="3" stroke-linecap="round"></path>
+  <circle cx="170" cy="48" r="3.5" fill="var(--illustration-outline)"></circle>
+  <path d="M34 42Q34 50 42 50Q34 50 34 58Q34 50 26 50Q34 50 34 42Z" fill="var(--primary)"></path>
+  <path d="M30 91Q30 96 35 96Q30 96 30 101Q30 96 25 96Q30 96 30 91Z" fill="var(--primary)"></path>
+  <path d="M176 86Q176 92 182 92Q176 92 176 98Q176 92 170 92Q176 92 176 86Z" fill="var(--illustration-teal)"></path>
+</svg>

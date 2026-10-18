@@ -1,0 +1,387 @@
+---
+import { cn } from "@/lib/utils";
+
+// Final CTA artwork: three people cheering under a zł coin with confetti; decorative.
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<svg viewBox="0 0 520 230" width="520" height="230" aria-hidden="true" class:list={cn("max-w-full h-auto", className)}>
+  <ellipse cx="260" cy="222" rx="200" ry="8" fill="var(--illustration-outline)" fill-opacity="0.3"></ellipse>
+  <rect x="60" y="40" width="10" height="5" rx="1.5" fill="var(--primary)" transform="rotate(20 65 42)"></rect>
+  <rect
+    x="100"
+    y="20"
+    width="10"
+    height="5"
+    rx="1.5"
+    fill="var(--illustration-peach)"
+    transform="rotate(-30 105 22)"
+  ></rect>
+  <rect
+    x="190"
+    y="70"
+    width="10"
+    height="5"
+    rx="1.5"
+    fill="var(--illustration-peach)"
+    transform="rotate(-50 195 72)"
+  ></rect>
+  <rect
+    x="200"
+    y="14"
+    width="10"
+    height="5"
+    rx="1.5"
+    fill="var(--illustration-teal)"
+    transform="rotate(45 205 16)"
+  ></rect>
+  <rect x="320" y="60" width="10" height="5" rx="1.5" fill="var(--primary)" transform="rotate(70 325 62)"></rect>
+  <rect
+    x="330"
+    y="22"
+    width="10"
+    height="5"
+    rx="1.5"
+    fill="var(--illustration-periwinkle)"
+    transform="rotate(-15 335 24)"
+  ></rect>
+  <rect
+    x="420"
+    y="36"
+    width="10"
+    height="5"
+    rx="1.5"
+    fill="var(--illustration-peach)"
+    transform="rotate(30 425 38)"
+  ></rect>
+  <rect x="470" y="70" width="10" height="5" rx="1.5" fill="var(--primary)" transform="rotate(-40 475 72)"></rect>
+  <rect
+    x="40"
+    y="110"
+    width="10"
+    height="5"
+    rx="1.5"
+    fill="var(--illustration-teal)"
+    transform="rotate(60 45 112)"
+  ></rect>
+  <rect
+    x="480"
+    y="140"
+    width="10"
+    height="5"
+    rx="1.5"
+    fill="var(--illustration-periwinkle)"
+    transform="rotate(15 485 142)"
+  ></rect>
+  <circle
+    cx="80"
+    cy="160"
+    r="7"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="452"
+    cy="110"
+    r="7"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="440"
+    cy="190"
+    r="7"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <path
+    d="M120 150L98 96M180 150L202 96"
+    stroke="var(--illustration-outline)"
+    stroke-width="16"
+    stroke-linecap="round"
+  ></path>
+  <path
+    d="M120 150L98 96M180 150L202 96"
+    stroke="var(--illustration-periwinkle)"
+    stroke-width="10"
+    stroke-linecap="round"
+  ></path>
+  <circle
+    cx="98"
+    cy="96"
+    r="8"
+    fill="var(--illustration-skin-1)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <circle
+    cx="202"
+    cy="96"
+    r="8"
+    fill="var(--illustration-skin-1)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <rect
+    x="141"
+    y="118"
+    width="18"
+    height="20"
+    rx="4"
+    fill="var(--illustration-skin-1)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></rect>
+  <path
+    d="M110 220Q110 136 150 136Q190 136 190 220Z"
+    fill="var(--illustration-periwinkle)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <circle
+    cx="150"
+    cy="100"
+    r="26"
+    fill="var(--illustration-skin-1)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <path
+    d="M124 98Q122 70 150 70Q178 70 176 98Q168 84 150 84Q134 84 124 98Z"
+    fill="var(--illustration-hair-1)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <circle cx="141" cy="100" r="3.2" fill="var(--illustration-outline)"></circle>
+  <circle cx="159" cy="100" r="3.2" fill="var(--illustration-outline)"></circle>
+  <circle cx="133" cy="108" r="4" fill="var(--illustration-blush)" fill-opacity="0.7"></circle>
+  <circle cx="167" cy="108" r="4" fill="var(--illustration-blush)" fill-opacity="0.7"></circle>
+  <path
+    d="M140 110Q150 124 160 110Z"
+    fill="var(--illustration-outline)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2"
+    stroke-linejoin="round"
+  ></path>
+  <path
+    d="M230 150Q202 100 236 62M290 150Q318 100 284 62"
+    fill="none"
+    stroke="var(--illustration-outline)"
+    stroke-width="16"
+    stroke-linecap="round"
+  ></path>
+  <path
+    d="M230 150Q202 100 236 62M290 150Q318 100 284 62"
+    fill="none"
+    stroke="var(--primary)"
+    stroke-width="10"
+    stroke-linecap="round"
+  ></path>
+  <circle
+    cx="260"
+    cy="90"
+    r="10"
+    fill="var(--illustration-hair-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+    transform="translate(-22 0)"
+  ></circle>
+  <circle
+    cx="244"
+    cy="78"
+    r="11"
+    fill="var(--illustration-hair-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="260"
+    cy="72"
+    r="12"
+    fill="var(--illustration-hair-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="276"
+    cy="78"
+    r="11"
+    fill="var(--illustration-hair-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <circle
+    cx="282"
+    cy="90"
+    r="10"
+    fill="var(--illustration-hair-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+  ></circle>
+  <rect
+    x="251"
+    y="118"
+    width="18"
+    height="20"
+    rx="4"
+    fill="var(--illustration-skin-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></rect>
+  <path
+    d="M220 220Q220 136 260 136Q300 136 300 220Z"
+    fill="var(--primary)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <circle
+    cx="260"
+    cy="100"
+    r="26"
+    fill="var(--illustration-skin-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <circle cx="251" cy="100" r="3.2" fill="var(--illustration-outline)"></circle>
+  <circle cx="269" cy="100" r="3.2" fill="var(--illustration-outline)"></circle>
+  <circle cx="252" cy="99" r="1.1" fill="var(--illustration-highlight)"></circle>
+  <circle cx="270" cy="99" r="1.1" fill="var(--illustration-highlight)"></circle>
+  <path
+    d="M250 110Q260 124 270 110Z"
+    fill="var(--illustration-outline)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2"
+    stroke-linejoin="round"
+  ></path>
+  <path
+    d="M260 10v-6M232 22l-5-4M288 22l5-4M226 44h-6M294 44h6"
+    stroke="var(--illustration-gold)"
+    stroke-width="3"
+    stroke-linecap="round"
+  ></path>
+  <circle
+    cx="260"
+    cy="44"
+    r="20"
+    fill="var(--illustration-gold)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <circle cx="260" cy="44" r="13" fill="none" stroke="var(--illustration-gold-deep)" stroke-width="2.5"></circle>
+  <text
+    x="260"
+    y="49"
+    text-anchor="middle"
+    class="font-heading"
+    font-weight="700"
+    font-size="14"
+    fill="var(--illustration-gold-ink)"
+  >
+    zł
+  </text>
+  <circle
+    cx="236"
+    cy="62"
+    r="8"
+    fill="var(--illustration-skin-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <circle
+    cx="284"
+    cy="62"
+    r="8"
+    fill="var(--illustration-skin-3)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <path
+    d="M340 150L318 96M400 150L422 96"
+    stroke="var(--illustration-outline)"
+    stroke-width="16"
+    stroke-linecap="round"
+  ></path>
+  <path
+    d="M340 150L318 96M400 150L422 96"
+    stroke="var(--illustration-teal)"
+    stroke-width="10"
+    stroke-linecap="round"
+  ></path>
+  <circle
+    cx="318"
+    cy="96"
+    r="8"
+    fill="var(--illustration-skin-2)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <circle
+    cx="422"
+    cy="96"
+    r="8"
+    fill="var(--illustration-skin-2)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <circle
+    cx="370"
+    cy="68"
+    r="10"
+    fill="var(--illustration-hair-2)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <rect
+    x="361"
+    y="118"
+    width="18"
+    height="20"
+    rx="4"
+    fill="var(--illustration-skin-2)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></rect>
+  <path
+    d="M330 220Q330 136 370 136Q410 136 410 220Z"
+    fill="var(--illustration-teal)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <circle
+    cx="370"
+    cy="100"
+    r="26"
+    fill="var(--illustration-skin-2)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+  ></circle>
+  <path
+    d="M344 102Q342 74 370 74Q398 74 396 102Q392 88 380 84Q370 90 356 86Q348 92 344 102Z"
+    fill="var(--illustration-hair-2)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <circle cx="361" cy="102" r="3.2" fill="var(--illustration-outline)"></circle>
+  <circle cx="379" cy="102" r="3.2" fill="var(--illustration-outline)"></circle>
+  <circle cx="353" cy="110" r="4" fill="var(--illustration-blush)" fill-opacity="0.7"></circle>
+  <circle cx="387" cy="110" r="4" fill="var(--illustration-blush)" fill-opacity="0.7"></circle>
+  <path
+    d="M360 112Q370 126 380 112Z"
+    fill="var(--illustration-outline)"
+    stroke="var(--illustration-outline)"
+    stroke-width="2"
+    stroke-linejoin="round"
+  ></path>
+</svg>

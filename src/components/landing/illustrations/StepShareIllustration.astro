@@ -1,0 +1,70 @@
+---
+import { cn } from "@/lib/utils";
+
+// "How it works" step 2: a smiling pie chart split into shares; decorative.
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<svg viewBox="0 0 200 140" width="200" height="140" aria-hidden="true" class:list={cn("max-w-full h-auto", className)}>
+  <ellipse cx="100" cy="131" rx="56" ry="7" fill="var(--illustration-outline)" fill-opacity="0.3"></ellipse>
+  <path
+    d="M106.8 73.7L106.8 27.7A46 46 0 1 1 84.6 114.1Z"
+    fill="var(--primary)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <path
+    d="M93.2 73.7L71.1 114.1A46 46 0 0 1 54.4 49.1Z"
+    fill="var(--illustration-teal)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <path
+    d="M96.6 65.9L57.8 41.2A46 46 0 0 1 96.6 19.9Z"
+    fill="var(--illustration-peach)"
+    stroke="var(--illustration-outline)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  ></path>
+  <circle cx="126" cy="76" r="3" fill="var(--illustration-outline)"></circle>
+  <circle cx="137" cy="76" r="3" fill="var(--illustration-outline)"></circle>
+  <circle cx="121" cy="83" r="3" fill="var(--illustration-blush)" fill-opacity="0.8"></circle>
+  <circle cx="142" cy="83" r="3" fill="var(--illustration-blush)" fill-opacity="0.8"></circle>
+  <path
+    d="M125.5 84q6 6 12 0"
+    fill="none"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  ></path>
+  <circle cx="64" cy="77" r="2.6" fill="var(--illustration-outline)"></circle>
+  <circle cx="73" cy="77" r="2.6" fill="var(--illustration-outline)"></circle>
+  <path
+    d="M64 84q4.5 4 9 0"
+    fill="none"
+    stroke="var(--illustration-outline)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  ></path>
+  <circle cx="81" cy="42" r="2.2" fill="var(--illustration-outline)"></circle>
+  <circle cx="88" cy="42" r="2.2" fill="var(--illustration-outline)"></circle>
+  <path
+    d="M81 48q3.5 3 7 0"
+    fill="none"
+    stroke="var(--illustration-outline)"
+    stroke-width="2"
+    stroke-linecap="round"
+  ></path>
+  <path d="M180 27Q180 36 189 36Q180 36 180 45Q180 36 171 36Q180 36 180 27Z" fill="var(--illustration-gold)"></path>
+  <path d="M24 104Q24 110 30 110Q24 110 24 116Q24 110 18 110Q24 110 24 104Z" fill="var(--primary)"></path>
+  <path
+    d="M168 113Q168 118 173 118Q168 118 168 123Q168 118 163 118Q168 118 168 113Z"
+    fill="var(--illustration-teal)"
+  ></path>
+</svg>

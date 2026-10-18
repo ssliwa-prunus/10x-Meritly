@@ -308,26 +308,26 @@ Rebuild `Welcome.astro` from the design. Add the PL and EN copy, wire fonts and 
 
 #### Automated
 
-- [x] 1.1 Astro types regenerate and type-check passes: `npx astro sync && npx astro check`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 UI literal guard passes: `npm run lint:ui`
-- [x] 1.4 Unit tests pass: `npm test`
+- [x] 1.1 Astro types regenerate and type-check passes: `npx astro sync && npx astro check` — 8b5ce50
+- [x] 1.2 Lint passes: `npm run lint` — 8b5ce50
+- [x] 1.3 UI literal guard passes: `npm run lint:ui` — 8b5ce50
+- [x] 1.4 Unit tests pass: `npm test` — 8b5ce50
 
 #### Manual
 
-- [x] 1.5 `/`, `/auth/signin` and `/dashboard` look exactly as before, with the language switch still fixed bottom-right
+- [x] 1.5 `/`, `/auth/signin` and `/dashboard` look exactly as before, with the language switch still fixed bottom-right — 8b5ce50
 
 ### Phase 2: Illustrations
 
 #### Automated
 
-- [ ] 2.1 UI literal guard passes and covers the 8 new files: `npm run lint:ui`
-- [ ] 2.2 Type-check passes: `npx astro check`
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 UI literal guard passes and covers the 8 new files: `npm run lint:ui`
+- [x] 2.2 Type-check passes: `npx astro check`
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 No hex value is left in `src/components/landing/illustrations/` (spot-check the guard by temporarily adding a hex to one file and seeing it fail)
+- [x] 2.4 No hex value is left in `src/components/landing/illustrations/` (spot-check the guard by temporarily adding a hex to one file and seeing it fail)
 
 ### Phase 3: Landing view
 
