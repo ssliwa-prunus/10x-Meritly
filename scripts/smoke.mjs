@@ -132,6 +132,11 @@ const steps = [
     { status: 200, htmlIncludes: ['<html lang="en"'], bodyIncludes: [EN_LANDING_TEXT] },
   ],
   [
+    "anonymous home links to sign-up and sign-in",
+    () => request("/", { as: "anon" }),
+    { status: 200, htmlIncludes: ['href="/auth/signup"', 'href="/auth/signin"'] },
+  ],
+  [
     "language switch sets lang=en and returns to next",
     () => request("/api/locale", { as: "switchToEn", method: "POST", form: { locale: "en", next: "/auth/signin" } }),
     { status: 302, exact: "/auth/signin", setsCookie: "lang=en" },
@@ -203,6 +208,16 @@ const steps = [
     { status: 302, exact: "/projects" },
   ],
   ["admin signin", () => signIn("admin", "admin@meritly.local"), { status: 302, exact: "/" }],
+  // Signed in, the landing page swaps the sign-in / sign-up calls to action for the dashboard and sign-out.
+  [
+    "signed-in home links to the dashboard and signs out",
+    () => request("/", { as: "admin" }),
+    {
+      status: 200,
+      htmlIncludes: ['href="/dashboard"', 'action="/api/auth/signout"'],
+      bodyExcludes: ["Załóż konto"],
+    },
+  ],
   ["employee2 signin", () => signIn("employee2", "employee2@meritly.local"), { status: 302, exact: "/" }],
 
   // Role × route.

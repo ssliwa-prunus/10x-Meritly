@@ -321,31 +321,31 @@ Rebuild `Welcome.astro` from the design. Add the PL and EN copy, wire fonts and 
 
 #### Automated
 
-- [x] 2.1 UI literal guard passes and covers the 8 new files: `npm run lint:ui`
-- [x] 2.2 Type-check passes: `npx astro check`
-- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 UI literal guard passes and covers the 8 new files: `npm run lint:ui` — f9bdcf8
+- [x] 2.2 Type-check passes: `npx astro check` — f9bdcf8
+- [x] 2.3 Lint passes: `npm run lint` — f9bdcf8
 
 #### Manual
 
-- [x] 2.4 No hex value is left in `src/components/landing/illustrations/` (spot-check the guard by temporarily adding a hex to one file and seeing it fail)
+- [x] 2.4 No hex value is left in `src/components/landing/illustrations/` (spot-check the guard by temporarily adding a hex to one file and seeing it fail) — f9bdcf8
 
 ### Phase 3: Landing view
 
 #### Automated
 
-- [ ] 3.1 Type-check passes (EN dictionary matches the `Messages` type): `npx astro sync && npx astro check`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 UI literal guard passes: `npm run lint:ui`
-- [ ] 3.4 Unit tests pass: `npm test`
-- [ ] 3.5 Production build succeeds: `npm run build`
-- [ ] 3.6 Smoke passes against the running preview, including the new CTA steps: `npm run smoke`
-- [ ] 3.7 E2E passes, including `language-switch.spec.ts` unchanged: `npm run test:e2e`
+- [x] 3.1 Type-check passes (EN dictionary matches the `Messages` type): `npx astro sync && npx astro check`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 UI literal guard passes: `npm run lint:ui`
+- [x] 3.4 Unit tests pass: `npm test`
+- [x] 3.5 Production build succeeds: `npm run build`
+- [x] 3.6 Smoke passes against the running preview, including the new CTA steps: `npm run smoke`
+- [x] 3.7 E2E passes, including `language-switch.spec.ts` unchanged: `npm run test:e2e`
 
 #### Manual
 
-- [ ] 3.8 At 1440 px, `/` matches the design section by section (layout, fonts, illustrations, worked example)
-- [ ] 3.9 At 375 px there is no horizontal page scroll, the header wraps cleanly and the example table scrolls inside its card
-- [ ] 3.10 With `lang=en`, every text on `/` is English and the figures stay pl-PL
-- [ ] 3.11 Signed in, the header shows the dashboard link and the sign-out button and the hero CTA reads "Przejdź do panelu"; sign-out works
-- [ ] 3.12 Keyboard tab order reaches nav, switch and CTAs with a visible focus ring
-- [ ] 3.13 Other pages still show the bottom-right switch and no web fonts
+- [x] 3.8 At 1440 px, `/` matches the design section by section (layout, fonts, illustrations, worked example)
+- [x] 3.9 At 375 px there is no horizontal page scroll, the header wraps cleanly and the example table scrolls inside its card
+- [x] 3.10 With `lang=en`, every text on `/` is English and the figures stay pl-PL
+- [x] 3.11 Signed in, the header shows the dashboard link and the sign-out button and the hero CTA reads "Przejdź do panelu"; sign-out works
+- [x] 3.12 Keyboard tab order reaches nav, switch and CTAs with a visible focus ring
+- [x] 3.13 Other pages still show the bottom-right switch and no web fonts
