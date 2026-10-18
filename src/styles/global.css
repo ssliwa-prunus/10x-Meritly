@@ -39,6 +39,11 @@
   --background-accent: var(--background);
   --success: oklch(0.596 0.145 163.225);
   --success-foreground: oklch(0.985 0 0);
+  /* status roles from reports/design/project/Dashboard.dc.html — see context/changes/new-dashboard-view/tokens.md */
+  --warning: oklch(0.5 0.12 60);
+  --warning-foreground: oklch(0.985 0 0);
+  --info: oklch(0.48 0.17 274.713);
+  --info-foreground: oklch(0.985 0 0);
   /* landing artwork palette, declared once here and inherited by .dark — see context/changes/new-landingpage-view/tokens.md */
   --illustration-outline: oklch(0.208 0.036 298.588);
   --illustration-highlight: oklch(0.979 0.004 271.37);
@@ -80,6 +85,11 @@
   --destructive: oklch(0.704 0.191 22.216);
   --success: oklch(0.765 0.177 163.223);
   --success-foreground: oklch(0.985 0 0);
+  /* status roles: #f5c38a (peach) and #a5b4fc (periwinkle) from reports/design/project/Dashboard.dc.html */
+  --warning: oklch(0.849 0.093 69.715);
+  --warning-foreground: oklch(0.205 0 0);
+  --info: oklch(0.785 0.104 274.713);
+  --info-foreground: oklch(0.205 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 20%);
   --ring: oklch(0.827 0.119 306.383);
@@ -121,6 +131,10 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -169,7 +183,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
   }
   /* Native select popups can't paint the select's translucent background, so options need an opaque surface. */
   option,

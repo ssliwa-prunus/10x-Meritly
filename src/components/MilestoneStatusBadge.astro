@@ -1,0 +1,28 @@
+---
+import { Badge } from "@/components/ui/badge";
+import { getMessages, type Locale } from "@/lib/i18n";
+import type { MilestoneStatus } from "@/types";
+
+// Status pill for a milestone. `awaiting` (scored, has engagements, ready for the Approve button) shows the
+// warning tone whatever the underlying status; approved and cancelled milestones are never awaiting.
+interface Props {
+  status: MilestoneStatus;
+  awaiting?: boolean;
+  locale: Locale;
+}
+
+const { status, awaiting = false, locale } = Astro.props;
+const t = getMessages(locale);
+
+type Variant = "success" | "warning" | "info" | "secondary" | "outline";
+
+function variantFor(): Variant {
+  if (status === "approved") return "success";
+  if (status === "cancelled") return "outline";
+  if (awaiting || status === "completed") return "warning";
+  if (status === "active") return "info";
+  return "secondary";
+}
+---
+
+<Badge variant={variantFor()}>{t.status.milestone[status]}</Badge>
