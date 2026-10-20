@@ -1,0 +1,125 @@
+---
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
+import { formatPercent, formatPln } from "@/lib/format";
+import { format, getMessages, plural, type Locale, type PluralForms } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import type { AppRole, AttentionItems } from "@/types";
+
+// "Wymaga uwagi" (Dashboard.dc.html, right column): milestones awaiting approval with their payout pool and
+// headcount, open projects over budget with the worst case against the budget, and the employees whose open
+// time share exceeds 100% (for a Supervisor only on their own milestones, as RLS scopes it). `error` means
+// one of the sources failed: the alert says the list may be incomplete and the loaded items stay listed.
+interface Props {
+  items: AttentionItems;
+  viewerRole: AppRole;
+  error?: boolean;
+  locale: Locale;
+}
+
+const { items, viewerRole: role, error = false, locale } = Astro.props;
+const t = getMessages(locale).dashboard.attention;
+const count = (forms: PluralForms, n: number) => format(plural(locale, n, forms), { count: n });
+
+const overAllocatedList = items.over_allocated
+  .map((employee) => `${employee.full_name}: ${formatPercent(employee.open_total)}`)
+  .join(", ");
+const overAllocatedDetail = role === "admin" ? t.overAllocatedDetailAdmin : t.overAllocatedDetailSupervisor;
+const isEmpty = items.awaiting.length === 0 && items.over_budget.length === 0 && items.over_allocated.length === 0;
+const itemClass = "flex gap-3 rounded-xl p-3.5";
+const iconClass = "mt-0.5 size-5 shrink-0";
+---
+
+<Card className="gap-3.5 rounded-2xl px-6">
+  <h2 class="font-heading text-xl font-semibold">{t.heading}</h2>
+  {error && (
+    <Alert variant="destructive">
+      <AlertDescription>{t.loadFailed}</AlertDescription>
+    </Alert>
+  )}
+  {isEmpty ? (
+    !error && <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{t.empty}</p>
+  ) : (
+    <ul class="flex flex-col gap-2.5">
+      {items.awaiting.map(({ milestone, summary }) => (
+        <li class:list={cn(itemClass, "bg-warning/10")}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            class:list={cn(iconClass, "text-warning")}
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          <div class="flex min-w-0 flex-col gap-0.5">
+            <strong class="text-sm font-semibold break-words">
+              {format(t.awaitingTitle, { name: milestone.name })}
+            </strong>
+            <span class="text-muted-foreground text-sm">
+              {format(t.awaitingDetail, {
+                pool: summary.payout_pool === null ? t.noPool : formatPln(summary.payout_pool),
+                people: count(t.people, summary.engagement_count),
+              })}
+            </span>
+          </div>
+        </li>
+      ))}
+      {items.over_budget.map(({ project, exposure }) => (
+        <li class:list={cn(itemClass, "bg-destructive/10")}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            class:list={cn(iconClass, "text-destructive")}
+          >
+            <path d="M12 3l9 16H3z" />
+            <path d="M12 10v4M12 17h.01" />
+          </svg>
+          <div class="flex min-w-0 flex-col gap-0.5">
+            <strong class="text-sm font-semibold break-words">
+              {format(t.overBudgetTitle, { name: project.name })}
+            </strong>
+            <span class="text-muted-foreground text-sm">
+              {format(t.overBudgetDetail, {
+                reserved: formatPln(exposure.reserved_total),
+                budget: formatPln(exposure.total_budget),
+              })}
+            </span>
+          </div>
+        </li>
+      ))}
+      {items.over_allocated.length > 0 && (
+        <li class:list={cn(itemClass, "bg-destructive/10")}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            class:list={cn(iconClass, "text-destructive")}
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+          </svg>
+          <div class="flex min-w-0 flex-col gap-0.5">
+            <strong class="text-sm font-semibold">{count(t.overAllocatedTitle, items.over_allocated.length)}</strong>
+            <span class="text-muted-foreground text-sm break-words">
+              {format(overAllocatedDetail, { list: overAllocatedList })}
+            </span>
+          </div>
+        </li>
+      )}
+    </ul>
+  )}
+</Card>

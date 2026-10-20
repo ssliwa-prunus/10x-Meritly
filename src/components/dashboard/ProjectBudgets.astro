@@ -1,0 +1,72 @@
+---
+import ProgressBar from "@/components/ui/ProgressBar.astro";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { projectBudgetRows } from "@/lib/dashboard";
+import { formatPln } from "@/lib/format";
+import { format, getMessages, type Locale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import type { Project, ProjectExposure } from "@/types";
+
+// "Budżety projektów" (Dashboard.dc.html, right column): one bar per open project (not completed or
+// cancelled), the worst-case reserved amount against the budget from project_budget_exposure. An
+// over-budget project gets the destructive bar, figure and pill; the bar itself is clamped at 100%.
+interface Props {
+  projects: Project[];
+  exposures: ProjectExposure[];
+  error?: boolean;
+  locale: Locale;
+}
+
+const { projects, exposures, error = false, locale } = Astro.props;
+const t = getMessages(locale).dashboard.budgets;
+
+const rows = projectBudgetRows(projects, exposures);
+const focusRing = "focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none";
+---
+
+<Card className="gap-4.5 rounded-2xl px-6">
+  <h2 class="font-heading text-xl font-semibold">{t.heading}</h2>
+  {error ? (
+    <Alert variant="destructive">
+      <AlertDescription>{t.loadFailed}</AlertDescription>
+    </Alert>
+  ) : rows.length === 0 ? (
+    <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{t.empty}</p>
+  ) : (
+    <>
+      <ul class="flex flex-col gap-4.5">
+        {rows.map(({ project, exposure, percent }) => (
+          <li class="flex flex-col gap-2">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span class="flex min-w-0 flex-wrap items-center gap-2">
+                <a
+                  href={`/projects/${project.id}`}
+                  class:list={cn(focusRing, "rounded-sm break-words underline-offset-4 hover:underline")}
+                >
+                  {project.name}
+                </a>
+                {exposure.over_budget && <Badge variant="destructive">{t.overBudget}</Badge>}
+              </span>
+              <span
+                class:list={cn("font-figures", exposure.over_budget ? "text-destructive" : "text-muted-foreground")}
+              >
+                {format(t.amounts, {
+                  reserved: formatPln(exposure.reserved_total),
+                  budget: formatPln(exposure.total_budget),
+                })}
+              </span>
+            </div>
+            <ProgressBar
+              value={percent}
+              tone={exposure.over_budget ? "destructive" : "primary"}
+              label={format(t.bar, { percent, name: project.name })}
+            />
+          </li>
+        ))}
+      </ul>
+      <p class="text-muted-foreground text-xs">{t.note}</p>
+    </>
+  )}
+</Card>

@@ -60,10 +60,10 @@ const grandTotal = reportGrandTotal(rows);
 const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 ---
 
-<Layout title={r.title}>
+<Layout title={r.title} languageSwitch={false}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
-      <Topbar />
+      <Topbar current="reports" />
       <h1 class="text-foreground mb-6 text-3xl font-bold">{r.title}</h1>
 
       <div class="flex flex-col gap-6">

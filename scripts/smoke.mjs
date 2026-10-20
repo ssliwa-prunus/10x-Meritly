@@ -20,7 +20,7 @@ const EMPLOYEE_2 = "00000000-0000-4000-8000-000000000033";
 // A well-formed id with no employee behind it.
 const MISSING_EMPLOYEE = "00000000-0000-4000-8000-000000000999";
 // Expected bonuses derived by hand in seed.sql: 1000.00 split 0.60 / 0.40 at the maximum multiplier.
-// Written as /my-bonuses formats them (pl-PL currency), after whitespace normalisation.
+// Written as /my-bonuses and /dashboard format them (pl-PL currency), after whitespace normalisation.
 const OWN_BONUS = "400,00 zł";
 const OTHER_BONUS = "600,00 zł";
 // Draft Milestone (…0024): employee2 alone at 0.30, all KPI scores 100, so the Draft bonus is the
@@ -236,6 +236,12 @@ const steps = [
     () => request("/my-bonuses", { as: "employee" }),
     { status: 200, bodyIncludes: [OTHER_BONUS, "Approved Milestone"] },
   ],
+  // The same positive control for the employee2 /dashboard excludes: the dashboard formats bonuses alike.
+  [
+    "employee 200 on /dashboard",
+    () => request("/dashboard", { as: "employee" }),
+    { status: 200, bodyIncludes: [OTHER_BONUS, "Approved Milestone"] },
+  ],
   ["supervisor 200 on /projects", () => request("/projects", { as: "supervisor" }), { status: 200 }],
   // Positive control for the employee2 excludes below: the Draft milestone's name renders.
   [
@@ -261,7 +267,7 @@ const steps = [
   // Pinned: Astro routes are case-sensitive, so /ADMIN matches no page (and no gate).
   ["employee 404 on /ADMIN", () => request("/ADMIN", { as: "employee" }), { status: 404 }],
 
-  // IDOR as employee2: no project pages or actions, and /my-bonuses shows only own Approved lines.
+  // IDOR as employee2: no project pages or actions, and /my-bonuses and /dashboard show only own Approved lines.
   [
     "employee2 403 on another's project",
     () => request(`/projects/${APPROVED_PROJECT}`, { as: "employee2" }),
@@ -294,6 +300,25 @@ const steps = [
   [
     "employee2 /my-bonuses ignores injected ids",
     () => request(`/my-bonuses?employee=${EMPLOYEE_1}&milestone=${DRAFT_MILESTONE}`, { as: "employee2" }),
+    {
+      status: 200,
+      bodyIncludes: [OWN_BONUS, "Approved Demo Project", "Approved Milestone"],
+      bodyExcludes: [OTHER_BONUS, "Draft Milestone"],
+    },
+  ],
+  // The dashboard shows figures too (tiles, latest bonus, history preview): only own Approved ones.
+  [
+    "employee2 /dashboard shows only own Approved bonus",
+    () => request("/dashboard", { as: "employee2" }),
+    {
+      status: 200,
+      bodyIncludes: [OWN_BONUS, "Approved Demo Project", "Approved Milestone"],
+      bodyExcludes: [OTHER_BONUS, "Draft Milestone"],
+    },
+  ],
+  [
+    "employee2 /dashboard ignores injected ids",
+    () => request(`/dashboard?employee=${EMPLOYEE_1}&milestone=${DRAFT_MILESTONE}`, { as: "employee2" }),
     {
       status: 200,
       bodyIncludes: [OWN_BONUS, "Approved Demo Project", "Approved Milestone"],

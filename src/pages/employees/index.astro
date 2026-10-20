@@ -79,10 +79,10 @@ const columnCount = isAdmin ? 7 : 6;
 const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || supervisors);
 ---
 
-<Layout title={t.employees.title}>
+<Layout title={t.employees.title} languageSwitch={false}>
   <div class="bg-cosmic min-h-screen p-4 text-white">
     <div class="mx-auto w-full max-w-5xl">
-      <Topbar />
+      <Topbar current="employees" />
       <h1 class="mb-2 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
         {t.employees.title}
       </h1>

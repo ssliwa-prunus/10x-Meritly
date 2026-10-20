@@ -55,10 +55,10 @@ const history = groupHistory(historyResult.data ?? []);
 const focusRing = "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 ---
 
-<Layout title={employee ? employee.full_name : d.fallbackTitle}>
+<Layout title={employee ? employee.full_name : d.fallbackTitle} languageSwitch={false}>
   <div class="bg-cosmic text-foreground min-h-screen p-4">
     <div class="mx-auto w-full max-w-4xl">
-      <Topbar />
+      <Topbar current="employees" />
       <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
         <h1 class="text-foreground min-w-0 text-3xl font-bold break-words">
           {employee ? employee.full_name : d.fallbackTitle}

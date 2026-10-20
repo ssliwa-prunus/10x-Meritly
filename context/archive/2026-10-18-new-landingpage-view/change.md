@@ -1,10 +1,10 @@
 ---
 change_id: new-landingpage-view
 title: New landingpage view
-status: impl_reviewed
+status: archived
 created: 2026-10-18
 updated: 2026-10-18
-archived_at: null
+archived_at: 2026-10-18T18:02:43Z
 ---
 
 ## Notes

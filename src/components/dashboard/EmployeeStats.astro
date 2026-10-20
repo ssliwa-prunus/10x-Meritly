@@ -1,0 +1,52 @@
+---
+import StatTile from "@/components/ui/StatTile.astro";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatDate, formatPln } from "@/lib/format";
+import { format, getMessages, plural, type Locale } from "@/lib/i18n";
+import type { EmployeeStats as Stats } from "@/types";
+
+// The three employee tiles (DashboardEmployee.dc.html "Stat tiles"): this Warsaw year's bonus total and
+// count, the latest bonus, and the projects with a bonus. Own approved figures only (employeeStats over
+// listMyBonuses); no pool, share or colleague figure. Without lines the tiles show 0 / "—" (empty state).
+interface Props {
+  stats: Stats;
+  error?: boolean;
+  locale: Locale;
+}
+
+const { stats, error = false, locale } = Astro.props;
+const t = getMessages(locale).dashboard;
+const e = t.employee;
+const latest = stats.latest;
+---
+
+<section aria-label={t.stats.label}>
+  {error ? (
+    <Alert variant="destructive">
+      <AlertDescription>{e.loadFailed}</AlertDescription>
+    </Alert>
+  ) : (
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <StatTile
+        label={format(e.yearTotal, { year: stats.year })}
+        value={formatPln(stats.year_total)}
+        hint={format(plural(locale, stats.year_count, e.yearTotalHint), { count: stats.year_count })}
+        tone="success"
+      />
+      <StatTile
+        label={e.latest}
+        value={latest ? formatPln(latest.bonus) : e.noValue}
+        hint={
+          latest
+            ? format(e.latestHint, { milestone: latest.milestone_name, date: formatDate(latest.approved_at) })
+            : e.latestEmpty
+        }
+      />
+      <StatTile
+        label={e.projects}
+        value={String(stats.project_names.length)}
+        hint={stats.project_names.length > 0 ? stats.project_names.join(", ") : undefined}
+      />
+    </div>
+  )}
+</section>

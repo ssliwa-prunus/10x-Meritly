@@ -1,0 +1,519 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Topbar from "@/components/Topbar.astro";
+import AttentionList from "@/components/dashboard/AttentionList.astro";
+import BonusHistoryPreview from "@/components/dashboard/BonusHistoryPreview.astro";
+import DashboardGreeting from "@/components/dashboard/DashboardGreeting.astro";
+import EmployeeStats from "@/components/dashboard/EmployeeStats.astro";
+import LatestBonusBreakdown from "@/components/dashboard/LatestBonusBreakdown.astro";
+import MilestonesTable from "@/components/dashboard/MilestonesTable.astro";
+import ProjectBudgets from "@/components/dashboard/ProjectBudgets.astro";
+import SupervisorStats from "@/components/dashboard/SupervisorStats.astro";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getMessages } from "@/lib/i18n";
+import type {
+  AttentionItems,
+  DashboardMilestone,
+  DashboardMilestoneRow,
+  EmployeeListItem,
+  EmployeeStats as EmployeeStatsData,
+  MilestonePayoutSummary,
+  MyBonusLine,
+  Project,
+  ProjectExposure,
+  ReservedBudget,
+  SupervisorStats as SupervisorStatsData,
+} from "@/types";
+
+// Dev-only review page: every state of the /dashboard sections, rendered from inline fixtures.
+// Production gets an empty 404 (status set here, template skipped below). A top-level `return new Response()`
+// would also work in Astro, but it crashes @typescript-eslint/no-misused-promises in astro-eslint-parser.
+const isDev = import.meta.env.DEV;
+if (!isDev) {
+  Astro.response.status = 404;
+}
+
+// The sections render in the session's language (PL by default); the sink's own copy is English, like
+// /dev/projects-kitchen-sink.
+const { locale } = Astro.locals;
+const t = getMessages(locale);
+const year = 2026;
+
+const supervisorId = "5d1f6c2a-3b4e-4f6a-8c9d-0e1f2a3b4c5d";
+
+const portal: Project = {
+  id: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  name: "Customer portal relaunch",
+  start_date: "2026-01-01",
+  end_date: "2026-12-31",
+  status: "active",
+  total_budget: 120000,
+  notes: null,
+  supervisor_id: supervisorId,
+};
+const warehouse: Project = {
+  ...portal,
+  id: "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+  name: "Data warehouse migration with a deliberately long name that has to wrap on narrow screens",
+  total_budget: 50000,
+};
+// Completed: ProjectBudgets filters it out, so it never gets a bar.
+const archive: Project = {
+  ...portal,
+  id: "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f",
+  name: "Archive cleanup",
+  status: "completed",
+  total_budget: 20000,
+};
+const projects = [portal, warehouse, archive];
+
+const portalExposure: ProjectExposure = {
+  project_id: portal.id,
+  total_budget: 120000,
+  reserved_total: 66635.11,
+  remaining: 53364.89,
+  over_budget: false,
+};
+const warehouseExposure: ProjectExposure = {
+  project_id: warehouse.id,
+  total_budget: 50000,
+  reserved_total: 58200,
+  remaining: -8200,
+  over_budget: true,
+};
+const archiveExposure: ProjectExposure = {
+  project_id: archive.id,
+  total_budget: 20000,
+  reserved_total: 18000,
+  remaining: 2000,
+  over_budget: false,
+};
+const exposures = [portalExposure, warehouseExposure, archiveExposure];
+
+const milestone = (id: string, overrides: Partial<DashboardMilestone> = {}): DashboardMilestone => ({
+  id,
+  project_id: portal.id,
+  name: "Discovery and design",
+  start_date: "2026-01-01",
+  end_date: "2026-03-31",
+  status: "completed",
+  target_pool: 10000,
+  notes: null,
+  kpi_schedule: 80,
+  kpi_budget: 90,
+  kpi_quality: 85,
+  kpi_risk: 60,
+  project_name: portal.name,
+  project_status: "active",
+  ...overrides,
+});
+const unscored = { kpi_schedule: null, kpi_budget: null, kpi_quality: null, kpi_risk: null };
+
+const awaitingMilestone = milestone("aa000001-0000-4000-8000-000000000001");
+const activeMilestone = milestone("aa000002-0000-4000-8000-000000000002", {
+  name: "Build and integration",
+  start_date: "2026-04-01",
+  end_date: "2026-09-30",
+  status: "active",
+  target_pool: 42500.5,
+  ...unscored,
+});
+const approvedMilestone = milestone("aa000003-0000-4000-8000-000000000003", {
+  project_id: warehouse.id,
+  project_name: warehouse.name,
+  name: "Cut-over",
+  start_date: "2026-02-01",
+  end_date: "2026-05-31",
+  status: "approved",
+  target_pool: 8000,
+});
+const plannedMilestone = milestone("aa000004-0000-4000-8000-000000000004", {
+  project_id: warehouse.id,
+  project_name: warehouse.name,
+  name: "Hypercare and knowledge transfer with a deliberately long milestone name to test wrapping",
+  start_date: "2026-10-01",
+  end_date: "2026-12-31",
+  status: "planned",
+  target_pool: 50000,
+  ...unscored,
+});
+
+// The worked example (M 1.1875 of max 1.30, target 10 000 → pool 9 134,61), awaiting approval.
+const awaitingSummary: MilestonePayoutSummary = {
+  milestone_id: awaitingMilestone.id,
+  target_pool: 10000,
+  kpi_schedule: 80,
+  kpi_budget: 90,
+  kpi_quality: 85,
+  kpi_risk: 60,
+  scored: true,
+  multiplier: 1.1875,
+  budget_share: 0.913462,
+  payout_pool: 9134.61,
+  payout_total: 9134.6,
+  residual: 0.01,
+  within_pool: true,
+  engagement_count: 3,
+};
+
+const supervisorRows: DashboardMilestoneRow[] = [
+  {
+    milestone: awaitingMilestone,
+    awaiting: true,
+    kpi: { multiplier: 1.1875, multiplier_max: 1.3 },
+    action: "approve",
+    approved_at: null,
+  },
+  { milestone: activeMilestone, awaiting: false, kpi: null, action: "open", approved_at: null },
+  { milestone: plannedMilestone, awaiting: false, kpi: null, action: "open", approved_at: null },
+  {
+    milestone: approvedMilestone,
+    awaiting: false,
+    kpi: { multiplier: 1.3, multiplier_max: 1.3 },
+    action: "results",
+    approved_at: "2026-06-03T09:00:00Z",
+  },
+];
+// An Admin row is never "approve": the awaiting milestone keeps its pill but the action is "Otwórz".
+const adminRows: DashboardMilestoneRow[] = supervisorRows.map((row) =>
+  row.action === "approve" ? { ...row, action: "open" } : row,
+);
+
+const overAllocated: EmployeeListItem[] = [
+  {
+    id: "ff000001-0000-4000-8000-000000000001",
+    supervisor_id: supervisorId,
+    full_name: "Katarzyna Wiśniewska",
+    email: "katarzyna@example.com",
+    job_role_id: "ee000001-0000-4000-8000-000000000001",
+    profile_id: null,
+    invited_at: null,
+    activated_at: null,
+    job_role_name: "Tech lead",
+    open_total: 1.2,
+    over_allocated: true,
+  },
+  {
+    id: "ff000002-0000-4000-8000-000000000002",
+    supervisor_id: supervisorId,
+    full_name: "Marek Zieliński",
+    email: "marek@example.com",
+    job_role_id: "ee000002-0000-4000-8000-000000000002",
+    profile_id: null,
+    invited_at: null,
+    activated_at: null,
+    job_role_name: "Senior developer",
+    open_total: 1.05,
+    over_allocated: true,
+  },
+];
+
+const attention: AttentionItems = {
+  awaiting: [{ milestone: awaitingMilestone, summary: awaitingSummary }],
+  over_budget: [{ project: warehouse, exposure: warehouseExposure }],
+  over_allocated: overAllocated,
+};
+const attentionPartial: AttentionItems = { ...attention, over_budget: [], over_allocated: [] };
+const attentionEmpty: AttentionItems = { awaiting: [], over_budget: [], over_allocated: [] };
+
+const supervisorStats: SupervisorStatsData = {
+  active_projects: 2,
+  active_milestones: 3,
+  awaiting: 1,
+  paid_total: 7280.4,
+  paid_count: 1,
+};
+// Open projects only: 66 635,11 + 58 200 of 120 000 + 50 000 → 73% (floored).
+const reserved: ReservedBudget = { reserved: 124835.11, budget: 170000, percent: 73 };
+
+const emptyStats: SupervisorStatsData = {
+  active_projects: 0,
+  active_milestones: 0,
+  awaiting: 0,
+  paid_total: 0,
+  paid_count: 0,
+};
+const emptyReserved: ReservedBudget = { reserved: 0, budget: 0, percent: 0 };
+
+// Employee fixtures: own approved lines, newest approval first (listMyBonuses order); one line from the
+// previous year so the year tile differs from the history total.
+const bonusLine = (id: string, overrides: Partial<MyBonusLine>): MyBonusLine => ({
+  id,
+  project_id: portal.id,
+  project_name: portal.name,
+  milestone_name: "Discovery and design",
+  start_date: "2026-01-01",
+  end_date: "2026-03-31",
+  approved_at: "2026-04-02T09:00:00Z",
+  job_role_name: "Senior",
+  time_share: 0.6,
+  role_weight: 1.2,
+  rating: 4,
+  rating_factor: 1.1,
+  multiplier: 1.35,
+  bonus: 3240.5,
+  ...overrides,
+});
+const employeeLines: MyBonusLine[] = [
+  bonusLine("b-4", {
+    project_id: warehouse.id,
+    project_name: warehouse.name,
+    milestone_name: "Cut-over",
+    start_date: "2026-02-01",
+    end_date: "2026-05-31",
+    approved_at: "2026-09-15T09:00:00Z",
+    time_share: 0.25,
+    bonus: 980.75,
+  }),
+  bonusLine("b-3", {
+    milestone_name: "Build and launch",
+    start_date: "2026-04-01",
+    end_date: "2026-06-30",
+    approved_at: "2026-07-03T09:00:00Z",
+    bonus: 4120,
+  }),
+  bonusLine("b-2", {}),
+  bonusLine("b-1", {
+    milestone_name: "Inception",
+    start_date: "2025-09-01",
+    end_date: "2025-11-15",
+    approved_at: "2025-11-20T09:00:00Z",
+    bonus: 1500,
+  }),
+];
+const employeeTotal = 9841.25;
+const employeeStats: EmployeeStatsData = {
+  year,
+  year_total: 8341.25,
+  year_count: 3,
+  latest: employeeLines[0],
+  project_names: [warehouse.name, portal.name],
+};
+const emptyEmployeeStats: EmployeeStatsData = {
+  year,
+  year_total: 0,
+  year_count: 0,
+  latest: null,
+  project_names: [],
+};
+
+const states = [
+  {
+    state: "default",
+    where:
+      "Sections “Supervisor”, “Admin” and “Employee”: each role's dashboard composed as on /dashboard. “Greeting sentences” adds the remaining sentence variants.",
+  },
+  {
+    state: "hover",
+    where:
+      "Manual (pointer): Topbar pills and the greeting CTAs change background, “Wszystkie projekty”, “Zobacz całą historię”, project names and the table's text actions underline, table rows (the awaiting row in the warning tint) change background, the “Zatwierdź” button darkens.",
+  },
+  {
+    state: "focus-visible",
+    where:
+      "Manual tab-through (see the note below): the Topbar logo, nav pills and sign-out, the greeting CTAs, the table's links and actions, the budget project links and the history link show the ring.",
+  },
+  {
+    state: "disabled",
+    where:
+      "N/A — the dashboard has no disabled control: blocked approval (Admin, or not yet awaiting) shows “Otwórz”, never a disabled button.",
+  },
+  {
+    state: "error",
+    where:
+      "Section “Error”: every Supervisor section with `error` (attention keeps its loaded items, and also shown with none), and every Employee section with `error`.",
+  },
+  {
+    state: "empty",
+    where:
+      "Section “Empty”: a Supervisor with no projects, an Employee with no approved lines, and an Employee whose account is not linked.",
+  },
+  {
+    state: "loading",
+    where:
+      "N/A — the dashboard is server-rendered with no client fetch, so there is nothing to skeleton and no layout jump.",
+  },
+];
+
+const groupHeading = "text-foreground text-2xl font-bold";
+const variantHeading = "text-muted-foreground text-sm font-medium tracking-wide uppercase";
+const managerGrid = "grid grid-cols-1 items-start gap-6 lg:grid-cols-3";
+const employeeGrid = "grid grid-cols-1 items-start gap-6 lg:grid-cols-2";
+---
+
+{isDev && (
+  <Layout title="Dashboard kitchen sink" languageSwitch={false}>
+    <div class="bg-cosmic text-foreground min-h-screen p-4">
+      <div class="mx-auto flex w-full max-w-7xl flex-col gap-10">
+        <Topbar current="dashboard" />
+
+        <header class="flex flex-col gap-4">
+          <h1 class="text-foreground text-3xl font-bold">Dashboard — kitchen sink</h1>
+          <p class="text-muted-foreground text-sm">
+            Dev-only page (404 in production). Every state of the <code>/dashboard</code> sections from inline fixtures.
+            The Topbar above renders the dev session's own nav and sign-out; the sections render in the session's
+            language.
+          </p>
+          <p class="text-muted-foreground text-sm">
+            Each greeting renders its own <code>h1</code>, so this page has several; check the heading outline on the
+            real <code>/dashboard</code>, where there is one.
+          </p>
+
+          <Card>
+            <CardHeader>
+              <h2 class="text-xl leading-none font-semibold">State matrix</h2>
+              <CardDescription>Where each of the 7 states is shown on this page.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table className="text-left">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead scope="col" className="text-muted-foreground">
+                      State
+                    </TableHead>
+                    <TableHead scope="col" className="text-muted-foreground">
+                      Where shown
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {states.map((row) => (
+                    <TableRow className="align-top">
+                      <TableCell className="align-top font-medium">{row.state}</TableCell>
+                      <TableCell className="align-top whitespace-normal">{row.where}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <p class="bg-muted text-muted-foreground rounded-lg border px-3 py-2 text-sm">
+            Focus-visible check: click on an empty area of the page, then press Tab repeatedly. Each link and button,
+            from the Topbar down, must show the ring before moving on.
+          </p>
+        </header>
+
+        <section id="ks-supervisor" class="flex flex-col gap-6" aria-labelledby="ks-supervisor-heading">
+          <h2 id="ks-supervisor-heading" class:list={groupHeading}>
+            Supervisor
+          </h2>
+          <h3 class:list={variantHeading}>Default — one awaiting approval, one project over budget</h3>
+          <DashboardGreeting viewerRole="supervisor" awaiting={1} overBudget={1} locale={locale} />
+          <SupervisorStats stats={supervisorStats} reserved={reserved} year={year} locale={locale} />
+          <div class:list={managerGrid}>
+            <div class="min-w-0 lg:col-span-2">
+              <MilestonesTable rows={supervisorRows} locale={locale} />
+            </div>
+            <div class="flex min-w-0 flex-col gap-6">
+              <AttentionList items={attention} viewerRole="supervisor" locale={locale} />
+              <ProjectBudgets projects={projects} exposures={exposures} locale={locale} />
+            </div>
+          </div>
+        </section>
+
+        <section id="ks-admin" class="flex flex-col gap-6" aria-labelledby="ks-admin-heading">
+          <h2 id="ks-admin-heading" class:list={groupHeading}>
+            Admin
+          </h2>
+          <h3 class:list={variantHeading}>Default — awaiting row opens, never approves</h3>
+          <DashboardGreeting viewerRole="admin" awaiting={1} overBudget={1} locale={locale} />
+          <SupervisorStats stats={supervisorStats} reserved={reserved} year={year} locale={locale} />
+          <div class:list={managerGrid}>
+            <div class="min-w-0 lg:col-span-2">
+              <MilestonesTable rows={adminRows} locale={locale} />
+            </div>
+            <div class="flex min-w-0 flex-col gap-6">
+              <AttentionList items={attention} viewerRole="admin" locale={locale} />
+              <ProjectBudgets projects={projects} exposures={exposures} locale={locale} />
+            </div>
+          </div>
+        </section>
+
+        <section id="ks-employee" class="flex flex-col gap-6" aria-labelledby="ks-employee-heading">
+          <h2 id="ks-employee-heading" class:list={groupHeading}>
+            Employee
+          </h2>
+          <h3 class:list={variantHeading}>Default — four own approved lines, one from last year</h3>
+          <DashboardGreeting viewerRole="employee" locale={locale} />
+          <EmployeeStats stats={employeeStats} locale={locale} />
+          <div class:list={employeeGrid}>
+            <LatestBonusBreakdown line={employeeStats.latest} locale={locale} />
+            <BonusHistoryPreview lines={employeeLines} total={employeeTotal} locale={locale} />
+          </div>
+        </section>
+
+        <section id="ks-greeting" class="flex flex-col gap-6" aria-labelledby="ks-greeting-heading">
+          <h2 id="ks-greeting-heading" class:list={groupHeading}>
+            Greeting sentences
+          </h2>
+          <h3 class:list={variantHeading}>Supervisor — awaiting only (plural)</h3>
+          <DashboardGreeting viewerRole="supervisor" awaiting={3} overBudget={0} locale={locale} />
+          <h3 class:list={variantHeading}>Admin — over budget only</h3>
+          <DashboardGreeting viewerRole="admin" awaiting={0} overBudget={2} locale={locale} />
+          <h3 class:list={variantHeading}>Admin — calm</h3>
+          <DashboardGreeting viewerRole="admin" awaiting={0} overBudget={0} locale={locale} />
+        </section>
+
+        <section id="ks-error" class="flex flex-col gap-6" aria-labelledby="ks-error-heading">
+          <h2 id="ks-error-heading" class:list={groupHeading}>
+            Error
+          </h2>
+          <h3 class:list={variantHeading}>Supervisor — every section with error</h3>
+          <DashboardGreeting viewerRole="supervisor" error locale={locale} />
+          <SupervisorStats stats={emptyStats} reserved={emptyReserved} year={year} error locale={locale} />
+          <div class:list={managerGrid}>
+            <div class="min-w-0 lg:col-span-2">
+              <MilestonesTable rows={[]} error locale={locale} />
+            </div>
+            <div class="flex min-w-0 flex-col gap-6">
+              <AttentionList items={attentionPartial} viewerRole="supervisor" error locale={locale} />
+              <AttentionList items={attentionEmpty} viewerRole="supervisor" error locale={locale} />
+              <ProjectBudgets projects={[]} exposures={[]} error locale={locale} />
+            </div>
+          </div>
+          <h3 class:list={variantHeading}>Admin — greeting with error</h3>
+          <DashboardGreeting viewerRole="admin" error locale={locale} />
+          <h3 class:list={variantHeading}>Employee — every section with error</h3>
+          <DashboardGreeting viewerRole="employee" locale={locale} />
+          <EmployeeStats stats={emptyEmployeeStats} error locale={locale} />
+          <div class:list={employeeGrid}>
+            <LatestBonusBreakdown line={null} error locale={locale} />
+            <BonusHistoryPreview lines={[]} total={0} error locale={locale} />
+          </div>
+        </section>
+
+        <section id="ks-empty" class="flex flex-col gap-6" aria-labelledby="ks-empty-heading">
+          <h2 id="ks-empty-heading" class:list={groupHeading}>
+            Empty
+          </h2>
+          <h3 class:list={variantHeading}>Supervisor — no projects</h3>
+          <DashboardGreeting viewerRole="supervisor" awaiting={0} overBudget={0} locale={locale} />
+          <SupervisorStats stats={emptyStats} reserved={emptyReserved} year={year} locale={locale} />
+          <div class:list={managerGrid}>
+            <div class="min-w-0 lg:col-span-2">
+              <MilestonesTable rows={[]} locale={locale} />
+            </div>
+            <div class="flex min-w-0 flex-col gap-6">
+              <AttentionList items={attentionEmpty} viewerRole="supervisor" locale={locale} />
+              <ProjectBudgets projects={[]} exposures={[]} locale={locale} />
+            </div>
+          </div>
+          <h3 class:list={variantHeading}>Employee — no approved lines</h3>
+          <DashboardGreeting viewerRole="employee" locale={locale} />
+          <EmployeeStats stats={emptyEmployeeStats} locale={locale} />
+          <div class:list={employeeGrid}>
+            <LatestBonusBreakdown line={null} locale={locale} />
+            <BonusHistoryPreview lines={[]} total={0} locale={locale} />
+          </div>
+          <h3 class:list={variantHeading}>Employee — account not linked</h3>
+          <DashboardGreeting viewerRole="employee" locale={locale} />
+          <Card className="rounded-2xl px-6">
+            <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{t.myBonuses.notLinked}</p>
+          </Card>
+        </section>
+      </div>
+    </div>
+  </Layout>
+)}

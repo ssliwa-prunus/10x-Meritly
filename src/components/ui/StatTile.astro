@@ -1,0 +1,37 @@
+---
+import { cn } from "@/lib/utils";
+
+// One dashboard stat tile: label, a figure in font-figures, an optional bar (default slot) and a hint.
+// Tones follow reports/design/project/Dashboard.dc.html: "warning" tints the whole tile (awaiting approval),
+// "success" colours only the figure (paid bonuses).
+interface Props {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "default" | "warning" | "success";
+  class?: string;
+}
+
+const { label, value, hint, tone = "default", class: className } = Astro.props;
+---
+
+<div
+  class:list={cn(
+    "flex flex-col gap-1.5 rounded-2xl border p-5",
+    tone === "warning" ? "border-warning/45 bg-warning/10" : "bg-card",
+    className,
+  )}
+>
+  <span class="text-muted-foreground text-sm">{label}</span>
+  <span
+    class:list={cn(
+      "font-figures text-3xl font-medium",
+      tone === "warning" && "text-warning",
+      tone === "success" && "text-success",
+    )}
+  >
+    {value}
+  </span>
+  <slot />
+  {hint && <span class="text-muted-foreground text-sm">{hint}</span>}
+</div>

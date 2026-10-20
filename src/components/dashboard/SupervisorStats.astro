@@ -1,0 +1,64 @@
+---
+import ProgressBar from "@/components/ui/ProgressBar.astro";
+import StatTile from "@/components/ui/StatTile.astro";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatPln } from "@/lib/format";
+import { format, getMessages, plural, type Locale, type PluralForms } from "@/lib/i18n";
+import type { ReservedBudget, SupervisorStats as Stats } from "@/types";
+
+// The four Supervisor/Admin tiles (Dashboard.dc.html "Stat tiles"): active projects with milestones in
+// progress, awaiting approval, reserved from budget with a bar, and bonuses paid in the Warsaw year. The
+// figures come from supervisorStats() and reservedBudget(). With `error` (any source failed) the section
+// shows an alert instead of tiles, so no tile ever shows a misleading 0. All-zero tiles are the empty state.
+interface Props {
+  stats: Stats;
+  reserved: ReservedBudget;
+  /** The current Warsaw calendar year (warsawYearBounds). */
+  year: number;
+  error?: boolean;
+  locale: Locale;
+}
+
+const { stats, reserved, year, error = false, locale } = Astro.props;
+const t = getMessages(locale).dashboard.stats;
+const count = (forms: PluralForms, n: number) => format(plural(locale, n, forms), { count: n });
+---
+
+<section aria-label={t.label}>
+  {error ? (
+    <Alert variant="destructive">
+      <AlertDescription>{t.loadFailed}</AlertDescription>
+    </Alert>
+  ) : (
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <StatTile
+        label={t.activeProjects}
+        value={String(stats.active_projects)}
+        hint={count(t.activeMilestones, stats.active_milestones)}
+      />
+      <StatTile
+        label={t.awaiting}
+        value={String(stats.awaiting)}
+        hint={t.awaitingHint}
+        tone={stats.awaiting > 0 ? "warning" : "default"}
+      />
+      <StatTile
+        label={t.reserved}
+        value={formatPln(reserved.reserved)}
+        hint={format(t.reservedHint, { budget: formatPln(reserved.budget), percent: reserved.percent })}
+      >
+        <ProgressBar
+          value={reserved.percent}
+          label={format(t.reservedBar, { percent: reserved.percent })}
+          class="my-0.5"
+        />
+      </StatTile>
+      <StatTile
+        label={format(t.paid, { year })}
+        value={formatPln(stats.paid_total)}
+        hint={count(t.paidHint, stats.paid_count)}
+        tone="success"
+      />
+    </div>
+  )}
+</section>

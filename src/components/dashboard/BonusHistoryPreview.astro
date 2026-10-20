@@ -1,0 +1,83 @@
+---
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
+import { formatDate, formatPln } from "@/lib/format";
+import { format, getMessages, type Locale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import type { MyBonusLine } from "@/types";
+
+// "Historia premii" (DashboardEmployee.dc.html): the newest approved lines (listMyBonuses order, at most 5),
+// the total over all lines (groupHistory().total, the same figure as /my-bonuses) and a link to the full
+// history, followed by the dashed "new bonuses appear here" note.
+interface Props {
+  lines: MyBonusLine[];
+  /** Sum over every line, not only the ones shown. */
+  total: number;
+  error?: boolean;
+  locale: Locale;
+}
+
+const PREVIEW_LIMIT = 5;
+
+const { lines, total, error = false, locale } = Astro.props;
+const t = getMessages(locale).dashboard.history;
+const shown = lines.slice(0, PREVIEW_LIMIT);
+const focusRing = "focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none";
+---
+
+<div class="flex min-w-0 flex-col gap-6">
+  <Card className="gap-3.5 rounded-2xl px-6">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="font-heading text-xl font-semibold">{t.heading}</h2>
+      <a
+        href="/my-bonuses"
+        class:list={cn(focusRing, "text-primary rounded-sm text-sm underline-offset-4 hover:underline")}
+      >
+        {t.seeAll}
+      </a>
+    </div>
+
+    {error ? (
+      <Alert variant="destructive">
+        <AlertDescription>{t.loadFailed}</AlertDescription>
+      </Alert>
+    ) : shown.length === 0 ? (
+      <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{t.empty}</p>
+    ) : (
+      <ul class="flex flex-col">
+        {shown.map((line) => (
+          <li class="border-border flex flex-wrap items-center justify-between gap-3 border-t py-3.5">
+            <div class="flex min-w-0 flex-col">
+              <span class="font-medium break-words">{line.milestone_name}</span>
+              <span class="text-muted-foreground text-sm break-words">
+                {format(t.lineDetail, { project: line.project_name, date: formatDate(line.approved_at) })}
+              </span>
+            </div>
+            <span class="font-figures font-medium">{formatPln(line.bonus)}</span>
+          </li>
+        ))}
+        <li class="border-border flex flex-wrap items-center justify-between gap-3 border-t-2 pt-3.5">
+          <span class="font-semibold">{t.total}</span>
+          <span class="font-figures text-success font-medium">{formatPln(total)}</span>
+        </li>
+      </ul>
+    )}
+  </Card>
+
+  <div class="border-border flex gap-3.5 rounded-2xl border border-dashed p-5">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      class="text-primary mt-0.5 size-5.5 shrink-0"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 7l9 6 9-6" />
+    </svg>
+    <p class="text-muted-foreground text-sm">{t.note}</p>
+  </div>
+</div>

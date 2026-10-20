@@ -21,8 +21,9 @@ export const PUBLIC_ROUTES = [
   "/api/auth/signout",
   // Language switch: anyone may change the language, signed in or not.
   "/api/locale",
-  // Dev-only fixture page; it answers 404 in production.
+  // Dev-only fixture pages; they answer 404 in production.
   "/dev/projects-kitchen-sink",
+  "/dev/dashboard-kitchen-sink",
 ];
 
 /** Prefixes that require a signed-in user. */

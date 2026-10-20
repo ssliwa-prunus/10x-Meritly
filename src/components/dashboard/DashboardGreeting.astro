@@ -1,0 +1,74 @@
+---
+import AdminAvatar from "@/components/landing/illustrations/AdminAvatar.astro";
+import EmployeeAvatar from "@/components/landing/illustrations/EmployeeAvatar.astro";
+import SupervisorAvatar from "@/components/landing/illustrations/SupervisorAvatar.astro";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { format, getMessages, plural, type Locale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import type { AppRole } from "@/types";
+
+// The dashboard greeting (reports/design/project/Dashboard.dc.html, DashboardEmployee.dc.html): the role's
+// avatar, "Dzień dobry!" with a role pill, a sentence and the role's calls to action. Supervisor and Admin
+// sentences count the milestones awaiting approval and the open projects over budget; `error` (the counts
+// could not be loaded) switches to a neutral sentence instead of claiming that nothing is waiting.
+interface Props {
+  viewerRole: AppRole;
+  /** Milestones awaiting approval (supervisor/admin). */
+  awaiting?: number;
+  /** Open projects over budget (supervisor/admin). */
+  overBudget?: number;
+  error?: boolean;
+  locale: Locale;
+}
+
+const { viewerRole: role, awaiting = 0, overBudget = 0, error = false, locale } = Astro.props;
+const t = getMessages(locale);
+const g = t.dashboard.greeting;
+
+function sentence(): string {
+  if (role === "employee") return g.employee;
+  const copy = role === "admin" ? g.admin : g.supervisor;
+  if (error) return copy.neutral;
+  const awaitingText = format(plural(locale, awaiting, copy.awaiting), { count: awaiting });
+  const overBudgetText = format(plural(locale, overBudget, g.overBudget), { count: overBudget });
+  if (awaiting > 0 && overBudget > 0) return format(copy.both, { awaiting: awaitingText, overBudget: overBudgetText });
+  if (awaiting > 0) return format(copy.awaitingOnly, { awaiting: awaitingText });
+  if (overBudget > 0) return format(copy.overBudgetOnly, { overBudget: overBudgetText });
+  return copy.calm;
+}
+
+const cta = (variant: "default" | "outline") => cn(buttonVariants({ variant }), "h-11 px-4.5");
+---
+
+<Card className="flex-row flex-wrap items-center gap-6 rounded-2xl px-6 py-7 sm:px-8">
+  {role === "supervisor" && <SupervisorAvatar class="size-22 shrink-0" />}
+  {role === "admin" && <AdminAvatar class="size-22 shrink-0" />}
+  {role === "employee" && <EmployeeAvatar class="size-22 shrink-0" />}
+  <div class="flex min-w-0 flex-1 basis-80 flex-col gap-1.5">
+    <div class="flex flex-wrap items-center gap-2.5">
+      <h1 class="font-heading text-3xl font-bold tracking-tight">{g.title}</h1>
+      <Badge variant="outline" className={role === "employee" ? "border-success/45" : "border-primary/40"}>
+        {t.status.role[role]}
+      </Badge>
+    </div>
+    <p class="text-muted-foreground">{sentence()}</p>
+  </div>
+  <div class="flex flex-wrap gap-2.5">
+    {role === "employee" ? (
+      <a href="/my-bonuses" class:list={cta("default")}>
+        {g.myBonuses}
+      </a>
+    ) : (
+      <>
+        <a href="/projects#new" class:list={cta("default")}>
+          {g.newProject}
+        </a>
+        <a href="/employees#new" class:list={cta("outline")}>
+          {g.inviteEmployee}
+        </a>
+      </>
+    )}
+  </div>
+</Card>

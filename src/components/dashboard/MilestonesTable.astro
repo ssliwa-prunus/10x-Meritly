@@ -1,0 +1,114 @@
+---
+import MilestoneStatusBadge from "@/components/MilestoneStatusBadge.astro";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatMultiplier, formatPln } from "@/lib/format";
+import { format, getMessages, type Locale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import type { DashboardMilestoneRow } from "@/types";
+
+// The milestones table (Dashboard.dc.html "Milestones table"): rows from dashboardRows() (order, 8-row cap,
+// KPI cell and action already decided there; an Admin row is never "approve"). "Zatwierdź" lands on the
+// milestone page's approval section (#approval), "Wyniki" on its bonuses section (#bonuses). The table
+// scrolls inside its own wrapper (ui/table), so a phone never scrolls the page sideways.
+interface Props {
+  rows: DashboardMilestoneRow[];
+  error?: boolean;
+  locale: Locale;
+}
+
+const { rows, error = false, locale } = Astro.props;
+const t = getMessages(locale).dashboard.table;
+
+const milestoneHref = (row: DashboardMilestoneRow) =>
+  `/projects/${row.milestone.project_id}/milestones/${row.milestone.id}`;
+const actionHref = (row: DashboardMilestoneRow) => {
+  if (row.action === "approve") return `${milestoneHref(row)}#approval`;
+  if (row.action === "results") return `${milestoneHref(row)}#bonuses`;
+  return milestoneHref(row);
+};
+const actionLabel = (row: DashboardMilestoneRow) =>
+  row.action === "approve" ? t.approve : row.action === "results" ? t.results : t.open;
+const focusRing = "focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none";
+const textLink = cn(focusRing, "text-primary rounded-sm text-sm underline-offset-4 hover:underline");
+---
+
+<Card className="min-w-0 gap-4 rounded-2xl px-4 sm:px-6">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h2 class="font-heading text-xl font-semibold">{t.heading}</h2>
+    <a href="/projects" class:list={textLink}>
+      {t.allProjects}
+    </a>
+  </div>
+
+  {error ? (
+    <Alert variant="destructive">
+      <AlertDescription>{t.loadFailed}</AlertDescription>
+    </Alert>
+  ) : rows.length === 0 ? (
+    <p class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">{t.empty}</p>
+  ) : (
+    <Table className="min-w-2xl text-left">
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead scope="col" className="text-muted-foreground text-xs">
+            {t.milestone}
+          </TableHead>
+          <TableHead scope="col" className="text-muted-foreground text-xs">
+            {t.period}
+          </TableHead>
+          <TableHead scope="col" className="text-muted-foreground text-right text-xs">
+            {t.targetPool}
+          </TableHead>
+          <TableHead scope="col" className="text-muted-foreground text-right text-xs">
+            {t.kpi}
+          </TableHead>
+          <TableHead scope="col" className="text-muted-foreground text-xs">
+            {t.status}
+          </TableHead>
+          <TableHead scope="col">
+            <span class="sr-only">{t.action}</span>
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow className={cn(row.awaiting && "bg-warning/5 hover:bg-warning/10")}>
+            <TableCell className="py-3.5 whitespace-normal">
+              <div class="font-medium break-words">{row.milestone.name}</div>
+              <div class="text-muted-foreground text-xs break-words">{row.milestone.project_name}</div>
+            </TableCell>
+            <TableCell className="font-figures text-muted-foreground py-3.5 text-xs">
+              {row.milestone.start_date} – {row.milestone.end_date}
+            </TableCell>
+            <TableCell className="font-figures py-3.5 text-right">{formatPln(row.milestone.target_pool)}</TableCell>
+            <TableCell className={cn("font-figures py-3.5 text-right", !row.kpi && "text-muted-foreground")}>
+              {row.kpi
+                ? format(t.kpiOf, {
+                    kpi: formatMultiplier(row.kpi.multiplier),
+                    max: formatMultiplier(row.kpi.multiplier_max),
+                  })
+                : t.noKpi}
+            </TableCell>
+            <TableCell className="py-3.5">
+              <MilestoneStatusBadge status={row.milestone.status} awaiting={row.awaiting} locale={locale} />
+            </TableCell>
+            <TableCell className="py-3.5 text-right">
+              <a
+                href={actionHref(row)}
+                class:list={
+                  row.action === "approve" ? cn(buttonVariants({ size: "sm" }), "h-9 font-semibold") : textLink
+                }
+              >
+                {actionLabel(row)}
+                <span class="sr-only">: {row.milestone.name}</span>
+              </a>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )}
+</Card>
