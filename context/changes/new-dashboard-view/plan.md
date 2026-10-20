@@ -595,28 +595,28 @@ Not applicable: no schema or data change.
 
 #### Automated
 
-- [x] 4.1 `npm run lint:ui` passes with `dashboard.astro` and `src/components/dashboard/*` in `CLEAN_PATHS` (dashboard hits 10 → 0)
-- [x] 4.2 `npm run lint`, `npx astro check` and `npm test` pass
-- [x] 4.3 `npm run smoke` passes (`/dashboard` anonymous 302, signed-in 200, after sign-out 302)
+- [x] 4.1 `npm run lint:ui` passes with `dashboard.astro` and `src/components/dashboard/*` in `CLEAN_PATHS` (dashboard hits 10 → 0) — 9c17fe6
+- [x] 4.2 `npm run lint`, `npx astro check` and `npm test` pass — 9c17fe6
+- [x] 4.3 `npm run smoke` passes (`/dashboard` anonymous 302, signed-in 200, after sign-out 302) — 9c17fe6
 
 #### Manual
 
-- [x] 4.4 Signed in as the seeded supervisor, `/dashboard` matches `Dashboard.dc.html` in layout and hierarchy at 1440px and at 375px, and the numbers agree with the project pages
-- [x] 4.5 Signed in as admin: company-wide figures, and no "Zatwierdź" anywhere
-- [x] 4.6 Signed in as the seeded employee, `/dashboard` matches `DashboardEmployee.dc.html`, the breakdown shows the KPI multiplier and no pool, and the history total equals `/my-bonuses`
-- [x] 4.7 Switching to EN translates every dashboard string, and the figures stay pl-PL
+- [x] 4.4 Signed in as the seeded supervisor, `/dashboard` matches `Dashboard.dc.html` in layout and hierarchy at 1440px and at 375px, and the numbers agree with the project pages — 9c17fe6
+- [x] 4.5 Signed in as admin: company-wide figures, and no "Zatwierdź" anywhere — 9c17fe6
+- [x] 4.6 Signed in as the seeded employee, `/dashboard` matches `DashboardEmployee.dc.html`, the breakdown shows the KPI multiplier and no pool, and the history total equals `/my-bonuses` — 9c17fe6
+- [x] 4.7 Switching to EN translates every dashboard string, and the figures stay pl-PL — 9c17fe6
 
 ### Phase 5: States, visual gate and guard
 
 #### Automated
 
-- [ ] 5.1 `npm run lint:ui` passes with the kitchen sink in `CLEAN_PATHS`
-- [ ] 5.2 `npm run smoke` passes, including both new employee2 `/dashboard` cases
-- [ ] 5.3 `npx astro check`, `npm test` and `npm run build` pass
-- [ ] 5.4 The literal scan on `src/pages/dashboard.astro`, `src/components/Topbar.astro` and `src/components/dashboard/*` returns 0 hits
+- [x] 5.1 `npm run lint:ui` passes with the kitchen sink in `CLEAN_PATHS`
+- [x] 5.2 `npm run smoke` passes, including both new employee2 `/dashboard` cases
+- [x] 5.3 `npx astro check`, `npm test` and `npm run build` pass
+- [x] 5.4 The literal scan on `src/pages/dashboard.astro`, `src/components/Topbar.astro` and `src/components/dashboard/*` returns 0 hits
 
 #### Manual
 
-- [ ] 5.5 `/dev/dashboard-kitchen-sink` shows all 7 states (or N/A with a reason) for every section, with screenshots at 1440px and 375px attached to the change folder
+- [x] 5.5 `/dev/dashboard-kitchen-sink` shows all 7 states (or N/A with a reason) for every section, with screenshots at 1440px and 375px attached to the change folder
 - [ ] 5.6 Focus rings are visible on every control in the sink, using the `ring` token
-- [ ] 5.7 `/dev/dashboard-kitchen-sink` returns 404 in `npm run build && npm run preview`
+- [x] 5.7 `/dev/dashboard-kitchen-sink` returns 404 in `npm run build && npm run preview`

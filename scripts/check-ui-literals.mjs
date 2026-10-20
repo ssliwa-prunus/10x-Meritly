@@ -42,6 +42,7 @@ const CLEAN_PATHS = [
   "src/components/ui/ProgressBar.astro",
   "src/components/ui/StatTile.astro",
   "src/components/Welcome.astro",
+  "src/pages/dev/dashboard-kitchen-sink.astro",
   "src/pages/dev/projects-kitchen-sink.astro",
   "src/pages/employees/[id].astro",
   "src/pages/my-bonuses.astro",
