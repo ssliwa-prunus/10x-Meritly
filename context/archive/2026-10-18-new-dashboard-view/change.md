@@ -1,10 +1,10 @@
 ---
 change_id: new-dashboard-view
 title: Restyle /dashboard to the supervisor and employee mockups
-status: impl_reviewed
+status: archived
 created: 2026-10-18
 updated: 2026-10-20
-archived_at: null
+archived_at: 2026-10-20T13:51:28Z
 ---
 
 ## Notes
