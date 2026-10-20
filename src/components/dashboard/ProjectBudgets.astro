@@ -3,6 +3,7 @@ import ProgressBar from "@/components/ui/ProgressBar.astro";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { projectBudgetRows } from "@/lib/dashboard";
 import { formatPln } from "@/lib/format";
 import { format, getMessages, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -21,17 +22,7 @@ interface Props {
 const { projects, exposures, error = false, locale } = Astro.props;
 const t = getMessages(locale).dashboard.budgets;
 
-const exposureById = new Map(exposures.map((exposure) => [exposure.project_id, exposure]));
-const rows = projects
-  .filter((project) => project.status !== "completed" && project.status !== "cancelled")
-  .flatMap((project) => {
-    const exposure = exposureById.get(project.id);
-    if (!exposure) return [];
-    // In grosze, like reservedBudget(), so 0.29 / 1 floors to 29 and not 28.
-    const budget = Math.round(exposure.total_budget * 100);
-    const percent = budget > 0 ? Math.floor((Math.round(exposure.reserved_total * 100) * 100) / budget) : 0;
-    return [{ project, exposure, percent }];
-  });
+const rows = projectBudgetRows(projects, exposures);
 const focusRing = "focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none";
 ---
 

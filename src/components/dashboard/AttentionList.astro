@@ -62,7 +62,7 @@ const iconClass = "mt-0.5 size-5 shrink-0";
             </strong>
             <span class="text-muted-foreground text-sm">
               {format(t.awaitingDetail, {
-                pool: formatPln(summary.payout_pool ?? 0),
+                pool: summary.payout_pool === null ? t.noPool : formatPln(summary.payout_pool),
                 people: count(t.people, summary.engagement_count),
               })}
             </span>

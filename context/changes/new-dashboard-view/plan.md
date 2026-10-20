@@ -618,5 +618,5 @@ Not applicable: no schema or data change.
 #### Manual
 
 - [x] 5.5 `/dev/dashboard-kitchen-sink` shows all 7 states (or N/A with a reason) for every section, with screenshots at 1440px and 375px attached to the change folder
-- [ ] 5.6 Focus rings are visible on every control in the sink, using the `ring` token
+- [x] 5.6 Focus rings are visible on every control in the sink, using the `ring` token
 - [x] 5.7 `/dev/dashboard-kitchen-sink` returns 404 in `npm run build && npm run preview`

@@ -6,6 +6,7 @@ import {
   employeeStats,
   isAwaitingApproval,
   needsPayoutSummary,
+  projectBudgetRows,
   reservedBudget,
   supervisorStats,
   warsawYearBounds,
@@ -276,6 +277,42 @@ describe("awaitingMilestones", () => {
       { milestone: earlyB, summary: summaries.get(earlyB.id) },
       { milestone: late, summary: summaries.get(late.id) },
     ]);
+  });
+});
+
+describe("projectBudgetRows", () => {
+  it("keeps open projects with an exposure, in project order, and floors each percent in grosze", () => {
+    const planned = project({ status: "planned" });
+    const active = project({ status: "active" });
+    const completed = project({ status: "completed" });
+    const cancelled = project({ status: "cancelled" });
+    const unexposed = project({ status: "active" });
+    const exposures = [
+      exposure(active.id, { reserved_total: 0.29, total_budget: 1 }),
+      exposure(planned.id, { reserved_total: 999.99, total_budget: 1000 }),
+      exposure(completed.id, { reserved_total: 10, total_budget: 10 }),
+      exposure(cancelled.id, { reserved_total: 10, total_budget: 10 }),
+    ];
+
+    const rows = projectBudgetRows([planned, active, completed, cancelled, unexposed], exposures);
+
+    expect(rows.map((row) => row.project.id)).toEqual([planned.id, active.id]);
+    expect(rows.map((row) => row.exposure)).toEqual([exposures[1], exposures[0]]);
+    // 0.29 × 100 is 28.999… in floating point; in grosze it is 29. 999.99 of 1000 floors to 99.
+    expect(rows.map((row) => row.percent)).toEqual([99, 29]);
+  });
+
+  it("is 0% for a zero budget and over 100% when the reserve exceeds it", () => {
+    const zero = project();
+    const over = project();
+    const rows = projectBudgetRows(
+      [zero, over],
+      [
+        exposure(zero.id, { reserved_total: 50, total_budget: 0 }),
+        exposure(over.id, { reserved_total: 1500, total_budget: 1000 }),
+      ],
+    );
+    expect(rows.map((row) => row.percent)).toEqual([0, 150]);
   });
 });
 

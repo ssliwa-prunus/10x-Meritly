@@ -102,27 +102,31 @@ if (role === "supervisor" || role === "admin") {
   const milestonesFailed = !milestonesResult.data;
   const approvedFailed = !approvedResult.data;
 
-  // Only scored, unapproved milestones of open projects cost a summary RPC; a failed one degrades its row only.
-  const summaries =
+  // Only scored, unapproved milestones of open projects cost a summary RPC. A failed one would hide an
+  // awaiting milestone, so it raises the greeting, stats and attention errors instead of a false zero.
+  const { summaries, failed: summariesFailed } =
     supabase && !milestonesFailed
       ? await listPayoutSummaries(supabase, milestones, log)
-      : new Map<string, MilestonePayoutSummary>();
+      : { summaries: new Map<string, MilestonePayoutSummary>(), failed: 0 };
+  const awaitingFailed = summariesFailed > 0;
   const awaiting = awaitingMilestones(milestones, summaries);
-  // A missing bonus_settings row only blanks the live KPI cells ("—"); approved rows keep their snapshot.
+  // Without bonus_settings the live KPI cells blank ("—", approved rows keep their snapshot), so a failed
+  // or missing row raises the table error rather than looking like "not scored yet".
   const multiplierMax = settingsResult.data?.multiplier_max ?? null;
+  const settingsFailed = Boolean(settingsResult.error);
   const attention = attentionItems(awaiting, exposures, projects, employeesResult.data ?? []);
 
   manager = {
-    greetingError: projectsFailed || milestonesFailed,
+    greetingError: projectsFailed || milestonesFailed || awaitingFailed,
     awaitingCount: awaiting.length,
     overBudgetCount: attention.over_budget.length,
     stats: supervisorStats(projects, milestones, awaiting, approvedResults),
     reserved: reservedBudget(projects, exposures),
-    statsError: projectsFailed || milestonesFailed || approvedFailed,
+    statsError: projectsFailed || milestonesFailed || approvedFailed || awaitingFailed,
     rows: dashboardRows(milestones, summaries, approvedResults, role, multiplierMax),
-    tableError: milestonesFailed || approvedFailed,
+    tableError: milestonesFailed || approvedFailed || settingsFailed,
     attention,
-    attentionError: projectsFailed || milestonesFailed || !employeesResult.data,
+    attentionError: projectsFailed || milestonesFailed || awaitingFailed || !employeesResult.data,
     projects,
     exposures,
     budgetsError: projectsFailed,

@@ -269,13 +269,13 @@ describe("listPayoutSummaries", () => {
 
   it("returns an empty map and calls nothing for no milestones", async () => {
     const { client, requested } = perMilestoneClient({});
-    expect(await listPayoutSummaries(client, [])).toEqual(new Map());
+    expect(await listPayoutSummaries(client, [])).toEqual({ summaries: new Map(), failed: 0 });
     expect(requested).toEqual([]);
   });
 
   it("calls the summary RPC only for scored, unapproved, non-cancelled milestones of open projects", async () => {
     const { client, requested } = perMilestoneClient({ a: "ok", b: "ok" });
-    const summaries = await listPayoutSummaries(client, [
+    const { summaries, failed } = await listPayoutSummaries(client, [
       milestone("a"),
       milestone("unscored", { kpi_schedule: null, kpi_budget: null, kpi_quality: null, kpi_risk: null }),
       milestone("approved", { status: "approved" }),
@@ -286,16 +286,19 @@ describe("listPayoutSummaries", () => {
 
     expect(requested).toEqual(["milestone_payout_summary:a", "milestone_payout_summary:b"]);
     expect([...summaries.keys()]).toEqual(["a", "b"]);
+    expect(failed).toBe(0);
     expect(summaries.get("a")).toMatchObject({ milestone_id: "a", engagement_count: 1, multiplier: 1 });
   });
 
-  it("drops only a failed or invisible summary and logs the failure", async () => {
+  it("drops a failed or invisible summary, counts and logs only the failure", async () => {
     const { client } = perMilestoneClient({ a: "ok", b: "fail", c: "hidden" });
-    const summaries = await listPayoutSummaries(client, [milestone("a"), milestone("b"), milestone("c")], {
+    const { summaries, failed } = await listPayoutSummaries(client, [milestone("a"), milestone("b"), milestone("c")], {
       userId: "u-1",
     });
 
     expect([...summaries.keys()]).toEqual(["a"]);
+    // An invisible milestone is not a failure; a failed RPC must reach the page as an error.
+    expect(failed).toBe(1);
     expect(consoleError).toHaveBeenCalledTimes(1);
     expect(consoleError).toHaveBeenCalledWith("getPayoutSummary failed", {
       ...DB_PAYLOAD,

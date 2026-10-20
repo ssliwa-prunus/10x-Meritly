@@ -13,6 +13,7 @@ import type {
   MilestoneStatus,
   MyBonusLine,
   Project,
+  ProjectBudgetRow,
   ProjectExposure,
   ReservedBudget,
   SupervisorStats,
@@ -148,8 +149,29 @@ export function reservedBudget(projects: readonly Project[], exposures: readonly
   return {
     reserved: reservedGrosze / 100,
     budget: budgetGrosze / 100,
-    percent: budgetGrosze === 0 ? 0 : Math.floor((reservedGrosze * 100) / budgetGrosze),
+    percent: floorPercent(reservedGrosze, budgetGrosze),
   };
+}
+
+/** Reserved share of the budget in whole percent, floored; 0 when the budget is 0. */
+const floorPercent = (reservedGrosze: number, budgetGrosze: number) =>
+  budgetGrosze === 0 ? 0 : Math.floor((reservedGrosze * 100) / budgetGrosze);
+
+/**
+ * The "Budżety projektów" bars: open projects (as in reservedBudget) that have an exposure row, in
+ * project order, each with its own floored percent computed in grosze.
+ */
+export function projectBudgetRows(
+  projects: readonly Project[],
+  exposures: readonly ProjectExposure[],
+): ProjectBudgetRow[] {
+  const exposureById = new Map(exposures.map((exposure) => [exposure.project_id, exposure]));
+  return projects.flatMap((project) => {
+    const exposure = exposureById.get(project.id);
+    if (!exposure || !isOpenProject(project.status)) return [];
+    const percent = floorPercent(toGrosze(exposure.reserved_total), toGrosze(exposure.total_budget));
+    return [{ project, exposure, percent }];
+  });
 }
 
 /**

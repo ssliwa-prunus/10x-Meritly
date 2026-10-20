@@ -97,22 +97,25 @@ export async function getPayoutSummary(
 
 /**
  * Live summaries for the milestones that need one (scored, unapproved, non-cancelled, project open),
- * fetched in parallel. A failed summary is logged by getPayoutSummary and only its milestone is
- * missing from the map, as is one that is not visible: that row shows no KPI and is not awaiting.
+ * fetched in parallel. A milestone that is not visible is just missing from the map. A failed
+ * summary (logged by getPayoutSummary) is missing too, but counted in `failed`, so the page can
+ * show an error instead of a false "nothing awaiting".
  */
 export async function listPayoutSummaries(
   supabase: SupabaseClient,
   milestones: readonly DashboardMilestone[],
   log?: LogContext,
-): Promise<Map<string, MilestonePayoutSummary>> {
+): Promise<{ summaries: Map<string, MilestonePayoutSummary>; failed: number }> {
   const wanted = milestones.filter(needsPayoutSummary);
   const results = await Promise.all(wanted.map((milestone) => getPayoutSummary(supabase, milestone.id, log)));
 
   const summaries = new Map<string, MilestonePayoutSummary>();
-  results.forEach(({ data }, index) => {
-    if (data) summaries.set(wanted[index].id, data);
+  let failed = 0;
+  results.forEach(({ data, error }, index) => {
+    if (error) failed += 1;
+    else if (data) summaries.set(wanted[index].id, data);
   });
-  return summaries;
+  return { summaries, failed };
 }
 
 /**

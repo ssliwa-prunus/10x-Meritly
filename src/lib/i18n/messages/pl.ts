@@ -264,6 +264,8 @@ export const pl = {
       awaitingTitle: "{name} czeka na zatwierdzenie",
       // {pool} is a formatted amount, {people} the plural phrase below.
       awaitingDetail: "Pula do wypłaty {pool} dla {people}.",
+      // Stands in for {pool} when the summary has no payout pool.
+      noPool: "—",
       people: {
         one: "{count} osoby",
         few: "{count} osób",

@@ -374,6 +374,13 @@ export interface ReservedBudget {
   percent: number;
 }
 
+/** One "Budżety projektów" bar: an open project, its exposure and the floored reserved percent. */
+export interface ProjectBudgetRow {
+  project: Project;
+  exposure: ProjectExposure;
+  percent: number;
+}
+
 /** The Supervisor/Admin dashboard tiles' counts and the year's paid total (Warsaw calendar year). */
 export interface SupervisorStats {
   active_projects: number;

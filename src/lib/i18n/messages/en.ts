@@ -252,6 +252,7 @@ export const en: Messages = {
       heading: "Needs attention",
       awaitingTitle: "{name} is waiting for approval",
       awaitingDetail: "Payout pool {pool} for {people}.",
+      noPool: "—",
       people: {
         one: "{count} person",
         few: "{count} people",
