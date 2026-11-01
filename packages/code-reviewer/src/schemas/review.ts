@@ -5,7 +5,6 @@ export const FindingSchema = z.object({
   line: z
     .number()
     .int()
-    .positive()
     .optional()
     .describe("Line number in the new version of the file. Omit when you are not certain."),
   severity: z
