@@ -195,23 +195,23 @@ Single model step, no tools. `stopWhen` stays at the SDK default.
 
 #### Automated
 
-- [x] 1.1 Type checking passes
-- [x] 1.2 Modules import without any env var set
+- [x] 1.1 Type checking passes — b98541a
+- [x] 1.2 Modules import without any env var set — b98541a
 
 #### Manual
 
-- [x] 1.3 Prompt text and schema descriptions match the intended review semantics
+- [x] 1.3 Prompt text and schema descriptions match the intended review semantics — b98541a
 
 ### Phase 2: Reviewer agent module
 
 #### Automated
 
-- [ ] 2.1 Type checking passes
-- [ ] 2.2 Importing the agent module without the API key does not throw
+- [x] 2.1 Type checking passes
+- [x] 2.2 Importing the agent module without the API key does not throw
 
 #### Manual
 
-- [ ] 2.3 `createReviewer()` without a key throws the clear missing-key error only when called
+- [x] 2.3 `createReviewer()` without a key throws the clear missing-key error only when called
 
 ### Phase 3: Entry points and wiring
 
