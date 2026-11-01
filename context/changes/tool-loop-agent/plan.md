@@ -217,12 +217,12 @@ Single model step, no tools. `stopWhen` stays at the SDK default.
 
 #### Automated
 
-- [x] 3.1 Type checking passes
-- [x] 3.2 Barrel imports cleanly with no key and prints nothing
-- [x] 3.3 CLI fails clearly without a key
+- [x] 3.1 Type checking passes — 63c4df7
+- [x] 3.2 Barrel imports cleanly with no key and prints nothing — 63c4df7
+- [x] 3.3 CLI fails clearly without a key — 63c4df7
 
 #### Manual
 
-- [x] 3.4 With a real key, the CLI returns schema-valid JSON with a plausible finding for a buggy diff
-- [x] 3.5 `git diff | npm start` works via stdin
-- [x] 3.6 Empty or non-diff input yields a sensible result or a clear error
+- [x] 3.4 With a real key, the CLI returns schema-valid JSON with a plausible finding for a buggy diff — 63c4df7
+- [x] 3.5 `git diff | npm start` works via stdin — 63c4df7
+- [x] 3.6 Empty or non-diff input yields a sensible result or a clear error — 63c4df7
