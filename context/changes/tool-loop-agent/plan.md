@@ -206,23 +206,23 @@ Single model step, no tools. `stopWhen` stays at the SDK default.
 
 #### Automated
 
-- [x] 2.1 Type checking passes
-- [x] 2.2 Importing the agent module without the API key does not throw
+- [x] 2.1 Type checking passes — 81ae899
+- [x] 2.2 Importing the agent module without the API key does not throw — 81ae899
 
 #### Manual
 
-- [x] 2.3 `createReviewer()` without a key throws the clear missing-key error only when called
+- [x] 2.3 `createReviewer()` without a key throws the clear missing-key error only when called — 81ae899
 
 ### Phase 3: Entry points and wiring
 
 #### Automated
 
-- [ ] 3.1 Type checking passes
-- [ ] 3.2 Barrel imports cleanly with no key and prints nothing
-- [ ] 3.3 CLI fails clearly without a key
+- [x] 3.1 Type checking passes
+- [x] 3.2 Barrel imports cleanly with no key and prints nothing
+- [x] 3.3 CLI fails clearly without a key
 
 #### Manual
 
-- [ ] 3.4 With a real key, the CLI returns schema-valid JSON with a plausible finding for a buggy diff
-- [ ] 3.5 `git diff | npm start` works via stdin
-- [ ] 3.6 Empty or non-diff input yields a sensible result or a clear error
+- [x] 3.4 With a real key, the CLI returns schema-valid JSON with a plausible finding for a buggy diff
+- [x] 3.5 `git diff | npm start` works via stdin
+- [x] 3.6 Empty or non-diff input yields a sensible result or a clear error
