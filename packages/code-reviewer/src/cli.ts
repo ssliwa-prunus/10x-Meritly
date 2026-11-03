@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { reviewDiff } from "./agents/reviewer.js";
+import { formatUsage, runReview } from "./run.js";
+import { maxDiffCharsFromEnv } from "./truncate.js";
 
 const USAGE = "Usage: npm start -- <path-to-diff>   or   git diff | npm start";
 
@@ -49,8 +50,15 @@ async function main(): Promise<void> {
     throw new Error(`The diff is empty; nothing to review. ${USAGE}`);
   }
 
-  const review = await reviewDiff({ diff });
-  console.log(JSON.stringify(review, null, 2));
+  // PR text comes from env vars so a workflow never interpolates it into a shell script.
+  const result = await runReview({
+    diff,
+    title: process.env.REVIEW_TITLE || undefined,
+    description: process.env.REVIEW_DESCRIPTION || undefined,
+    maxDiffChars: maxDiffCharsFromEnv(),
+  });
+  console.error(formatUsage(result.usage));
+  console.log(JSON.stringify(result, null, 2));
 }
 
 try {

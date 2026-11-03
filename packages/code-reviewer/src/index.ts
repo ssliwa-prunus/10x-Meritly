@@ -4,3 +4,7 @@ export { REVIEWER_INSTRUCTIONS, buildReviewPrompt } from "./prompts/reviewer.js"
 export { DEFAULT_MODEL_ID, createModel } from "./model.js";
 export { createReviewer, reviewDiff } from "./agents/reviewer.js";
 export type { Reviewer } from "./agents/reviewer.js";
+export { evaluate, MIN_SCORE, MIN_SECURITY_SCORE } from "./evaluate.js";
+export { truncateDiff, DEFAULT_MAX_DIFF_CHARS } from "./truncate.js";
+export { COMMENT_MARKER, renderComment, renderErrorComment } from "./render.js";
+export { formatUsage, runReview } from "./run.js";

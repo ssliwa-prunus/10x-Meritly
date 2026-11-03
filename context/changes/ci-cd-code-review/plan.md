@@ -315,26 +315,26 @@ Removing `verdict` is a breaking change to the CLI output. The only consumers ar
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test` (in `packages/code-reviewer`)
+- [x] 2.1 Unit tests pass: `npm test` (in `packages/code-reviewer`) — 3965f00
 - [x] 2.2 Tests cover the pass-rule boundaries (6/5 for all criteria, 7/6 for security), truncation at and over the limit and on a line boundary, and the comment containing the marker, the truncation notice and the failing criteria
-- [x] 2.3 Type checking passes: `npm run typecheck`
+- [x] 2.3 Type checking passes: `npm run typecheck` — 3965f00
 
 #### Manual
 
-- [x] 2.4 Rendered comment for a sample failing review reads clearly in a Markdown preview
+- [x] 2.4 Rendered comment for a sample failing review reads clearly in a Markdown preview — 3965f00
 
 ### Phase 3: CLI and usage logging
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npm run typecheck`
-- [ ] 3.2 Unit tests pass: `npm test`
-- [ ] 3.3 Empty diff exits non-zero: `echo "" | npm start` fails with the "diff is empty" message
+- [x] 3.1 Type checking passes: `npm run typecheck`
+- [x] 3.2 Unit tests pass: `npm test`
+- [x] 3.3 Empty diff exits non-zero: `echo "" | npm start` fails with the "diff is empty" message
 
 #### Manual
 
-- [ ] 3.4 With a real `OPENROUTER_API_KEY`, `git diff HEAD~1 | npm start` prints valid JSON with six scores, `passed`, `comment` and non-zero usage
-- [ ] 3.5 `REVIEW_TITLE` and `REVIEW_DESCRIPTION` appear to influence the review
+- [x] 3.4 With a real `OPENROUTER_API_KEY`, `git diff HEAD~1 | npm start` prints valid JSON with six scores, `passed`, `comment` and non-zero usage
+- [x] 3.5 `REVIEW_TITLE` and `REVIEW_DESCRIPTION` appear to influence the review
 
 ### Phase 4: Composite action and workflow
 
