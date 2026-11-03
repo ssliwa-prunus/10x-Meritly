@@ -1,0 +1,110 @@
+name: AI code review
+description: Review a pull request with packages/code-reviewer, post one editable comment and set the ai-cr:passed / ai-cr:failed label.
+
+inputs:
+  openrouter-api-key:
+    description: OpenRouter API key used by the reviewer model.
+    required: true
+  github-token:
+    description: Token with pull-requests and issues write access (github.token).
+    required: true
+  pr-number:
+    description: Pull request number.
+    required: true
+  pr-title:
+    description: Pull request title (untrusted text, only passed through env).
+    required: false
+    default: ""
+  pr-body:
+    description: Pull request description (untrusted text, only passed through env).
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+        cache-dependency-path: packages/code-reviewer/package-lock.json
+
+    - name: Install reviewer
+      shell: bash
+      working-directory: packages/code-reviewer
+      run: npm ci
+
+    - name: Build the diff
+      shell: bash
+      # The checkout is the PR merge commit; its first parent is the base branch tip.
+      # Lockfiles are excluded: they are large and carry no reviewable intent.
+      run: |
+        git diff --no-color HEAD^1 HEAD -- . ':(exclude)package-lock.json' ':(exclude)**/package-lock.json' > "$RUNNER_TEMP/pr.diff"
+        wc -c "$RUNNER_TEMP/pr.diff"
+
+    - name: Run the reviewer
+      id: review
+      shell: bash
+      working-directory: packages/code-reviewer
+      env:
+        OPENROUTER_API_KEY: ${{ inputs.openrouter-api-key }}
+        REVIEW_TITLE: ${{ inputs.pr-title }}
+        REVIEW_DESCRIPTION: ${{ inputs.pr-body }}
+      run: |
+        set +e
+        npx tsx src/cli.ts "$RUNNER_TEMP/pr.diff" > "$RUNNER_TEMP/result.json" 2> "$RUNNER_TEMP/stderr.txt"
+        status=$?
+        set -e
+        # Usage line (and any error text) is visible in the job log.
+        cat "$RUNNER_TEMP/stderr.txt" >&2
+        if [ "$status" -eq 0 ]; then
+          jq -r .comment "$RUNNER_TEMP/result.json" > "$RUNNER_TEMP/comment.md"
+          echo "outcome=$(jq -r 'if .passed then "passed" else "failed" end' "$RUNNER_TEMP/result.json")" >> "$GITHUB_OUTPUT"
+        else
+          npx tsx src/error-comment.ts "$RUNNER_TEMP/stderr.txt" > "$RUNNER_TEMP/comment.md"
+          echo "outcome=error" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Post or update the comment
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+      run: |
+        # Only edit our own comment: a user could copy the marker into theirs.
+        existing=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+          --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- ai-cr -->"))) | .id' | head -n 1)
+        if [ -n "$existing" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+        else
+          gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+        fi
+
+    - name: Set the result label
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        OUTCOME: ${{ steps.review.outputs.outcome }}
+      run: |
+        gh label create "ai-cr:passed" --color 0e8a16 --description "AI code review passed" --force --repo "$REPO"
+        gh label create "ai-cr:failed" --color d73a4a --description "AI code review failed" --force --repo "$REPO"
+        add_label() { gh api -X POST "repos/$REPO/issues/$PR_NUMBER/labels" -f "labels[]=$1" > /dev/null; }
+        remove_label() { gh api -X DELETE "repos/$REPO/issues/$PR_NUMBER/labels/$1" > /dev/null 2>&1 || true; }
+        case "$OUTCOME" in
+          passed) add_label "ai-cr:passed"; remove_label "ai-cr%3Afailed" ;;
+          failed) add_label "ai-cr:failed"; remove_label "ai-cr%3Apassed" ;;
+          # Reviewer error: no result label, and no stale one from an earlier run.
+          *) remove_label "ai-cr%3Apassed"; remove_label "ai-cr%3Afailed" ;;
+        esac
+
+    - name: Remove the retry label
+      if: always()
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+      run: gh api -X DELETE "repos/$REPO/issues/$PR_NUMBER/labels/ai-cr%3Areview" > /dev/null 2>&1 || true
