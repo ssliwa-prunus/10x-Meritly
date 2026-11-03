@@ -93,3 +93,9 @@ ${message}
 \`\`\`
 `;
 }
+
+// Error text goes into a public PR comment: keep the first line only and drop URLs (they can embed key ids).
+export function sanitizeErrorMessage(text: string, maxChars = 300): string {
+  const firstLine = text.split(/\r?\n/).find((line) => line.trim() !== "") ?? "Unknown error";
+  return firstLine.replace(/https?:\/\/\S+/g, "[url]").slice(0, maxChars);
+}

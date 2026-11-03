@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluate } from "../evaluate.js";
-import { COMMENT_MARKER, renderComment, renderErrorComment } from "../render.js";
+import { COMMENT_MARKER, renderComment, renderErrorComment, sanitizeErrorMessage } from "../render.js";
 import type { Review } from "../schemas/review.js";
 
 const review: Review = {
@@ -80,5 +80,17 @@ describe("renderErrorComment", () => {
     expect(text.startsWith(COMMENT_MARKER)).toBe(true);
     expect(text).toContain("boom");
     expect(text).toContain("ai-cr:review");
+  });
+});
+
+describe("sanitizeErrorMessage", () => {
+  it("keeps only the first non-empty line and drops URLs", () => {
+    const raw = "\nAI_APICallError: out of credits, see https://openrouter.ai/keys/abc123 to adjust\n    at stack frame";
+    expect(sanitizeErrorMessage(raw)).toBe("AI_APICallError: out of credits, see [url] to adjust");
+  });
+
+  it("truncates long messages and handles empty input", () => {
+    expect(sanitizeErrorMessage("x".repeat(500))).toHaveLength(300);
+    expect(sanitizeErrorMessage("")).toBe("Unknown error");
   });
 });

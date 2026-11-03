@@ -6,5 +6,5 @@ export { createReviewer, reviewDiff } from "./agents/reviewer.js";
 export type { Reviewer } from "./agents/reviewer.js";
 export { evaluate, MIN_SCORE, MIN_SECURITY_SCORE } from "./evaluate.js";
 export { truncateDiff, DEFAULT_MAX_DIFF_CHARS } from "./truncate.js";
-export { COMMENT_MARKER, renderComment, renderErrorComment } from "./render.js";
+export { COMMENT_MARKER, renderComment, renderErrorComment, sanitizeErrorMessage } from "./render.js";
 export { formatUsage, runReview } from "./run.js";
