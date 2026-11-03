@@ -92,34 +92,26 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All pages a
 Two GitHub Actions workflows. `PR` (@.github/workflows/pr.yml) runs on pull requests into `master` or `develop`, with no secrets, in four jobs: `checks` (astro sync, lint, `lint:ui`, `astro check`, `npm test`, build), `smoke` (local Supabase, `supabase test db`, production preview, `npm run smoke`), `integration` (local Supabase with Mailpit and edge runtime, `supabase functions serve`, `npm run test:integration`) and `e2e` (local Supabase, Chromium, `npm run test:e2e` with the seed accounts; report uploaded on failure). `CI` (@.github/workflows/ci.yml) runs on push to `master`: a `ci` job (the `checks` steps; build needs the `SUPABASE_URL` and `SUPABASE_KEY` repository secrets) and the same `smoke` job. The Supabase CLI is the lockfile-pinned `npx supabase`. Branch protection on `master` requires all four PR checks `checks`, `smoke`, `integration` and `e2e`.
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
-## 10xDevs AI Toolkit - Module 3, Lesson 5 (Debugging)
+## 10xDevs AI Toolkit - Module 5, Lesson 2 (Team Agent with SDKs)
 
-Turn a failure into a fix the agent can defend: evidence first, then a failing test, then the fix.
+Build a minimal code-review agent: diff in, structured JSON verdict out. The schema and system prompt are the contract everything later (CI gate, evals) depends on.
 
 ```
-signal (monitoring | log | flaky E2E | stack trace) -> gather evidence -> reproduce -> failing test -> fix -> verify
+review schema + system prompt -> review.ts (ready-made agent SDK or AI SDK ToolLoopAgent) -> git diff | npx tsx review.ts
 ```
 
 ### Task Router - Where to start
 
-| Skill                                                            | Use it when                                                                                                                                                                                                                                                      |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/10x-frame`                                                     | The report arrives as "bug + proposed fix". Check that the observed symptom and the stated cause actually match before anyone fixes anything.                                                                                                                    |
-| `/10x-new` -> `/10x-research` -> `/10x-plan` -> `/10x-implement` | The fix is more than a one-liner. Research collects the evidence; the plan starts with the failing regression test.                                                                                                                                              |
-| `/10x-tdd`                                                       | Writing the regression test that reproduces the bug before the fix.                                                                                                                                                                                              |
-| `/10x-e2e`                                                       | The bug only shows up in the running app. Reproduce it in the browser and keep that test.                                                                                                                                                                        |
-| `/10x-observability-audit`                                       | Errors are missing, noisy or impossible to diagnose in production. It audits the critical flows for code that hides failures and writes a dated report under `context/audits/observability/`. Use `--verify <report>` to re-check an earlier report after fixes. |
+| Skill / prompt / template                           | Use it when                                                                                                                                        |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `m5l2-review-schema.ts.template` (config templates) | Starting the reviewer. Copy it into your reviewer package: six scored criteria (1-10), verdict and summary as a zod schema plus the system prompt. |
+| `m5l2-agent` (prompts)                              | Setting up the AI SDK entry point and then planning a modular `ToolLoopAgent` reviewer with `/10x-plan`.                                           |
+| `/10x-plan` -> `/10x-implement`                     | Turning the single-file reviewer into reusable modules.                                                                                            |
 
 ### Hard rules
 
-- **Evidence before a hypothesis.** Use what the error tracker, the logs, a reproduction and the code each show. Never guess a cause from the stack trace alone.
-- **The bug becomes a failing test first.** The fix is done when that test goes from red to green and stays in the suite.
-- **Never hide the evidence.** No empty `catch`, no ignored promise rejections, no failures turned into redirects or `200`s, no dropped error causes. If the fix needs a `catch`, it logs or reports the error with its cause.
-- **Fix the cause, not the test.** Don't edit an assertion to match the new behaviour unless the requirement itself changed.
-
-### Lesson boundaries
-
-- `/10x-observability-audit` reads code and writes a report. It never changes the audited code. Fixing what it finds goes through the change chain.
-- Choosing a monitoring vendor is `/10x-infra-research`, not this lesson.
+- **The schema is the contract.** Change criteria, verdict values or field names in the schema first, then in prompts, gates and evals.
+- **Pin major versions.** The lesson code targets AI SDK 7 (`ai@7`, `@openrouter/ai-sdk-provider@3`) and Node 22+.
+- **Track cost per run.** Log usage from every review and set a hard budget cap before the agent runs unattended.
 
 <!-- END @przeprogramowani/10x-cli -->
