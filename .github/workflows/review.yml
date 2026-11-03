@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/ai-code-review
         with:
-          openrouter-api-key: ${{ secrets.OPENROUTER_API_KEY }}
+          openrouter-api-key: ${{ secrets.LLM_PROVIDER_API_KEY }}
           github-token: ${{ github.token }}
           pr-number: ${{ github.event.pull_request.number }}
           pr-title: ${{ github.event.pull_request.title }}
