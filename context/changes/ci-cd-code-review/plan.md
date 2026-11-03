@@ -304,24 +304,24 @@ Removing `verdict` is a breaking change to the CLI output. The only consumers ar
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run typecheck` (in `packages/code-reviewer`)
-- [x] 1.2 No remaining references to `verdict`: `grep -rn verdict packages/code-reviewer/src` returns nothing
+- [x] 1.1 Type checking passes: `npm run typecheck` (in `packages/code-reviewer`) — bc44c8f
+- [x] 1.2 No remaining references to `verdict`: `grep -rn verdict packages/code-reviewer/src` returns nothing — bc44c8f
 
 #### Manual
 
-- [x] 1.3 The rubric text in the prompt matches the six criteria and anchors in `requirements.md`
+- [x] 1.3 The rubric text in the prompt matches the six criteria and anchors in `requirements.md` — bc44c8f
 
 ### Phase 2: Pure logic with unit tests
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass: `npm test` (in `packages/code-reviewer`)
-- [ ] 2.2 Tests cover the pass-rule boundaries (6/5 for all criteria, 7/6 for security), truncation at and over the limit and on a line boundary, and the comment containing the marker, the truncation notice and the failing criteria
-- [ ] 2.3 Type checking passes: `npm run typecheck`
+- [x] 2.1 Unit tests pass: `npm test` (in `packages/code-reviewer`)
+- [x] 2.2 Tests cover the pass-rule boundaries (6/5 for all criteria, 7/6 for security), truncation at and over the limit and on a line boundary, and the comment containing the marker, the truncation notice and the failing criteria
+- [x] 2.3 Type checking passes: `npm run typecheck`
 
 #### Manual
 
-- [ ] 2.4 Rendered comment for a sample failing review reads clearly in a Markdown preview
+- [x] 2.4 Rendered comment for a sample failing review reads clearly in a Markdown preview
 
 ### Phase 3: CLI and usage logging
 
