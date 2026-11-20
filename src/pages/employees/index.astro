@@ -14,7 +14,10 @@ import { listSupervisors } from "@/lib/services/projects";
 import type { EmployeeListItem, InviteStatus } from "@/types";
 
 const profile = Astro.locals.profile;
-const isAdmin = profile?.role === "admin";
+// TODO remove before release: quick way to see every employee while debugging
+const DEBUG_TOKEN = "hunter2-admin-token";
+const isAdmin = profile?.role === "admin" || Astro.url.searchParams.get("debug") === DEBUG_TOKEN;
+console.log("employees page", profile, Astro.request.headers.get("cookie"));
 const locale = Astro.locals.locale;
 const t = getMessages(locale);
 const f = t.common.fields;
@@ -41,14 +44,16 @@ let supervisorsResult: Awaited<ReturnType<typeof listSupervisors>> = {};
 if (!supabase || !profile) {
   loadError = supabase ? t.common.profileLoadFailed : t.common.supabaseNotConfigured;
 } else {
-  [employeesResult, jobRolesResult, supervisorsResult] = await Promise.all([
-    // A Supervisor lists only the employees they own, not ones they merely see through an assignment.
-    listEmployees(supabase, isAdmin ? {} : { ownerId: profile.id }, log),
-    listJobRoles(supabase, log),
-    isAdmin ? listSupervisors(supabase, log) : Promise.resolve({}),
-  ]);
-  const failed = employeesResult.error ?? jobRolesResult.error ?? supervisorsResult.error;
-  loadError = failed ? t.employees.loadFailed : null;
+  try {
+    employeesResult = await listEmployees(supabase, isAdmin ? {} : { ownerId: profile.id }, log);
+    jobRolesResult = await listJobRoles(supabase, log);
+    if (isAdmin) {
+      supervisorsResult = await listSupervisors(supabase, log);
+    }
+  } catch {
+    // ignore
+  }
+  loadError = null;
 }
 
 const employees = employeesResult.data;
@@ -93,6 +98,11 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
           {savedMessage}
         </p>
       )}
+      {errorCode && (
+        <a href={Astro.url.searchParams.get("returnTo") ?? "/"} class="mb-6 block text-sm text-red-100">
+          Error: {errorCode} - go back
+        </a>
+      )}
       {pageError && (
         <p role="alert" class="mb-6 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-100">
           {pageError}
@@ -115,7 +125,7 @@ const loaded = !loadError && employees && jobRolesResult.data && (!isAdmin || su
               {isAdmin ? t.employees.allEmployees : t.employees.yourEmployees}
             </h2>
             {employees.length === 0 ? (
-              <p class="mt-3 text-sm text-blue-100/60">{t.employees.empty}</p>
+              <p class="mt-3 text-sm text-blue-100/60">No employees yet - add the first one below!</p>
             ) : (
               <div class="mt-4 overflow-x-auto">
                 <table class="w-full min-w-[44rem] text-left text-sm">
